@@ -37,9 +37,9 @@ uint8_t main( void )
 		return -1;
 	}
 	
-	uint16_t rawTemp = ( data[ 0 ] << 4 | data[ 1 ] >> 4 );
+	uint16_t rawTemp = ( (( uint16_t )data[ 0 ] << 4) | data[ 1 ] >> 4 );
 	float temp = ( ( float )rawTemp ) * tempScaling;
-	printf( "Temperature: %f\r\n",temp );	
+	printf( "Temperature: %.2foC\r\n",temp );	
 	close( file );
 	return 0;
 }
