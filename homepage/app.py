@@ -42,7 +42,7 @@ def display_page(pathname):
 #------------------------------------------------------------------------------------------------------------------
 index_page = html.Div([
     html.H1(children='Home Assistant Version 0.1'),
-    html.H3(children='Temperature Data')
+    html.H3(children='Temperature Data'),
     html.H3(children='Server Info')
     #dcc.Graph(id='static_temp_graph')
 ])
