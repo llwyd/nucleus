@@ -10,13 +10,46 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/fcntl.h>
+#include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 
-uint8_t main( void )
+
+#define bool_t bool
+
+// Scaling factor for values read from the TMP102
+static float tempScaling = 0.0625f;
+
+// I2C device template
+static uint8_t * device = "/dev/i2c-1";
+
+// Settings flags
+static bool_t printColours = false;
+static bool_t transmitOutput = false;
+
+
+uint8_t main( int argc, char ** argv )
 {
+	int inputFlags;
+	while((inputFlags = getopt( argc, argv, "ct:h:")) != -1)
+	{
+		switch(inputFlags)
+		{
+			case 'c':
+				printColours = true;
+				break;
+			case 't':
+				transmitOutput = true;
+				printf("Attempting transmission to %s\n",optarg);
+				break;
+			case 'h':
+				printf("Help");
+				break;
+		}
+	}
+
+	
 	//TMP 102
-	float tempScaling = 0.0625f;
-	uint8_t * device = "/dev/i2c-1";
 	uint16_t file = open( device, O_RDWR );
 	uint8_t data[ 2 ]={ 0x00 };
 	
