@@ -7,9 +7,11 @@
 #include <stdlib.h>
 #include <linux/i2c-dev.h>
 #include <inttypes.h>
+#include <netdb.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/fcntl.h>
+#include <sys/socket.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
@@ -18,20 +20,89 @@
 #define bool_t bool
 
 // Scaling factor for values read from the TMP102
-static float tempScaling = 0.0625f;
+static const float tempScaling = 0.0625f;
 
 // I2C device template
-static uint8_t * device = "/dev/i2c-1";
+static const uint8_t * device = "/dev/i2c-1";
 
 // Settings flags
 static bool_t printColours = false;
 static bool_t transmitOutput = false;
 
 
+static void ReadTemperature( float * temperature  )
+{
+
+	uint16_t file = open( device, O_RDWR );
+	uint8_t data[ 2 ]={ 0x00 };
+	
+	if( file < 0 )
+	{
+		printf("Error opening device");
+	}
+	uint8_t address = 0x48;
+	if( ioctl( file, I2C_SLAVE, address ) < 0 )
+	{
+		printf("Failed to access device\r\n");
+	}
+	if( read( file, data, 2U ) != 2U )
+	{
+		printf( "Failed to read data\r\n" );
+	}
+
+	close( file );	
+	uint16_t rawTemp = ( (( uint16_t )data[ 0 ] << 4) | data[ 1 ] >> 4 );
+
+	*temperature = ( ( float )rawTemp ) * tempScaling;
+}
+
+static void TransmitTemperatureData( uint8_t * ip, uint8_t * port, float * temp)
+{
+	int status;
+	struct addrinfo hints;
+	struct addrinfo *servinfo;
+	uint8_t tempString[ 16 ];
+
+	snprintf(tempString,16,"%f",*temp);
+
+	if( port != NULL )
+	{
+		printf("Attempting Connection to %s:%s\n",ip,port);
+		
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_PASSIVE;
+
+		// Populate server information structure
+		if( !getaddrinfo( ip, port, &hints, &servinfo ) )
+		{
+			// Create the socket
+			int s;
+			if( ( s = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) != -1)
+				{
+					// Attempt connection
+					int c = connect( s, servinfo->ai_addr, servinfo->ai_addrlen);
+
+					int se = send(s,tempString,sizeof(tempString),0);
+					freeaddrinfo(servinfo);
+				}
+		}
+	}
+	else
+	{
+		fprintf( stderr, "Error! Missing Port Number\n");
+	}
+}
+
 uint8_t main( int argc, char ** argv )
 {
 	int inputFlags;
-	while((inputFlags = getopt( argc, argv, "ct:h:")) != -1)
+	float temp;
+
+	uint8_t * ip;
+	uint8_t * port;
+	
+	while((inputFlags = getopt( argc, argv, "ct:p:h")) != -1)
 	{
 		switch(inputFlags)
 		{
@@ -40,7 +111,10 @@ uint8_t main( int argc, char ** argv )
 				break;
 			case 't':
 				transmitOutput = true;
-				printf("Attempting transmission to %s\n",optarg);
+				ip = optarg;
+				break;
+			case 'p':
+				port = optarg;
 				break;
 			case 'h':
 				printf("Help");
@@ -48,31 +122,14 @@ uint8_t main( int argc, char ** argv )
 		}
 	}
 
-	
-	//TMP 102
-	uint16_t file = open( device, O_RDWR );
-	uint8_t data[ 2 ]={ 0x00 };
-	
-	if( file < 0 )
+	ReadTemperature( &temp );
+	if( transmitOutput )
 	{
-		printf("Error opening device");
-		return -1;
-	}
-	uint8_t address = 0x48;
-	if( ioctl( file, I2C_SLAVE, address ) < 0 )
-	{
-		printf("Failed to access device\r\n");
-		return -1;
-	}
-	if( read( file, data, 2U ) != 2U )
-	{
-		printf( "Failed to read data\r\n" );
-		return -1;
+		TransmitTemperatureData( ip, port, &temp);
 	}
 	
-	uint16_t rawTemp = ( (( uint16_t )data[ 0 ] << 4) | data[ 1 ] >> 4 );
-	float temp = ( ( float )rawTemp ) * tempScaling;
+
+
 	printf( "Temperature: %.2foC\r\n",temp );	
-	close( file );
 	return 0;
 }
