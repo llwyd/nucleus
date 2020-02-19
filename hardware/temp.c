@@ -35,7 +35,7 @@ static void ReadTemperature( float * temperature  )
 
 	uint16_t file = open( device, O_RDWR );
 	uint8_t data[ 2 ]={ 0x00 };
-	
+
 	if( file < 0 )
 	{
 		printf("Error opening device");
@@ -50,7 +50,7 @@ static void ReadTemperature( float * temperature  )
 		printf( "Failed to read data\r\n" );
 	}
 
-	close( file );	
+	close( file );
 	uint16_t rawTemp = ( (( uint16_t )data[ 0 ] << 4) | data[ 1 ] >> 4 );
 
 	*temperature = ( ( float )rawTemp ) * tempScaling;
@@ -63,12 +63,23 @@ static void TransmitTemperatureData( uint8_t * ip, uint8_t * port, float * temp)
 	struct addrinfo *servinfo;
 	uint8_t tempString[ 16 ];
 
-	snprintf(tempString,16,"%f",*temp);
+	uint8_t httpData[ 64 ];
+	uint8_t httpRequest[ 2048 ];
 
+
+
+	snprintf(httpData,sizeof(httpData),"{\"temperature\": \"%.2f\"}", *temp);
+	printf("%s\n",httpData);
+
+	snprintf(httpRequest,sizeof(httpRequest),"POST HTTP/1.1\r\nHost: %s\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",ip,strlen(httpData),httpData);
+
+
+	printf("\n%s\n",httpRequest);
+	snprintf(tempString,16,"%f",*temp);
 	if( port != NULL )
 	{
 		printf("Attempting Connection to %s:%s\n",ip,port);
-		
+
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_PASSIVE;
@@ -76,6 +87,7 @@ static void TransmitTemperatureData( uint8_t * ip, uint8_t * port, float * temp)
 		// Populate server information structure
 		if( !getaddrinfo( ip, port, &hints, &servinfo ) )
 		{
+			printf("Got addrinfo\r\n");
 			// Create the socket
 			int s;
 			if( ( s = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) != -1)
@@ -83,7 +95,9 @@ static void TransmitTemperatureData( uint8_t * ip, uint8_t * port, float * temp)
 					// Attempt connection
 					int c = connect( s, servinfo->ai_addr, servinfo->ai_addrlen);
 
-					int se = send(s,tempString,sizeof(tempString),0);
+					printf("Connected\n");
+					int se = send(s,httpRequest,strlen(httpRequest),0);
+					printf("Send\n");
 					freeaddrinfo(servinfo);
 				}
 		}
