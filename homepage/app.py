@@ -74,5 +74,13 @@ def static_temp_graph(value):
     }
     return figure;
 
+@app.server.route('/raw', methods = ['GET', 'POST'])
+def raw_data():
+    if request.method == 'POST':
+        raw = request.get_json(force=True)
+        #raw_decoded = raw.decode('utf-8')
+        print(raw)
+    return 'ta pal\n'
+
 if __name__ == '__main__':
-    app.run_server(host='0.0.0.0');
+    app.run_server(host='0.0.0.0')
