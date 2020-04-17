@@ -38,20 +38,24 @@ index_page = html.Div([
     html.H1(children='Home Assistant Version 0.1'),
     html.H3(children='Temperature Data'),
     html.H3(children='Server Info'),
-    dcc.Dropdown(   id='date-dropdown',
-                    style={'height':'35px','width':'200px'},
-                    options=[
-                                {'label':'test','value':'1234'},
-                            ],
-                    clearable=False,
-                    placeholder="Select a data"
-                    #value = 0
-    ),
+    dcc.Interval(   id='interval-component',
+                    interval = 1000 * 60 * 5,
+                    n_intervals = 0
+                ),
+    #dcc.Dropdown(   id='date-dropdown',
+    #                style={'height':'35px','width':'200px'},
+    #                options=[
+    #                            {'label':'test','value':'1234'},
+    #                        ],
+    #                clearable=False,
+    #                placeholder="Select a data"
+    #                #value = 0
+    #                ),
     dcc.Graph(id='static-temp-graph')
 ])
 
 #   Temperature graph
-@app.callback(Output('static-temp-graph', 'figure'),[Input('date-dropdown','value')])
+@app.callback(Output('static-temp-graph', 'figure'),[Input('interval-component','n_intervals')])
 def static_temp_graph(value):
     data={}
     print("Hello")
