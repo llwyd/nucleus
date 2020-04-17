@@ -71,7 +71,8 @@ static void TransmitTemperatureData( uint8_t * ip, uint8_t * port, float * temp)
 	snprintf(httpData,sizeof(httpData),"{\"temperature\": \"%.2f\"}", *temp);
 	printf("%s\n",httpData);
 
-	snprintf(httpRequest,sizeof(httpRequest),"POST HTTP/1.1\r\nHost: %s\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",ip,strlen(httpData),httpData);
+//	snprintf(httpRequest,sizeof(httpRequest),"POST HTTP/1.1\r\nHost:raw\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",strlen(httpData),httpData);
+	snprintf(httpRequest,sizeof(httpRequest),"POST /raw  HTTP/1.1\r\nHost: %s:%s\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",ip, port, strlen(httpData), httpData);
 
 
 	printf("\n%s\n",httpRequest);
