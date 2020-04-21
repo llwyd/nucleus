@@ -1,4 +1,6 @@
 temp
+uuid
+hardware/.vscode
 network
 network.c
 homepage/__pycache__/*
