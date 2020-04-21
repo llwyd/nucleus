@@ -15,46 +15,14 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include "sensor.h"
 
 
 #define bool_t bool
 
-// Scaling factor for values read from the TMP102
-static const float tempScaling = 0.0625f;
-
-// I2C device template
-static const uint8_t * device = "/dev/i2c-1";
-
 // Settings flags
 static bool_t printColours = false;
 static bool_t transmitOutput = false;
-
-
-static void ReadTemperature( float * temperature  )
-{
-
-	uint16_t file = open( device, O_RDWR );
-	uint8_t data[ 2 ]={ 0x00 };
-
-	if( file < 0 )
-	{
-		printf("Error opening device");
-	}
-	uint8_t address = 0x48;
-	if( ioctl( file, I2C_SLAVE, address ) < 0 )
-	{
-		printf("Failed to access device\r\n");
-	}
-	if( read( file, data, 2U ) != 2U )
-	{
-		printf( "Failed to read data\r\n" );
-	}
-
-	close( file );
-	uint16_t rawTemp = ( (( uint16_t )data[ 0 ] << 4) | data[ 1 ] >> 4 );
-
-	*temperature = ( ( float )rawTemp ) * tempScaling;
-}
 
 static void TransmitTemperatureData( uint8_t * ip, uint8_t * port, float * temp)
 {
@@ -136,8 +104,7 @@ uint8_t main( int argc, char ** argv )
 				break;
 		}
 	}
-
-	ReadTemperature( &temp );
+	Sensor_Read( &temp );
 	if( transmitOutput )
 	{
 		TransmitTemperatureData( ip, port, &temp);

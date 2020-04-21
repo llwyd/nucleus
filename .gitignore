@@ -1,5 +1,7 @@
+*.o
 temp
 uuid
+hardware/bin/*
 hardware/.vscode
 network
 network.c
