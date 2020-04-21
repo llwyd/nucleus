@@ -47,7 +47,26 @@ int main( void )
 
     freeaddrinfo(servinfo);
 
-    printf("%s\n",rcvbuff);
+    // Find uuid in response
+    uint8_t * p = strstr( rcvbuff, "\"uuid\"" );
+
+    if(p!=NULL)
+    {
+        uint8_t * pch = strtok(p,"\"");
+        while( pch!=NULL )
+        {
+            /* magic number of uuid length */
+            if(strlen(pch) == 36U )
+            {
+                printf ("%s\n",pch);
+            }
+            pch = strtok (NULL, "\"");
+        }
+    }
+    else
+    {
+        fprintf( stderr, "UUID not found.\n");
+    }
 
     return 0;
 }
