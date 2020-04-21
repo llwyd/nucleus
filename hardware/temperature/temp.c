@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include "comms.h"
 #include "sensor.h"
 
 
@@ -104,6 +105,9 @@ uint8_t main( int argc, char ** argv )
 				break;
 		}
 	}
+	uint8_t getTest[2048];
+	Comms_Get("httpbin.org","80","/uuid",getTest,2048);
+
 	Sensor_Read( &temp );
 	if( transmitOutput )
 	{
