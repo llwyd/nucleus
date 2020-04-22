@@ -105,14 +105,14 @@ uint8_t main( int argc, char ** argv )
 				break;
 		}
 	}
-	uint8_t getTest[2048];
-	Comms_Get("httpbin.org","80","/uuid",getTest,2048);
+	
 	
 	Sensor_Read( &temp );
 	if( transmitOutput )
-	{
-		Comms_Post(ip,port,"/raw","{\"temperature\": \"1234\"}");
-		//TransmitTemperatureData( ip, port, &temp);
+	{	
+		uint8_t httpData[512];
+		Comms_FormatTempData( &temp, &temp, httpData, 512);
+		Comms_Post(ip,port,"/raw",httpData);
 	}
 	
 

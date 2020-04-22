@@ -13,6 +13,11 @@
 
 static uint8_t httpRequest[ REQUEST_SIZE ];
 
+extern void Comms_FormatTempData( float * inside, float * outside, uint8_t * buffer,uint16_t len)
+{
+    snprintf(buffer,len,"{\"inside_temp\": \"%.2f\",\"outside_temp\": \"%.2f\"}", *inside, *outside);
+}
+
 extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * data)
 {
     int status;
