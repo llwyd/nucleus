@@ -74,7 +74,7 @@ uint8_t main( int argc, char ** argv )
 	
 	printf( "          Device ID:	%s\r\n", deviceUUID);
 	printf( "           Location:	%s\r\n", weatherLocation);
-	printf(	"Outside Temperature:	%.2foC\r\n", outsideTemp);
-	printf( " Inside Temperature: 	%.2foC\r\n",temp );
+	printf(	"       Outside Temp:	%.2foC\r\n", outsideTemp);
+	printf( "        Inside Temp: 	%.2foC\r\n",temp );
 	return 0;
 }
