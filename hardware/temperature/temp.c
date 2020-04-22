@@ -25,59 +25,6 @@
 static bool_t printColours = false;
 static bool_t transmitOutput = false;
 
-static void TransmitTemperatureData( uint8_t * ip, uint8_t * port, float * temp)
-{
-	int status;
-	struct addrinfo hints;
-	struct addrinfo *servinfo;
-	uint8_t tempString[ 16 ];
-
-	uint8_t httpData[ 64 ];
-	uint8_t httpRequest[ 2048 ];
-
-
-
-	snprintf(httpData,sizeof(httpData),"{\"temperature\": \"%.2f\"}", *temp);
-	printf("%s\n",httpData);
-
-//	snprintf(httpRequest,sizeof(httpRequest),"POST HTTP/1.1\r\nHost:raw\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",strlen(httpData),httpData);
-	snprintf(httpRequest,sizeof(httpRequest),"POST /raw  HTTP/1.1\r\nHost: %s:%s\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",ip, port, (int)strlen(httpData), httpData);
-
-
-	printf("\n%s\n",httpRequest);
-	snprintf(tempString,16,"%f",*temp);
-	if( port != NULL )
-	{
-		printf("Attempting Connection to %s:%s\n",ip,port);
-
-		hints.ai_family = AF_UNSPEC;
-		hints.ai_socktype = SOCK_STREAM;
-		hints.ai_flags = AI_PASSIVE;
-
-		// Populate server information structure
-		if( !getaddrinfo( ip, port, &hints, &servinfo ) )
-		{
-			printf("Got addrinfo\r\n");
-			// Create the socket
-			int s;
-			if( ( s = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) != -1)
-				{
-					// Attempt connection
-					int c = connect( s, servinfo->ai_addr, servinfo->ai_addrlen);
-
-					printf("Connected\n");
-					int se = send(s,httpRequest,strlen(httpRequest),0);
-					printf("Send\n");
-					freeaddrinfo(servinfo);
-				}
-		}
-	}
-	else
-	{
-		fprintf( stderr, "Error! Missing Port Number\n");
-	}
-}
-
 uint8_t main( int argc, char ** argv )
 {
 	int inputFlags;
