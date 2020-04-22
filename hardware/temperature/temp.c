@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include "apikey.h"
 #include "comms.h"
 #include "sensor.h"
 
@@ -22,6 +23,7 @@
 #define bool_t bool
 
 #define RAW_WEATHER_SIZE ( 2048 )
+#define WEATHER_URL_SIZE ( 128 )
 
 // Settings flags
 static bool_t printColours = false;
@@ -32,6 +34,7 @@ uint8_t main( int argc, char ** argv )
 	int inputFlags;
 	float temp;
 	uint8_t rawWeatherData[ RAW_WEATHER_SIZE ];
+	uint8_t weatherUrl[ WEATHER_URL_SIZE ];
 
 	uint8_t * ip;
 	uint8_t * port;
@@ -56,7 +59,10 @@ uint8_t main( int argc, char ** argv )
 		}
 	}
 
+	snprintf(weatherUrl,WEATHER_URL_SIZE,"/data/2.5/weather?q=%s&appid=%s",weatherLocation,weatherLocation);
 	
+	Comms_Get("api.openweathermap.org","80",weatherUrl,rawWeatherData,RAW_WEATHER_SIZE);
+	printf("%s\n",rawWeatherData);
 	Sensor_Read( &temp );
 	if( transmitOutput )
 	{	
