@@ -59,7 +59,7 @@ uint8_t main( int argc, char ** argv )
 		}
 	}
 
-	snprintf(weatherUrl,WEATHER_URL_SIZE,"/data/2.5/weather?q=%s&appid=%s",weatherLocation,weatherLocation);
+	snprintf(weatherUrl,WEATHER_URL_SIZE,"/data/2.5/weather?q=%s&appid=%s",weatherLocation,weatherKey);
 	
 	Comms_Get("api.openweathermap.org","80",weatherUrl,rawWeatherData,RAW_WEATHER_SIZE);
 	printf("%s\n",rawWeatherData);
