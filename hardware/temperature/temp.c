@@ -41,7 +41,7 @@ static void TransmitTemperatureData( uint8_t * ip, uint8_t * port, float * temp)
 	printf("%s\n",httpData);
 
 //	snprintf(httpRequest,sizeof(httpRequest),"POST HTTP/1.1\r\nHost:raw\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",strlen(httpData),httpData);
-	snprintf(httpRequest,sizeof(httpRequest),"POST /raw  HTTP/1.1\r\nHost: %s:%s\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",ip, port, strlen(httpData), httpData);
+	snprintf(httpRequest,sizeof(httpRequest),"POST /raw  HTTP/1.1\r\nHost: %s:%s\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",ip, port, (int)strlen(httpData), httpData);
 
 
 	printf("\n%s\n",httpRequest);
@@ -107,11 +107,12 @@ uint8_t main( int argc, char ** argv )
 	}
 	uint8_t getTest[2048];
 	Comms_Get("httpbin.org","80","/uuid",getTest,2048);
-
+	
 	Sensor_Read( &temp );
 	if( transmitOutput )
 	{
-		TransmitTemperatureData( ip, port, &temp);
+		Comms_Post(ip,port,"/raw","{\"temperature\": \"1234\"}");
+		//TransmitTemperatureData( ip, port, &temp);
 	}
 	
 
