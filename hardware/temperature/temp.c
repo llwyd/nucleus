@@ -33,6 +33,7 @@ uint8_t main( int argc, char ** argv )
 {
 	int inputFlags;
 	float temp;
+	float outsideTemp;
 	uint8_t rawWeatherData[ RAW_WEATHER_SIZE ];
 	uint8_t weatherUrl[ WEATHER_URL_SIZE ];
 
@@ -62,17 +63,17 @@ uint8_t main( int argc, char ** argv )
 	snprintf(weatherUrl,WEATHER_URL_SIZE,"/data/2.5/weather?q=%s&appid=%s",weatherLocation,weatherKey);
 	
 	Comms_Get("api.openweathermap.org","80",weatherUrl,rawWeatherData,RAW_WEATHER_SIZE);
-	printf("%s\n",rawWeatherData);
+	Comms_ExtractTemp( rawWeatherData, &outsideTemp);
 	Sensor_Read( &temp );
 	if( transmitOutput )
 	{	
 		uint8_t httpData[512];
-		Comms_FormatTempData( &temp, &temp, httpData, 512);
+		Comms_FormatTempData( &temp, &outsideTemp, httpData, 512);
 		Comms_Post(ip,port,"/raw",httpData);
 	}
 	
 
-
-	printf( "Temperature: %.2foC\r\n",temp );	
+	printf(	"Outside Temperature:	%.2foC\r\n", outsideTemp);
+	printf( "Inside Temperature: 	%.2foC\r\n",temp );
 	return 0;
 }

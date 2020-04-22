@@ -10,8 +10,26 @@
 #include "comms.h"
 
 #define REQUEST_SIZE ( 2048 )
+#define ABSOLUTE_ZERO ( 273.15 )
+
+static const uint8_t * magicKey = "\"temp\":";
 
 static uint8_t httpRequest[ REQUEST_SIZE ];
+
+/* 	This function searchers for the magic key, then replaces the following comma
+	with a \0.  I'm quite chuffed with this hack tbh */
+extern void Comms_ExtractTemp( uint8_t * buffer, float * temp)
+{
+	uint8_t * p = strstr( buffer, magicKey );
+	if( p!= NULL )
+	{
+		p+=(int)strlen(magicKey);
+		uint8_t * pch = strchr(p,',');
+		*pch = '\0';
+		*temp = atof( p );
+		*temp -= ABSOLUTE_ZERO;
+	}
+}
 
 extern void Comms_FormatTempData( float * inside, float * outside, uint8_t * buffer,uint16_t len)
 {
