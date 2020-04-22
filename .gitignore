@@ -2,6 +2,7 @@
 temp
 uuid
 hardware/bin/*
+hardware/temperature/apikey.h
 hardware/.vscode
 network
 network.c

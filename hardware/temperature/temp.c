@@ -21,6 +21,8 @@
 
 #define bool_t bool
 
+#define RAW_WEATHER_SIZE ( 2048 )
+
 // Settings flags
 static bool_t printColours = false;
 static bool_t transmitOutput = false;
@@ -29,6 +31,7 @@ uint8_t main( int argc, char ** argv )
 {
 	int inputFlags;
 	float temp;
+	uint8_t rawWeatherData[ RAW_WEATHER_SIZE ];
 
 	uint8_t * ip;
 	uint8_t * port;
@@ -52,7 +55,7 @@ uint8_t main( int argc, char ** argv )
 				break;
 		}
 	}
-	
+
 	
 	Sensor_Read( &temp );
 	if( transmitOutput )
