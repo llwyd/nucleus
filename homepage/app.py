@@ -9,6 +9,8 @@ import plotly.graph_objs as go
 import plotly
 from dash.dependencies import Input, Output
 import numpy as np
+import os
+basedir = os.path.abspath(os.path.dirname(__file__))
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -19,6 +21,22 @@ app.config.suppress_callback_exceptions = True
 app.title='home Assistant v 0.0.1'
 app.server.config["DEBUG"] = True
 
+
+SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
+app.server.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+app.server.config["SQLALCHEMY_POOL_RECYCLE"] = 299
+app.server.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db = SQLAlchemy(app.server)
+
+# Database model
+class Readings(db.Model):
+    __tablename__ = "readings"
+    id              = db.Column(db.Integer, primary_key=True)       #id for each record in the database
+    deviceID        = db.Column(db.String(64))                      #id of the unit
+    datestamp       = db.Column(db.String(128))                     #datestamp
+    temperature     = db.Column(db.String(16))                      #temperature
+    humidity        = db.Column(db.String(16))                      #humidity
 
 #   Entry point for the website
 app.layout = html.Div(children=[
@@ -81,9 +99,15 @@ def static_temp_graph(value):
 @app.server.route('/raw', methods = ['GET', 'POST'])
 def raw_data():
     if request.method == 'POST':
+        timestamp = dt.datetime.now()
         raw = request.get_json(force=True)
-        #raw_decoded = raw.decode('utf-8')
         print(raw)
+        reading = Readings(	deviceID = raw['device_id'],
+				datestamp = timestamp,
+				temperature = raw['inside_temp'],
+				humidity = '0')
+        db.session.add(reading)
+        db.session.commit()
     return 'ta pal\n'
 
 if __name__ == '__main__':
