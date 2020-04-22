@@ -68,12 +68,13 @@ uint8_t main( int argc, char ** argv )
 	if( transmitOutput )
 	{	
 		uint8_t httpData[512];
-		Comms_FormatTempData( &temp, &outsideTemp, httpData, 512);
+		Comms_FormatTempData( deviceUUID, &temp, &outsideTemp, httpData, 512);
 		Comms_Post(ip,port,"/raw",httpData);
 	}
 	
-
+	printf( "          Device ID:	%s\r\n", deviceUUID);
+	printf( "           Location:	%s\r\n", weatherLocation);
 	printf(	"Outside Temperature:	%.2foC\r\n", outsideTemp);
-	printf( "Inside Temperature: 	%.2foC\r\n",temp );
+	printf( " Inside Temperature: 	%.2foC\r\n",temp );
 	return 0;
 }

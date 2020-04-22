@@ -31,9 +31,9 @@ extern void Comms_ExtractTemp( uint8_t * buffer, float * temp)
 	}
 }
 
-extern void Comms_FormatTempData( float * inside, float * outside, uint8_t * buffer,uint16_t len)
+extern void Comms_FormatTempData( const uint8_t * deviceID, float * inside, float * outside, uint8_t * buffer,uint16_t len)
 {
-    snprintf(buffer,len,"{\"inside_temp\": \"%.2f\",\"outside_temp\": \"%.2f\"}", *inside, *outside);
+    snprintf(buffer,len,"{\"device_id\":\"%s\",\"inside_temp\": \"%.2f\",\"outside_temp\": \"%.2f\"}", deviceID, *inside, *outside);
 }
 
 extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * data)
