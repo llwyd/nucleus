@@ -102,10 +102,10 @@ def raw_data():
         timestamp = dt.datetime.now()
         raw = request.get_json(force=True)
         print(raw)
-        reading = Readings(	deviceID = raw['device_id'],
-				datestamp = timestamp,
-				temperature = raw['inside_temp'],
-				humidity = '0')
+        reading = Readings(	deviceID 	= raw['device_id'],
+				datestamp 				= timestamp,
+				temperature 			= raw['temperature'],
+				humidity 				= raw['humidity'])
         db.session.add(reading)
         db.session.commit()
     return 'ta pal\n'

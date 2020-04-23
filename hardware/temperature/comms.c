@@ -33,7 +33,7 @@ extern void Comms_ExtractTemp( uint8_t * buffer, float * temp)
 
 extern void Comms_FormatTempData( const uint8_t * deviceID, float * temp, float * humidity, uint8_t * buffer,uint16_t len)
 {
-    snprintf(buffer,len,"{\"device_id\":\"%s\",\"temperature\": \"%.2f\"}", deviceID, *temp);
+    snprintf(buffer,len,"{\"device_id\":\"%s\",\"temperature\": \"%.2f\",\"humidity\":\"%.2f\"}", deviceID, *temp, *humidity);
 }
 
 extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * data)

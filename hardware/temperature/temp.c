@@ -34,6 +34,7 @@ uint8_t main( int argc, char ** argv )
 	int inputFlags;
 	float temp;
 	float outsideTemp;
+	float humidity = 0.0f; /* current unused */
 	uint8_t rawWeatherData[ RAW_WEATHER_SIZE ];
 	uint8_t weatherUrl[ WEATHER_URL_SIZE ];
 
@@ -68,7 +69,11 @@ uint8_t main( int argc, char ** argv )
 	if( transmitOutput )
 	{	
 		uint8_t httpData[512];
-		Comms_FormatTempData( deviceUUID, &temp, &outsideTemp, httpData, 512);
+		memset( httpData, 0U, 512 );
+		Comms_FormatTempData( deviceUUID, &temp, &humidity, httpData, 512);
+		Comms_Post(ip,port,"/raw",httpData);
+		memset( httpData, 0U, 512 );
+		Comms_FormatTempData( weatherUUID, &outsideTemp, &humidity, httpData, 512);
 		Comms_Post(ip,port,"/raw",httpData);
 	}
 	
