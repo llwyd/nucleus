@@ -59,6 +59,7 @@ extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * 
 
     freeaddrinfo(servinfo);
 
+    close( sock );
 }
 
 extern void Comms_Get(  uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * data, uint16_t len)
@@ -86,4 +87,6 @@ extern void Comms_Get(  uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * 
     int rcv = recv( sock, data, len, 0U);
 
     freeaddrinfo(servinfo);
+
+    close( sock );
 }
