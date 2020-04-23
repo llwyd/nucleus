@@ -7,6 +7,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 import plotly
+import devices as dv
 from dash.dependencies import Input, Output
 import numpy as np
 import os
@@ -88,14 +89,20 @@ def static_temp_graph(value):
     data = {
             'x':[],
             'y':[],
+            't':[],
             'z':[],}
 
     for d in todays_data:
-        data['x'].append(d.timestamp)
-        data['y'].append(d.temperature)
+        if(d.deviceID==dv.devices[0]['deviceID']):
+            data['x'].append(d.timestamp)
+            data['y'].append(d.temperature)
+        elif(d.deviceID==dv.devices[1]['deviceID']):
+            data['z'].append(d.temperature)
+            data['t'].append(d.timestamp)
     figure={
         'data': [
-            {'x': data['x'], 'y': data['y'], 'type': 'scatter', 'name': 'Device'}
+            {'x': data['x'], 'y': data['y'], 'type': 'scatter', 'name': 'Inside'},
+            {'x': data['t'], 'y': data['z'], 'type': 'scatter', 'name': 'Outside'}
         ],
         'layout': {
             'title': 'Home Temperature Monitoring',

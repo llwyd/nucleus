@@ -7,4 +7,5 @@ hardware/temperature/apikey.h
 hardware/.vscode
 network
 network.c
+homepage/devices.py
 homepage/__pycache__/*
