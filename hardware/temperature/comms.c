@@ -31,9 +31,9 @@ extern void Comms_ExtractTemp( uint8_t * buffer, float * temp)
 	}
 }
 
-extern void Comms_FormatTempData( const uint8_t * deviceID, float * inside, float * outside, uint8_t * buffer,uint16_t len)
+extern void Comms_FormatTempData( const uint8_t * deviceID, float * temp, float * humidity, uint8_t * buffer,uint16_t len)
 {
-    snprintf(buffer,len,"{\"device_id\":\"%s\",\"inside_temp\": \"%.2f\",\"outside_temp\": \"%.2f\"}", deviceID, *inside, *outside);
+    snprintf(buffer,len,"{\"device_id\":\"%s\",\"temperature\": \"%.2f\"}", deviceID, *temp);
 }
 
 extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * data)
@@ -42,6 +42,7 @@ extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * 
 	struct addrinfo hints;
 	struct addrinfo *servinfo;
 
+	memset( &hints, 0U, sizeof( hints ) );
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
@@ -49,7 +50,10 @@ extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * 
     snprintf(httpRequest, REQUEST_SIZE,"POST %s HTTP/1.1\r\nHost: %s:%s\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",path,ip, port, (int)strlen(data), data);
 
 
-    getaddrinfo( ip, port, &hints, &servinfo );
+    if( ( status = getaddrinfo( ip, port, &hints, &servinfo ) ) !=0U )
+	{
+		fprintf( stderr, "Comms Error: %s\n", gai_strerror( status ) );	
+	}
 
     int sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 
@@ -68,6 +72,8 @@ extern void Comms_Get(  uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * 
 	struct addrinfo hints;
 	struct addrinfo *servinfo;
 
+
+	memset( &hints, 0U, sizeof( hints ) );
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
