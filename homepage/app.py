@@ -33,10 +33,11 @@ db = SQLAlchemy(app.server)
 class Readings(db.Model):
     __tablename__ = "readings"
     id              = db.Column(db.Integer, primary_key=True)       #id for each record in the database
-    deviceID        = db.Column(db.String(64))                      #id of the unit
-    datestamp       = db.Column(db.String(128))                     #datestamp
-    temperature     = db.Column(db.String(16))                      #temperature
-    humidity        = db.Column(db.String(16))                      #humidity
+    deviceID        = db.Column(db.String(64))                      # id of the unit
+    datestamp       = db.Column(db.String(32))                     	# datestamp
+    timestamp       = db.Column(db.String(32))                     	# timestamp
+    temperature     = db.Column(db.String(16))                      # temperature
+    humidity        = db.Column(db.String(16))                      # humidity
 
 #   Entry point for the website
 app.layout = html.Div(children=[
@@ -75,26 +76,34 @@ index_page = html.Div([
 @app.callback(Output('last-update', 'children'),[Input('interval-component','n_intervals')])
 def last_update(n):
 	last_entry = Readings.query.order_by(Readings.id.desc()).first()
-	return [ html.Span("Last Update: " + str( last_entry.datestamp ) ) ]
+	return [ html.Span("Last Update: " + str( last_entry.datestamp ) +" at " +str( last_entry.timestamp ) ) ]
 
 #   Temperature graph
 @app.callback(Output('static-temp-graph', 'figure'),[Input('interval-component','n_intervals')])
 def static_temp_graph(value):
-    data={}
-    print("Hello")
-    data['y']=np.random.rand(1000);
-    data['x']=np.linspace(0,999,1000);
+    todays_date 		= dt.datetime.now().strftime('%Y-%m-%d')
+    yesterdays_date 	= (dt.datetime.now() - dt.timedelta(days=1)).strftime('%Y-%m-%d') 
+
+    todays_data = db.session.query( Readings ).filter(Readings.datestamp == todays_date).all()
+    data = {
+            'x':[],
+            'y':[],
+            'z':[],}
+
+    for d in todays_data:
+        data['x'].append(d.timestamp)
+        data['y'].append(d.temperature)
     figure={
         'data': [
-            {'x': data['x'], 'y': data['y'], 'type': 'scatter', 'name': 'Noise'}
+            {'x': data['x'], 'y': data['y'], 'type': 'scatter', 'name': 'Device'}
         ],
         'layout': {
-            'title': 'Noise',
+            'title': 'Home Temperature Monitoring',
             'xaxis': {
                 'title': 'Time (Seconds)'
             },
             'yaxis': {
-                'title': 'Amplitude'
+                'title': 'Temperature (Degrees)'
             }
         },
 
@@ -104,11 +113,13 @@ def static_temp_graph(value):
 @app.server.route('/raw', methods = ['GET', 'POST'])
 def raw_data():
     if request.method == 'POST':
-        timestamp = dt.datetime.now()
+        datestamp = dt.datetime.now().strftime('%Y-%m-%d')
+        timestamp = dt.datetime.now().strftime('%H:%M:%S')
         raw = request.get_json(force=True)
         print(raw)
         reading = Readings(	deviceID 	= raw['device_id'],
-				datestamp 				= timestamp,
+				datestamp 				= datestamp,
+				timestamp 				= timestamp,
 				temperature 			= raw['temperature'],
 				humidity 				= raw['humidity'])
         db.session.add(reading)
