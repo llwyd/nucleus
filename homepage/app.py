@@ -121,7 +121,7 @@ def static_temp_graph(value):
 def raw_data():
     if request.method == 'POST':
         datestamp = dt.datetime.now().strftime('%Y-%m-%d')
-        timestamp = dt.datetime.now().strftime('%H:%M:%S')
+        timestamp = dt.datetime.now().strftime('%H:%M')
         raw = request.get_json(force=True)
         print(raw)
         reading = Readings(	deviceID 	= raw['device_id'],
