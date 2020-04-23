@@ -110,5 +110,9 @@ def raw_data():
         db.session.commit()
     return 'ta pal\n'
 
+@app.server.route('/dump', methods = ['GET', 'POST'])
+def dump_data():
+	return render_template("raw_data.html", readings = Readings.query.all())
+
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0')
