@@ -54,9 +54,8 @@ def display_page(pathname):
 #   Static Index Page
 index_page = html.Div([
     html.H1(children='Home Assistant Version 0.1'),
-    html.H3(children='Temperature Data'),
-    html.H3(children='Server Info'),
-    dcc.Interval(   id='interval-component',
+   	html.Div(id = 'last-update'), 
+	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
                 ),
@@ -71,6 +70,12 @@ index_page = html.Div([
     #                ),
     dcc.Graph(id='static-temp-graph')
 ])
+
+#last update text
+@app.callback(Output('last-update', 'children'),[Input('interval-component','n_intervals')])
+def last_update(n):
+	last_entry = Readings.query.order_by(Readings.id.desc()).first()
+	return [ html.Span("Last Update: " + str( last_entry.datestamp ) ) ]
 
 #   Temperature graph
 @app.callback(Output('static-temp-graph', 'figure'),[Input('interval-component','n_intervals')])
