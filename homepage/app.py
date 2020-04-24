@@ -1,6 +1,7 @@
 from flask import Flask, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_basicauth import BasicAuth
+from sqlalchemy import or_
 import datetime as dt
 import dash
 import dash_core_components as dcc
@@ -85,7 +86,7 @@ def static_temp_graph(value):
     todays_date 		= dt.datetime.now().strftime('%Y-%m-%d')
     yesterdays_date 	= (dt.datetime.now() - dt.timedelta(days=1)).strftime('%Y-%m-%d') 
 
-    todays_data = db.session.query( Readings ).filter(Readings.datestamp == todays_date).all()
+    todays_data = db.session.query( Readings ).filter( or_(Readings.datestamp == todays_date, Readings.datestamp == yesterdays_date) ).all()
     data = {
             'x':[],
             'y':[],
