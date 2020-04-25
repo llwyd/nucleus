@@ -110,9 +110,9 @@ def static_temp_graph(value):
             {'x': data['t'], 'y': data['z'], 'type': 'scatter', 'name': 'Outside'}
         ],
         'layout': {
-            'title': 'Home Temperature Monitoring',
+            'title': '24 Hour Temperature Monitoring',
             'xaxis': {
-                'title': 'Time (Seconds)'
+                'title': 'Time'
             },
             'yaxis': {
                 'title': 'Temperature (Degrees)'
