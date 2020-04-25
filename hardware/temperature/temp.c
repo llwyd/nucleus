@@ -16,7 +16,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "apikey.h"
-#include "comms.h"
+#include "../common/comms.h"
 #include "sensor.h"
 
 
