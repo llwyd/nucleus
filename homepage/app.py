@@ -20,7 +20,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 app.config.suppress_callback_exceptions = True
 
-app.title='home Assistant v 0.0.1'
+app.title='Home Assistant'
 app.server.config["DEBUG"] = True
 
 
@@ -30,6 +30,8 @@ app.server.config["SQLALCHEMY_POOL_RECYCLE"] = 299
 app.server.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app.server)
+
+server_uptime = "N/a"
 
 # Database model
 class Readings(db.Model):
@@ -56,8 +58,9 @@ def display_page(pathname):
 
 #   Static Index Page
 index_page = html.Div([
-    html.H1(children='Home Assistant Version 0.1'),
+    html.H1(children='Home Assistant'),
    	html.Div(id = 'last-update'), 
+    html.Div(id = 'server-uptime'),
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
@@ -74,11 +77,16 @@ index_page = html.Div([
     dcc.Graph(id='static-temp-graph')
 ])
 
-#last update text
+# last update text
 @app.callback(Output('last-update', 'children'),[Input('interval-component','n_intervals')])
 def last_update(n):
 	last_entry = Readings.query.order_by(Readings.id.desc()).first()
 	return [ html.Span("Last Update: " + str( last_entry.datestamp ) +" at " +str( last_entry.timestamp ) ) ]
+
+# server uptime
+@app.callback(Output('server-uptime', 'children'),[Input('interval-component','n_intervals')])
+def update_uptime(n):
+    return [ html.Span("Server Uptime: " + str(server_uptime))]	
 
 #   Temperature graph
 @app.callback(Output('static-temp-graph', 'figure'),[Input('interval-component','n_intervals')])
