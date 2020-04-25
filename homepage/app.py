@@ -86,6 +86,8 @@ def static_temp_graph(value):
     todays_date 		= dt.datetime.now().strftime('%Y-%m-%d')
     yesterdays_date 	= (dt.datetime.now() - dt.timedelta(days=1)).strftime('%Y-%m-%d') 
 
+    yesterdays_time 	= (dt.datetime.now() - dt.timedelta(days=1)) 
+    
     todays_data = db.session.query( Readings ).filter( or_(Readings.datestamp == todays_date, Readings.datestamp == yesterdays_date) ).all()
     data = {
             'x':[],
@@ -94,12 +96,14 @@ def static_temp_graph(value):
             'z':[],}
 
     for d in todays_data:
-        if(d.deviceID==dv.devices[0]['deviceID']):
-            data['x'].append(d.timestamp)
-            data['y'].append(d.temperature)
-        elif(d.deviceID==dv.devices[1]['deviceID']):
-            data['z'].append(d.temperature)
-            data['t'].append(d.timestamp)
+        d_time = dt.datetime.strptime(d.datestamp + " " + d.timestamp,'%Y-%m-%d %H:%M')
+        if(d_time >= yesterdays_time):
+            if(d.deviceID==dv.devices[0]['deviceID']):
+                data['x'].append(d.timestamp)
+                data['y'].append(d.temperature)
+            elif(d.deviceID==dv.devices[1]['deviceID']):
+                data['z'].append(d.temperature)
+                data['t'].append(d.timestamp)
     figure={
         'data': [
             {'x': data['x'], 'y': data['y'], 'type': 'scatter', 'name': 'Inside'},
