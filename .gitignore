@@ -2,6 +2,7 @@
 *.db
 temp
 uuid
+uptime
 hardware/bin/*
 hardware/temperature/apikey.h
 hardware/.vscode
