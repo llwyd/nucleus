@@ -31,6 +31,24 @@ extern void Comms_ExtractTemp( uint8_t * buffer, float * temp)
 	}
 }
 
+
+extern void Comms_FormatData( uint8_t * buffer, uint16_t len, json_data_t * dataItem, int numItems )
+{
+	char tempBuffer[ 128 ];
+	memset( tempBuffer, 0, 128 );
+	memset( buffer, 0, len);
+
+	/* insert the first json data structure */
+	strcat( buffer, "{");
+	for( int i =0; i < numItems; i++ )
+	{
+		snprintf(tempBuffer, 128, "\"%s\":\"%d\",",dataItem[i].name, dataItem[i].data.i);
+		strcat( buffer, tempBuffer );
+		memset( tempBuffer, 0, 128);
+	}
+	strcat( buffer, "\b}");
+}
+
 extern void Comms_FormatTempData( const uint8_t * deviceID, float * temp, float * humidity, uint8_t * buffer,uint16_t len)
 {
     snprintf(buffer,len,"{\"device_id\":\"%s\",\"temperature\": \"%.2f\",\"humidity\":\"%.2f\"}", deviceID, *temp, *humidity);
