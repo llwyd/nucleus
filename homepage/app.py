@@ -68,6 +68,7 @@ index_page = html.Div([
     html.H1(children='Home Assistant'),
    	html.Div(id = 'last-update'), 
     html.Div(id = 'server-uptime'),
+    html.Div(id = 'database-size'),
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
@@ -89,6 +90,15 @@ def update_uptime(n):
         return [ html.Span("Server Uptime: " + str(server_uptime))]	
     else:
         return [ html.Span("Server Uptime: ????")]	
+
+# database size
+@app.callback(Output('database-size', 'children'),[Input('interval-component','n_intervals')])
+def update_uptime(n):
+    if( cache.get("database_size") is not None):
+        database_size = cache.get("database_size")
+        return [ html.Span("Database Size: " + str(database_size) + "MB")]	
+    else:
+        return [ html.Span("Database Size: ????")]	
 
 #   Temperature graph
 @app.callback(Output('static-temp-graph', 'figure'),[Input('interval-component','n_intervals')])
@@ -152,8 +162,11 @@ def raw_data():
 def receive_stats():
     if request.method == 'POST':
         raw = request.get_json(force = True)
-        server_uptime = str( raw['Days']) + " Day(s), " + str(raw['Hours']) + " hour(s) and " + str(raw['Minutes']) + " minute(s)."
-        cache.set("server_uptime",server_uptime);
+        server_uptime = str( raw['days']) + " Day(s), " + str(raw['hours']) + " hour(s) and " + str(raw['minutes']) + " minute(s)."
+        database_size = int(raw['database_size'])
+        databaze_size = int( database_size / 1000 )
+        cache.set("server_uptime",server_uptime)
+        cache.set("database_size",str(databaze_size))
     return 'ta pal\n'
 
 @app.server.route('/dump', methods = ['GET', 'POST'])
