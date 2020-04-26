@@ -5,6 +5,7 @@
 #include <math.h>
 #include "../common/comms.h"
 #include <string.h>
+#include <unistd.h>
 
 static json_data_t timeData[ 4 ];
 static uint8_t httpBuffer[ 512 ];
@@ -19,12 +20,27 @@ static void PopulateStruct( json_data_t * strct, char * name, int * data)
 
 int main (int argc, char ** argv)
 {
-	char * databasePath = "../../homepage/app.db";
+	char * databasePath;
+	int inputFlags;
+
+	while((inputFlags = getopt( argc, argv, "f:" )) != -1)
+	{
+		switch(inputFlags)
+		{
+			case 'f':
+				databasePath = optarg;
+				break;
+		}
+	}
+
 	/* Retrieve system info */
 	struct sysinfo info;
 	struct stat st;
 	sysinfo(&info);
-	stat(databasePath, &st);
+	if(databasePath != NULL)
+	{
+		stat(databasePath, &st);
+	}
 
 	/* Convert into days, hours and minutes */
 	long uptime = info.uptime;
@@ -42,7 +58,11 @@ int main (int argc, char ** argv)
 	PopulateStruct( &timeData[2], "minutes", 		&minutes);
 
 	/* Retrieve database size information */
-	int size = st.st_size;
+	int size = 0;
+	if(databasePath != NULL)
+	{
+		size = st.st_size;
+	}
 	printf("Database Size: %d Bytes\n",size);	
 	PopulateStruct( &timeData[3], "database_size", 	&size);
  	

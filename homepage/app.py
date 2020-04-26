@@ -162,6 +162,7 @@ def raw_data():
 def receive_stats():
     if request.method == 'POST':
         raw = request.get_json(force = True)
+        print(raw)
         server_uptime = str( raw['days']) + " Day(s), " + str(raw['hours']) + " hour(s) and " + str(raw['minutes']) + " minute(s)."
         database_size = int(raw['database_size'])
         databaze_size = int( database_size / 1000 )
