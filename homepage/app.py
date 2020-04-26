@@ -1,6 +1,7 @@
 from flask import Flask, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_basicauth import BasicAuth
+from flask_caching import Cache
 from sqlalchemy import or_
 import datetime as dt
 import dash
@@ -23,6 +24,14 @@ app.config.suppress_callback_exceptions = True
 app.title='Home Assistant'
 app.server.config["DEBUG"] = True
 
+cache_config = {
+    "DEBUG": True,         
+    "CACHE_TYPE": "simple", 
+    "CACHE_DEFAULT_TIMEOUT": 300
+}
+
+app.server.config.from_mapping(cache_config)
+cache = Cache(app.server)
 
 SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
 app.server.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
@@ -30,8 +39,6 @@ app.server.config["SQLALCHEMY_POOL_RECYCLE"] = 299
 app.server.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app.server)
-
-server_uptime = "N/a"
 
 # Database model
 class Readings(db.Model):
@@ -65,15 +72,6 @@ index_page = html.Div([
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
                 ),
-    #dcc.Dropdown(   id='date-dropdown',
-    #                style={'height':'35px','width':'200px'},
-    #                options=[
-    #                            {'label':'test','value':'1234'},
-    #                        ],
-    #                clearable=False,
-    #                placeholder="Select a data"
-    #                #value = 0
-    #                ),
     dcc.Graph(id='static-temp-graph')
 ])
 
@@ -86,7 +84,11 @@ def last_update(n):
 # server uptime
 @app.callback(Output('server-uptime', 'children'),[Input('interval-component','n_intervals')])
 def update_uptime(n):
-    return [ html.Span("Server Uptime: " + str(server_uptime))]	
+    if( cache.get("server_uptime") is not None):
+        server_uptime = cache.get("server_uptime")
+        return [ html.Span("Server Uptime: " + str(server_uptime))]	
+    else:
+        return [ html.Span("Server Uptime: ????")]	
 
 #   Temperature graph
 @app.callback(Output('static-temp-graph', 'figure'),[Input('interval-component','n_intervals')])
@@ -150,7 +152,8 @@ def raw_data():
 def receive_stats():
     if request.method == 'POST':
         raw = request.get_json(force = True)
-        server_uptime = str( raw['Days']) + "Days, " + str(raw['Hours']) + " hours and " + str(raw['Minutes']) + " minutes."
+        server_uptime = str( raw['Days']) + " Day(s), " + str(raw['Hours']) + " hour(s) and " + str(raw['Minutes']) + " minute(s)."
+        cache.set("server_uptime",server_uptime);
     return 'ta pal\n'
 
 @app.server.route('/dump', methods = ['GET', 'POST'])
