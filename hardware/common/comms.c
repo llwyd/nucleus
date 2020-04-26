@@ -42,11 +42,15 @@ extern void Comms_FormatData( uint8_t * buffer, uint16_t len, json_data_t * data
 	strcat( buffer, "{");
 	for( int i =0; i < numItems; i++ )
 	{
-		snprintf(tempBuffer, 128, "\"%s\":\"%d\",",dataItem[i].name, dataItem[i].data.i);
+		snprintf(tempBuffer, 128, "\"%s\":\"%d\"",dataItem[i].name, dataItem[i].data.i);
 		strcat( buffer, tempBuffer );
+		if( i < (numItems - 1))
+		{
+			strcat( buffer, ",");
+		}
 		memset( tempBuffer, 0, 128);
 	}
-	strcat( buffer, "\b}");
+	strcat( buffer, "}");
 }
 
 extern void Comms_FormatTempData( const uint8_t * deviceID, float * temp, float * humidity, uint8_t * buffer,uint16_t len)

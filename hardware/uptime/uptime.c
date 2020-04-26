@@ -37,6 +37,9 @@ int main (int argc, char ** argv)
 	PopulateStruct( &timeData[2], "Minutes", 	&minutes);
 
  	Comms_FormatData( httpBuffer, 512, timeData, 3 );
+	printf("%s\n",httpBuffer);
+
+	Comms_Post( "0.0.0.0", "8050", "/stats", httpBuffer);
 
 	printf("%d Days, %d hours and %d minutes\n",days, hours, minutes);
 	return 0;

@@ -146,6 +146,13 @@ def raw_data():
         db.session.commit()
     return 'ta pal\n'
 
+@app.server.route('/stats', methods = ['GET', 'POST'])
+def receive_stats():
+    if request.method == 'POST':
+        raw = request.get_json(force = True)
+        server_uptime = str( raw['Days']) + "Days, " + str(raw['Hours']) + " hours and " + str(raw['Minutes']) + " minutes."
+    return 'ta pal\n'
+
 @app.server.route('/dump', methods = ['GET', 'POST'])
 def dump_data():
 	return render_template("raw_data.html", readings = Readings.query.all())
