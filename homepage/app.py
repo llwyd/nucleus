@@ -132,14 +132,15 @@ def static_temp_graph(value):
         'layout': {
             'plot_bgcolor': 'rgba(0,0,0,0)',
             'paper_bgcolor': 'rgba(0,0,0,0)',
-            'title': '24 Hour Temperature Monitoring',
             'xaxis': {
                 'title': 'Time',
                 'showgrid': False,
+                'color':'#386ddb'
             },
             'yaxis': {
                 'title': 'Temperature (Degrees)',
                 'showgrid': False,
+                'color':'#386ddb'
             }
         },
 
