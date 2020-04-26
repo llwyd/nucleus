@@ -73,7 +73,7 @@ index_page = html.Div([
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
                 ),
-    dcc.Graph(id='static-temp-graph')
+    dcc.Graph(id='static-temp-graph',className='tempGraph')
 ])
 
 # last update text
@@ -130,12 +130,16 @@ def static_temp_graph(value):
             {'x': data['t'], 'y': data['z'], 'type': 'scatter', 'name': 'Outside'}
         ],
         'layout': {
+            'plot_bgcolor': 'rgba(0,0,0,0)',
+            'paper_bgcolor': 'rgba(0,0,0,0)',
             'title': '24 Hour Temperature Monitoring',
             'xaxis': {
-                'title': 'Time'
+                'title': 'Time',
+                'showgrid': False,
             },
             'yaxis': {
-                'title': 'Temperature (Degrees)'
+                'title': 'Temperature (Degrees)',
+                'showgrid': False,
             }
         },
 
