@@ -65,7 +65,7 @@ def display_page(pathname):
 
 #   Static Index Page
 index_page = html.Div([
-    html.H1(children='Home Assistant'),
+    html.H1(children='H O M E'),
    	html.Div(id = 'last-update'), 
     html.Div(id = 'server-uptime'),
     html.Div(id = 'database-size'),
