@@ -7,6 +7,7 @@
 #include "mem.h"
 #include "driver/i2c_master.h"
 #include "user_config.h"
+#include <stdio.h>
 
 //Define Timer
 static  os_timer_t t;
@@ -17,6 +18,15 @@ static struct station_config stat;
 static char addr = 0x48;
 
 static char data[2] = {0,0};
+static char text[64] = {0};
+
+static const float tempScaling = 0.0625f;
+
+float Node_ConvertTemp( char *d )
+{
+	int rawTemp = ( (( uint16_t )d[ 0 ] << 4) | d[ 1 ] >> 4 );
+	return ((float)rawTemp * tempScaling);
+}
 
 /* Timer */
 void timer(void *arg)
@@ -30,7 +40,10 @@ void timer(void *arg)
 		data[1] = i2c_master_readByte();
 		i2c_master_send_nack();
 		i2c_master_stop();
-		os_printf("%x,%x\n",data[0],data[1]);
+		/* This stupid conversion is because float printing doesnt work properly */
+		float temperature = Node_ConvertTemp(data);
+		int temp = (int)(temperature*100);
+		os_printf("Temperature: %d.%d\n",temp/100,temp%100);
 	}
 	else
 	{
