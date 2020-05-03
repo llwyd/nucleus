@@ -1,6 +1,6 @@
 CC = xtensa-lx106-elf-gcc
-CFLAGS = -I. -mlongcalls
-LDLIBS = -nostdlib -Wl,--start-group -lmain -lnet80211 -lwpa -llwip -lpp -lphy -lc -Wl,--end-group -lgcc -I$../../esp-open-sdk/sdk/include/ -L$../../esp-open-sdk/sdk/lib
+CFLAGS = -I. -mlongcalls -I../../../esp-open-sdk/sdk/driver_lib/include -I../../../esp-open-sdk/sdk/include
+LDLIBS = -L. -L../../../esp-open-sdk/sdk/lib -nostdlib -Wl,--start-group -lmain -lnet80211 -lwpa -llwip -lpp -lphy -lc -ldriver -Wl,--end-group -lgcc 
 LDFLAGS = -Teagle.app.v6.ld
 
 node-0x00000.bin: node
