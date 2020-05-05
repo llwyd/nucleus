@@ -69,40 +69,26 @@ void ICACHE_FLASH_ATTR Node_Disconnect(void *arg){
   os_printf("Server Disconnected!\n");
 }
 
-/* Find IP from DNS */
-void ICACHE_FLASH_ATTR Node_FoundDNS( const char *name, ip_addr_t *ipaddr, void *arg )
-{
-	struct espconn *eDNS=(struct espconn *)arg;
-	if( ipaddr == NULL )
-	{
-		os_printf("ipaddr NULL\n");
-		return;
-	}
-	//Set the IP
-	tcpIP.addr=ipaddr->addr;
-	os_memcpy(eDNS->proto.tcp->remote_ip,&ipaddr->addr,4);
-	
-	//Set the remote port
-	eDNS->proto.tcp->remote_port = port;
-	//Set the local port
-	eDNS->proto.tcp->local_port = espconn_port();
-	//Register Callback Functions
-	espconn_regist_connectcb(	eDNS, Node_Connect); 
-	espconn_regist_reconcb(		eDNS, Node_Reconnect);
-	espconn_regist_disconcb(	eDNS, Node_Disconnect);  
-	//Connect
-	espconn_connect(eDNS);	
-}
-
 /* Setup TCP Connection */
 void ICACHE_FLASH_ATTR Node_TCPSetup( void )
 {
-	tcpIP.addr = 0;
 	e.proto.tcp = &tcp;
 	e.type = ESPCONN_TCP;
 	e.state = ESPCONN_NONE;
+
 	os_printf("Attempting TCP Connection\n");
-	espconn_gethostbyname(&e, domain, &tcpIP, Node_FoundDNS);
+	//Set the IP
+	ipaddr_aton( domain,&e.proto.tcp->remote_ip);
+	//Set the remote port
+	e.proto.tcp->remote_port = port;
+	//Set the local port
+	e.proto.tcp->local_port = espconn_port();
+	//Register Callback Functions
+	espconn_regist_connectcb(	&e, Node_Connect); 
+	espconn_regist_reconcb(		&e, Node_Reconnect);
+	espconn_regist_disconcb(	&e, Node_Disconnect);  
+	//Connect
+	espconn_connect(&e);
 }
 
 /* Setup WiFi connection */
