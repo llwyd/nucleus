@@ -8,47 +8,101 @@
 #include "driver/i2c_master.h"
 #include "user_config.h"
 #include <stdio.h>
+#include <string.h>
 
-//Define Timer
+/* Period in seconds to update the server */
+//#define HTTP_UPDATE_PERIOD ( 5 * 60 )
+#define HTTP_UPDATE_PERIOD ( 10 )
+
+/* Define Timer */
 static  os_timer_t t;
 
-// define station config struct
+/*  define station config struct */
 static struct station_config stat;
+
+/* TCP Structs */
+static struct espconn e;
+static struct _esp_tcp tcp;
+ip_addr_t tcpIP;
 
 static char addr = 0x48;
 
 static char data[2] = {0,0};
-static char text[64] = {0};
+static char httpData[256] = {0};
+static char httpRequest[512] ={0};
 
 static const float tempScaling = 0.0625f;
+static float temperature = 0.0f;
+static float humidity = 0.0f;
 
-float Node_ConvertTemp( char *d )
-{
-	int rawTemp = ( (( uint16_t )d[ 0 ] << 4) | d[ 1 ] >> 4 );
-	return ((float)rawTemp * tempScaling);
+static volatile timerCount = 0;
+
+/*  TCP Receive Callback */
+void ICACHE_FLASH_ATTR Node_Rx(void *arg,char*pdata,unsigned short len){
+  os_printf("Data Received\n");
+  os_printf("%s\n",pdata);
 }
 
-/* Timer */
-void timer(void *arg)
+/*  TCP Sent Callback */
+void ICACHE_FLASH_ATTR Node_Tx(void *arg){
+  os_printf("Data Sent\n");
+}
+
+/*  TCP Connect Callback */
+void ICACHE_FLASH_ATTR Node_Connect(void *arg){
+  struct espconn *eDNS=(struct espconn *)arg;
+  os_printf("Connection Successful!\n");
+  //Register Rx and Tx callback functions
+  espconn_regist_recvcb(eDNS,Node_Rx);
+  espconn_regist_sentcb(eDNS,Node_Tx);
+  //Send data
+  espconn_send(&e,httpRequest,os_strlen(httpRequest));
+}
+
+/*  TCP Reconnect Callback */
+void ICACHE_FLASH_ATTR Node_Reconnect(void  *arg, sint8 err){
+  os_printf("Reconnecting...\n");
+}
+
+/*  TCP Disconnect Callback */
+void ICACHE_FLASH_ATTR Node_Disconnect(void *arg){
+  os_printf("Server Disconnected!\n");
+}
+
+/* Find IP from DNS */
+void ICACHE_FLASH_ATTR Node_FoundDNS( const char *name, ip_addr_t *ipaddr, void *arg )
 {
-	i2c_master_start();
-	i2c_master_writeByte( 0x91 );
-	if(i2c_master_checkAck())
+	struct espconn *eDNS=(struct espconn *)arg;
+	if( ipaddr == NULL )
 	{
-		data[0] = i2c_master_readByte();
-		i2c_master_send_ack();
-		data[1] = i2c_master_readByte();
-		i2c_master_send_nack();
-		i2c_master_stop();
-		/* This stupid conversion is because float printing doesnt work properly */
-		float temperature = Node_ConvertTemp(data);
-		int temp = (int)(temperature*100);
-		os_printf("Temperature: %d.%d\n",temp/100,temp%100);
+		os_printf("ipaddr NULL\n");
+		return;
 	}
-	else
-	{
-		os_printf("I2C Error\n");
-	}
+	//Set the IP
+	tcpIP.addr=ipaddr->addr;
+	os_memcpy(eDNS->proto.tcp->remote_ip,&ipaddr->addr,4);
+	
+	//Set the remote port
+	eDNS->proto.tcp->remote_port = port;
+	//Set the local port
+	eDNS->proto.tcp->local_port = espconn_port();
+	//Register Callback Functions
+	espconn_regist_connectcb(	eDNS, Node_Connect); 
+	espconn_regist_reconcb(		eDNS, Node_Reconnect);
+	espconn_regist_disconcb(	eDNS, Node_Disconnect);  
+	//Connect
+	espconn_connect(eDNS);	
+}
+
+/* Setup TCP Connection */
+void ICACHE_FLASH_ATTR Node_TCPSetup( void )
+{
+	tcpIP.addr = 0;
+	e.proto.tcp = &tcp;
+	e.type = ESPCONN_TCP;
+	e.state = ESPCONN_NONE;
+	os_printf("Attempting TCP Connection\n");
+	espconn_gethostbyname(&e, domain, &tcpIP, Node_FoundDNS);
 }
 
 /* Setup WiFi connection */
@@ -65,6 +119,58 @@ void ICACHE_FLASH_ATTR Node_WifiSetup()
 	wifi_station_set_hostname("Sensor Node\n");
 	//Connect to Wifi
 	wifi_station_connect();
+}
+
+float Node_ConvertTemp( char *d )
+{
+	int rawTemp = ( (( uint16_t )d[ 0 ] << 4) | d[ 1 ] >> 4 );
+	return ((float)rawTemp * tempScaling);
+}
+
+void Node_FormatTempData( const uint8_t * deviceID, float * temp, float * hum, uint8_t * buffer)
+{
+	int t = (int)(*temp*100);
+	int h = (int)(*hum*100);
+    os_sprintf(buffer,"{\"device_id\":\"%s\",\"temperature\": \"%d.%d\",\"humidity\":\"%d.%d\"}", deviceID, t/100,t%100,h/100,h%100);
+}
+void Node_Post( void )
+{
+	memset(httpRequest,0x00,512);
+	os_sprintf(httpRequest, "POST %s HTTP/1.1\r\nHost: %s:%d\r\nContent-Type: application/json\r\nAccept: */*\r\nContent-Length: %d\r\nConnection:close\r\nUser-Agent: pi\r\n\r\n%s\r\n\r\n",path, domain, port, (int)strlen(httpData), httpData);
+	//os_printf("%s\n",httpRequest);
+	Node_TCPSetup();
+}
+
+/* Timer */
+void timer(void *arg)
+{
+	if( timerCount > HTTP_UPDATE_PERIOD)
+	{
+		i2c_master_start();
+		i2c_master_writeByte( (addr << 0x1) | 0x1 );
+		if(i2c_master_checkAck())
+		{
+			data[0] = i2c_master_readByte();
+			i2c_master_send_ack();
+			data[1] = i2c_master_readByte();
+			i2c_master_send_nack();
+			i2c_master_stop();
+			/* This stupid conversion is because float printing doesnt work properly */
+			temperature = Node_ConvertTemp(data);
+			memset(httpData,0x00,256);
+			Node_FormatTempData(deviceUUID,&temperature,&humidity,httpData);
+			Node_Post();
+		}
+		else
+		{
+			os_printf("I2C Error\n");
+		}
+		timerCount = 0;
+	}
+	else
+	{
+		timerCount++;
+	}
 }
 
 /* main function */
