@@ -112,6 +112,8 @@ def static_temp_graph(value):
     data = {
             'x':[],
             'y':[],
+            'p':[],
+            's':[],
             't':[],
             'z':[],}
 
@@ -119,15 +121,19 @@ def static_temp_graph(value):
         d_time = dt.datetime.strptime(d.datestamp + " " + d.timestamp,'%Y-%m-%d %H:%M')
         if(d_time >= yesterdays_time):
             if(d.deviceID==dv.devices[0]['deviceID']):
-                data['x'].append(d.timestamp)
                 data['y'].append(d.temperature)
+                data['x'].append(dt.datetime.strptime(d.timestamp,'%H:%M'))
             elif(d.deviceID==dv.devices[1]['deviceID']):
                 data['z'].append(d.temperature)
-                data['t'].append(d.timestamp)
+                data['t'].append(dt.datetime.strptime(d.timestamp,'%H:%M'))
+            elif(d.deviceID==dv.devices[2]['deviceID']):
+                data['p'].append(d.temperature)
+                data['s'].append(dt.datetime.strptime(d.timestamp,'%H:%M'))
     figure={
         'data': [
-            {'x': data['x'], 'y': data['y'], 'type': 'scatter', 'name': 'Inside'},
-            {'x': data['t'], 'y': data['z'], 'type': 'scatter', 'name': 'Outside'}
+            {'x': data['x'], 'y': data['y'], 'type': 'line', 'name': 'Inside'},
+            {'x': data['t'], 'y': data['z'], 'type': 'line', 'name': 'Outside'},
+            {'x': data['s'], 'y': data['p'], 'type': 'line', 'name': 'Bedroom'}
         ],
         'layout': {
             'plot_bgcolor': 'rgba(0,0,0,0)',
