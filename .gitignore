@@ -10,3 +10,8 @@ network
 network.c
 homepage/devices.py
 homepage/__pycache__/*
+
+*.bin
+firmware/node/user_config.h
+firmware/node/node
+
