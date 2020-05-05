@@ -122,13 +122,13 @@ def static_temp_graph(value):
         if(d_time >= yesterdays_time):
             if(d.deviceID==dv.devices[0]['deviceID']):
                 data['y'].append(d.temperature)
-                data['x'].append(dt.datetime.strptime(d.timestamp,'%H:%M'))
+                data['x'].append(d_time)
             elif(d.deviceID==dv.devices[1]['deviceID']):
                 data['z'].append(d.temperature)
-                data['t'].append(dt.datetime.strptime(d.timestamp,'%H:%M'))
+                data['t'].append(d_time)
             elif(d.deviceID==dv.devices[2]['deviceID']):
                 data['p'].append(d.temperature)
-                data['s'].append(dt.datetime.strptime(d.timestamp,'%H:%M'))
+                data['s'].append(d_time)
     figure={
         'data': [
             {'x': data['x'], 'y': data['y'], 'type': 'line', 'name': 'Inside'},
