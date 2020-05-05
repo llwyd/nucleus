@@ -138,6 +138,7 @@ def static_temp_graph(value):
         'layout': {
             'plot_bgcolor': 'rgba(0,0,0,0)',
             'paper_bgcolor': 'rgba(0,0,0,0)',
+            'legend':dict(font=dict(color='#386ddb')),
             'xaxis': {
                 'title': 'Time',
                 'showgrid': False,
