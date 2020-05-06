@@ -11,8 +11,8 @@
 #include <string.h>
 
 /* Period in seconds to update the server */
-//#define HTTP_UPDATE_PERIOD ( 5 * 60 )
-#define HTTP_UPDATE_PERIOD ( 10 )
+#define HTTP_UPDATE_PERIOD ( 5 * 60 )
+//#define HTTP_UPDATE_PERIOD ( 10 )
 
 /* Define Timer */
 static  os_timer_t t;
