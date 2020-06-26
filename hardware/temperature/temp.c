@@ -78,9 +78,14 @@ uint8_t main( int argc, char ** argv )
 		memset( httpData, 0U, 512 );
 		Comms_FormatTempData( deviceUUID, &temp, &humidity, httpData, 512);
 		Comms_Post(ip,port,"/raw",httpData);
+
 		memset( httpData, 0U, 512 );
 		Comms_FormatTempData( weatherUUID, &outsideTemp, &humidity, httpData, 512);
 		Comms_Post(ip,port,"/raw",httpData);
+
+		memset( httpData, 0U, 512 );
+		Comms_FormatStringData( deviceUUID, weatherWords, httpData, 512);
+		Comms_Post(ip,port,"/words",httpData);
 	}
 	
 	printf( "          Device ID:	%s\r\n", deviceUUID);

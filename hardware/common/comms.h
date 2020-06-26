@@ -21,6 +21,7 @@ json_data_t;
 
 extern void Comms_ExtractValue( uint8_t * buffer,uint8_t * outputBuffer, uint8_t * keyword);
 extern void Comms_FormatData( uint8_t * buffer, uint16_t len, json_data_t * dataItem, int numItems );
+extern void Comms_FormatStringData( const uint8_t * deviceID, uint8_t * data, uint8_t * buffer,uint16_t len);
 extern void Comms_ExtractTemp( uint8_t * buffer, float * temp);
 extern void Comms_FormatTempData( const uint8_t * deviceID, float * temp, float * humidity, uint8_t * buffer,uint16_t len);
 extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * data);

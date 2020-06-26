@@ -69,6 +69,11 @@ extern void Comms_FormatData( uint8_t * buffer, uint16_t len, json_data_t * data
 	strcat( buffer, "}");
 }
 
+extern void Comms_FormatStringData( const uint8_t * deviceID, uint8_t * data, uint8_t * buffer,uint16_t len)
+{
+    snprintf(buffer,len,"{\"device_id\":\"%s\",\"weather\": \"%s\"}", deviceID, data);
+}
+
 extern void Comms_FormatTempData( const uint8_t * deviceID, float * temp, float * humidity, uint8_t * buffer,uint16_t len)
 {
     snprintf(buffer,len,"{\"device_id\":\"%s\",\"temperature\": \"%.2f\",\"humidity\":\"%.2f\"}", deviceID, *temp, *humidity);

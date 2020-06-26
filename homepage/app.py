@@ -61,10 +61,23 @@ app.layout = html.Div(children=[
 #   URL Handler
 @app.callback(Output('page_content', 'children'),[Input('url', 'pathname')])
 def display_page(pathname):
-    return index_page
+    if pathname == '/meta':
+        return stats_page
+    else:
+        return index_page
 
 #   Static Index Page
 index_page = html.Div([
+    html.H1(children='H O M E'),
+    html.Div(id = 'weather-description'),
+	dcc.Interval(   id='interval-component',
+                    interval = 1000 * 60 * 5,
+                    n_intervals = 0
+                ),
+    dcc.Graph(id='static-temp-graph',className='tempGraph')
+])
+
+stats_page = html.Div([
     html.H1(children='H O M E'),
    	html.Div(id = 'last-update'), 
     html.Div(id = 'server-uptime'),
@@ -73,7 +86,6 @@ index_page = html.Div([
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
                 ),
-    dcc.Graph(id='static-temp-graph',className='tempGraph')
 ])
 
 # last update text
@@ -81,6 +93,15 @@ index_page = html.Div([
 def last_update(n):
 	last_entry = Readings.query.order_by(Readings.id.desc()).first()
 	return [ html.Span("Last Update: " + str( last_entry.datestamp ) +" at " +str( last_entry.timestamp ) ) ]
+
+# weather description
+@app.callback(Output('weather-description', 'children'),[Input('interval-component','n_intervals')])
+def update_uptime(n):
+    if( cache.get("weather_description") is not None):
+        weather_description = cache.get("weather_description")
+        return [ html.Span("Weather: " + str(weather_description))]	
+    else:
+        return [ html.Span("Weather: No idea :(")]	
 
 # server uptime
 @app.callback(Output('server-uptime', 'children'),[Input('interval-component','n_intervals')])
@@ -180,6 +201,15 @@ def receive_stats():
         databaze_size = int( database_size / 1000 )
         cache.set("server_uptime",server_uptime)
         cache.set("database_size",str(databaze_size))
+    return 'ta pal\n'
+
+@app.server.route('/words', methods = ['GET', 'POST'])
+def receive_weather():
+    if request.method == 'POST':
+        raw = request.get_json(force = True)
+        print(raw)
+        weather_description = raw['weather']
+        cache.set("weather_description", weather_description)
     return 'ta pal\n'
 
 @app.server.route('/dump', methods = ['GET', 'POST'])
