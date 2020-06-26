@@ -209,6 +209,7 @@ def receive_weather():
         raw = request.get_json(force = True)
         print(raw)
         weather_description = raw['weather']
+        weather_description = weather_description.capitalize();
         cache.set("weather_description", weather_description)
     return 'ta pal\n'
 
