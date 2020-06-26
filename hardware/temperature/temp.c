@@ -24,6 +24,7 @@
 
 #define RAW_WEATHER_SIZE ( 2048 )
 #define WEATHER_URL_SIZE ( 128 )
+#define WEATHER_KEYWORDS_SIZE ( 256 )
 
 // Settings flags
 static bool_t printColours = false;
@@ -38,6 +39,9 @@ uint8_t main( int argc, char ** argv )
 	uint8_t rawWeatherData[ RAW_WEATHER_SIZE ];
 	uint8_t weatherUrl[ WEATHER_URL_SIZE ];
 
+	uint8_t weatherWords[ WEATHER_KEYWORDS_SIZE ];
+	memset(weatherWords, 0x00, 256);
+	
 	uint8_t * ip;
 	uint8_t * port;
 	
@@ -65,6 +69,8 @@ uint8_t main( int argc, char ** argv )
 	
 	Comms_Get("api.openweathermap.org","80",weatherUrl,rawWeatherData,RAW_WEATHER_SIZE);
 	Comms_ExtractTemp( rawWeatherData, &outsideTemp);
+	
+	Comms_ExtractValue( rawWeatherData, weatherWords, "\"description\":");
 	Sensor_Read( &temp );
 	if( transmitOutput )
 	{	
@@ -81,5 +87,6 @@ uint8_t main( int argc, char ** argv )
 	printf( "           Location:	%s\r\n", weatherLocation);
 	printf(	"       Outside Temp:	%.2foC\r\n", outsideTemp);
 	printf( "        Inside Temp: 	%.2foC\r\n",temp );
+	printf( "   Weather Keywords:	%s\r\n", weatherWords);
 	return 0;
 }

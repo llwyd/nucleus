@@ -16,6 +16,21 @@ static const uint8_t * magicKey = "\"temp\":";
 
 static uint8_t httpRequest[ REQUEST_SIZE ];
 
+extern void Comms_ExtractValue( uint8_t * buffer,uint8_t * outputBuffer, uint8_t * keyword)
+{
+	uint8_t * p = strstr( buffer, keyword );
+	if( p!= NULL )
+	{
+		p+=(int)strlen(keyword);
+		uint8_t * pch = strchr(p,',');
+		*pch = '\0';
+		strcat(outputBuffer,p+1);
+		int stringLen = strlen(outputBuffer);	
+		*(outputBuffer+stringLen-1) = '\0';
+		*pch = ',';
+	}
+}
+
 /* 	This function searchers for the magic key, then replaces the following comma
 	with a \0.  I'm quite chuffed with this hack tbh */
 extern void Comms_ExtractTemp( uint8_t * buffer, float * temp)
@@ -28,6 +43,7 @@ extern void Comms_ExtractTemp( uint8_t * buffer, float * temp)
 		*pch = '\0';
 		*temp = atof( p );
 		*temp -= ABSOLUTE_ZERO;
+		*pch = ',';
 	}
 }
 
