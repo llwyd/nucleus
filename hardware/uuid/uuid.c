@@ -30,6 +30,10 @@ int main( void )
     const uint8_t * ip = "httpbin.org";
     const uint8_t * port = "80";
 
+	memset(httpRequest,0x00, 2048);
+
+	memset( &hints, 0U, sizeof(hints));
+
    	snprintf(httpRequest,sizeof(httpRequest),"GET /uuid HTTP/1.1\r\nHost: %s:%s\r\nAccept: */*\r\nUser-Agent: pi\r\n\r\n",ip, port);
 
     hints.ai_family = AF_UNSPEC;
