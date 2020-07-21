@@ -4,6 +4,7 @@ temp
 uuid
 uptime
 hardware/bin/*
+hardware/daemon/*
 hardware/temperature/apikey.h
 hardware/.vscode
 network
