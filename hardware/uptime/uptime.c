@@ -68,7 +68,7 @@ int main (int argc, char ** argv)
  	
 	Comms_FormatData( httpBuffer, 512, timeData, 4 );
 
-	Comms_Post( "0.0.0.0", "8050", "/stats", httpBuffer);
+	Comms_Post( "0.0.0.0", "80", "/stats", httpBuffer);
 
 	printf("%d Days, %d hours and %d minutes\n",days, hours, minutes);
 	return 0;
