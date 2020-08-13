@@ -167,7 +167,7 @@ def static_temp_graph(value):
                 'color':'#386ddb'
             },
             'yaxis': {
-                'title': 'Temperature (Celcius)',
+                'title': 'Temperature (Celsius)',
                 'showgrid': False,
                 'color':'#386ddb'
             }
