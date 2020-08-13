@@ -158,6 +158,7 @@ def static_temp_graph(value):
             {'x': data['s'], 'y': data['p'], 'type': 'line', 'name': 'Bedroom'}
         ],
         'layout': {
+			'height': 700,
             'plot_bgcolor': 'rgba(0,0,0,0)',
             'paper_bgcolor': 'rgba(0,0,0,0)',
             'legend':dict(font=dict(color='#386ddb')),
