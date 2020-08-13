@@ -103,6 +103,8 @@ void ICACHE_FLASH_ATTR Node_WifiSetup()
 	wifi_station_set_config(&stat);
 	//Set HostName
 	wifi_station_set_hostname("Sensor Node\n");
+	//Set reconnection policy
+	wifi_station_set_reconnect_policy( true );
 	//Connect to Wifi
 	wifi_station_connect();
 }
