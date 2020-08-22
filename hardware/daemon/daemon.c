@@ -5,6 +5,8 @@
 *	T.L. 2020
 *
 */
+
+#include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,10 +54,10 @@ void State_RcvData( state_data_t * data );
 
 state_func_t StateTable[] = 
 {
-	{state_ReadTemp,	State_ReadTemp, 	5,0},
-	{state_ReadWeather,	State_ReadWeather,	5,0},
-	{state_SendData,	State_SendData,		5,0},
-	{state_RcvData,		State_RcvData,		1,0},
+	{state_ReadTemp,	State_ReadTemp, 	5,	0},
+	{state_ReadWeather,	State_ReadWeather,	5,	0},
+	{state_SendData,	State_SendData,		5,	0},
+	{state_RcvData,		State_RcvData,		1,	0},
 };
 
 void State_Init( state_data_t * data )
@@ -87,19 +89,13 @@ uint8_t main( int16_t argc, uint8_t **argv )
 	/* Master time struct for running states at set periods*/
 	time_t stateTime;
 
-	/* Initialise all the state time structures*/
-	for(int i=0;i<state_Count;i++)
-	{
-		time(&StateTable[i].currentTime);
-	}
 	
 	/* Inf Loop */
 	while (1)
 	{
 		/* Iterate through all the states sequentially */
 		for( int i=0; i < state_Count; i++)
-		{
-			
+		{			
 			time(&stateTime);
 			double delta = difftime(stateTime, StateTable[i].currentTime );
 			
