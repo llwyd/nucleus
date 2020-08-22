@@ -6,6 +6,7 @@ uptime
 hardware/bin/*
 hardware/daemon/experiments/*
 hardware/daemon/daemon
+hardware/daemon/sensorDaemon
 hardware/temperature/apikey.h
 hardware/.vscode
 network
