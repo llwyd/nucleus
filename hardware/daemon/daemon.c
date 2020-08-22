@@ -42,11 +42,10 @@ typedef struct
 	state_t currentState;					/* Current State Enumeration */	
 	void (*state_fn)( state_data_t *data);	/* fn pointer */
 	double time;							/* how often to execute */
-	time_t currentTime;
+	time_t currentTime;						/* Keep track of last time task was executed */
 } state_func_t;
 
 /* State Prototypes */
-void State_Init( state_data_t * data );
 void State_ReadTemp( state_data_t * data );
 void State_ReadWeather( state_data_t * data );
 void State_SendData( state_data_t * data );
@@ -60,10 +59,6 @@ state_func_t StateTable[] =
 	{state_RcvData,		State_RcvData,		1,	0},
 };
 
-void State_Init( state_data_t * data )
-{
-	printf("Initial State\n");
-}
 void State_ReadTemp( state_data_t * data )
 {
 	printf("ReadTemp State\n");
@@ -88,7 +83,6 @@ uint8_t main( int16_t argc, uint8_t **argv )
 
 	/* Master time struct for running states at set periods*/
 	time_t stateTime;
-
 	
 	/* Inf Loop */
 	while (1)
