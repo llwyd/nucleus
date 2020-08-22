@@ -83,6 +83,11 @@ uint8_t main( int16_t argc, uint8_t **argv )
 
 	/* Master time struct for running states at set periods*/
 	time_t stateTime;
+
+	/* 100ms delay to prevent cpu melting */
+	struct timespec delay;
+	delay.tv_sec = 0;
+	delay.tv_nsec = 100000000;
 	
 	/* Inf Loop */
 	while (1)
@@ -98,6 +103,8 @@ uint8_t main( int16_t argc, uint8_t **argv )
 				StateTable[i].state_fn( &s );
 				StateTable[i].currentTime = stateTime;
 			}
+			/* Delay to stop CPU melting */
+			nanosleep(&delay, NULL);
 		}
 	}
 
