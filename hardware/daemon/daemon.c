@@ -20,7 +20,7 @@ static state_func_t StateTable[] =
 	{state_ReadTemp,	State_ReadTemp, 	5,	0},
 	{state_ReadWeather,	State_ReadWeather,	5,	0},
 	{state_SendData,	State_SendData,		5,	0},
-	{state_RcvData,		State_RcvData,		1,	0},
+	{state_RcvData,		State_RcvData,		0,	0},
 };
 
 uint8_t main( int16_t argc, uint8_t **argv )
