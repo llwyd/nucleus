@@ -8,6 +8,8 @@ hardware/daemon/experiments/*
 hardware/daemon/daemon
 hardware/daemon/sensorDaemon
 hardware/temperature/apikey.h
+hardware/daemon/apikey.h
+hardware/apikeys/apikey.h
 hardware/.vscode
 network
 network.c
