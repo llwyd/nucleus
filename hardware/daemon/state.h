@@ -35,7 +35,8 @@ typedef struct state_data_t
 	float humidity;		/* Sensor Humidity */
 
 	/* Weather Description */
-	float outsideTemperature;
+	float outsideTemperature; /* Outside Temperature */
+	float outsideHumidity;    /* Outside Humidity */
 	uint8_t * weather;
 } state_data_t;
 

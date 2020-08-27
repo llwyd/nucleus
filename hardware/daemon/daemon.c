@@ -23,10 +23,16 @@ static state_func_t StateTable[] =
 	{state_RcvData,		State_RcvData,		0,	0},
 };
 
+static uint8_t * const ip 	= "0.0.0.0";
+static uint8_t * const port = "80";
+
 uint8_t main( int16_t argc, uint8_t **argv )
 {
 	/* Data Structure for passing data between states */
 	static state_data_t s;
+
+	s.ip = ip;
+	s.port = port;
 
 	/* Master time struct for running states at set periods*/
 	time_t stateTime;
