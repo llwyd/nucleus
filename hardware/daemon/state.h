@@ -18,6 +18,7 @@ typedef enum state_t
 {
 	state_ReadTemp,
 	state_ReadWeather,
+	state_ReadDatabaseSize,
 	state_SendData,
 	state_RcvData,
 	/*---------*/
@@ -41,6 +42,7 @@ typedef struct state_data_t
 	uint8_t * weather;			/* Outside weather description */
 
 	/* Device Analytics */
+	uint8_t * db;				/* Database Path */ 
 	int databaseSize;			/* SQL database size */
 	float cpuTemperature;		/* CPU Temperature */
 

@@ -10,6 +10,8 @@
 #include "../common/comms.h"
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/sysinfo.h>
 
 #define HTTP_BUFFER_SIZE ( 2048 )
 
@@ -37,6 +39,17 @@ void State_ReadWeather( state_data_t * data )
 
 	printf("Outside Temperature: %.2f C\n", data->outsideTemperature );
 	printf("   Outside Humidity: %.2f\%\n", data->outsideHumidity );
+}
+
+
+void State_ReadDatabaseSize( state_data_t * data )
+{
+	struct stat st;
+	stat( data->db, &st );
+
+	data->databaseSize = st.st_size;
+
+	printf( "Database Size: %d Bytes\n", data->databaseSize );
 }
 
 void State_SendData( state_data_t * data )

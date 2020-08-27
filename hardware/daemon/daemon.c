@@ -17,14 +17,17 @@
 
 static state_func_t StateTable[] = 
 {
-	{state_ReadTemp,	State_ReadTemp, 	5,	0},
-	{state_ReadWeather,	State_ReadWeather,	10,	0},
-	{state_SendData,	State_SendData,		5,	0},
-	{state_RcvData,		State_RcvData,		0,	0},
+	{state_ReadTemp,			State_ReadTemp, 		5,	0},
+	{state_ReadWeather,			State_ReadWeather,		10,	0},
+	{state_ReadDatabaseSize,	State_ReadDatabaseSize,	5,	0},
+	{state_SendData,			State_SendData,			5,	0},
+	{state_RcvData,				State_RcvData,			0,	0},
 };
 
 static uint8_t * const ip 	= "0.0.0.0";
 static uint8_t * const port = "80";
+
+static uint8_t * const databasePath = "../../homepage/app.db";
 
 uint8_t main( int16_t argc, uint8_t **argv )
 {
@@ -33,6 +36,8 @@ uint8_t main( int16_t argc, uint8_t **argv )
 
 	s.ip = ip;
 	s.port = port;
+
+	s.db = databasePath;
 
 	/* Master time struct for running states at set periods*/
 	time_t stateTime;
