@@ -19,7 +19,9 @@ static uint8_t httpRcv[ HTTP_BUFFER_SIZE ];
 void State_ReadTemp( state_data_t * data )
 {
 	Sensor_Read( &data->temperature );
-	printf("Temperature: %.2f\n", data->temperature);
+	data->humidity = 0.0f;
+
+	printf("Temperature: %.2f C\n", data->temperature);
 }
 
 void State_ReadWeather( state_data_t * data )
@@ -31,12 +33,26 @@ void State_ReadWeather( state_data_t * data )
 
 	Comms_Get( "api.openweathermap.org", "80", httpSend, httpRcv, HTTP_BUFFER_SIZE );
 	Comms_ExtractTemp( httpRcv, &data->outsideTemperature );
+	Comms_ExtractFloat( httpRcv, &data->humidity, "\"humidity\"" );
 
-	printf("%.2f\n", data->outsideTemperature );
+	printf("Outside Temperature: %.2f C\n", data->outsideTemperature );
+	printf("   Outside Humidity: %.2f\%\n", data->humidity );
 }
 
 void State_SendData( state_data_t * data )
 {
+	memset( httpSend, 0x00, HTTP_BUFFER_SIZE );
+	memset(  httpRcv, 0x00, HTTP_BUFFER_SIZE );
+	
+	Comms_FormatTempData( deviceUUID, &data->temperature, &data->humidity, httpSend, HTTP_BUFFER_SIZE );
+	/* Post */
+
+	memset( httpSend, 0x00, HTTP_BUFFER_SIZE );
+	memset(  httpRcv, 0x00, HTTP_BUFFER_SIZE );
+	
+	Comms_FormatTempData( deviceUUID, &data->outsideTemperature, &data->humidity, httpSend, HTTP_BUFFER_SIZE );
+	/* Post */
+
 	printf("");
 }
 

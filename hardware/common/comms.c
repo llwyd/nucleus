@@ -16,6 +16,27 @@ static const uint8_t * magicKey = "\"temp\":";
 
 static uint8_t httpRequest[ REQUEST_SIZE ];
 
+
+extern void Comms_ExtractFloat( uint8_t * buffer,float * outputFloat, uint8_t * keyword)
+{
+	uint8_t * p = strstr( buffer, keyword );
+	uint8_t outputBuffer[32];
+	memset(outputBuffer, 0x00, 32);	
+
+	*outputFloat = 0.0f;
+	if( p!= NULL )
+	{
+		p+=(int)strlen(keyword);
+		uint8_t * pch = strchr(p,',');
+		*pch = '\0';
+		strcat(outputBuffer,p+1);
+		int stringLen = strlen(outputBuffer);	
+		*(outputBuffer+stringLen-1) = '\0';
+		*pch = ',';
+	}
+	*outputFloat = (float)atof(outputBuffer);
+}
+
 extern void Comms_ExtractValue( uint8_t * buffer,uint8_t * outputBuffer, uint8_t * keyword)
 {
 	uint8_t * p = strstr( buffer, keyword );
