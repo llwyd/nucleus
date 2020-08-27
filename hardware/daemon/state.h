@@ -27,17 +27,26 @@ typedef enum state_t
 
 typedef struct state_data_t
 {
-	uint8_t *ip;		/* IP to transmit data */
-	uint8_t *port;		/* Port number */
+	/* Network Transmission Info */
+	uint8_t *ip;				/* IP to transmit data */
+	uint8_t *port;				/* Port number */
 	
 	/* Sensor Data*/
-	float temperature;	/* Sensor Temperature */
-	float humidity;		/* Sensor Humidity */
+	float temperature;			/* Sensor Temperature */
+	float humidity;				/* Sensor Humidity */
 
 	/* Weather Description */
-	float outsideTemperature; /* Outside Temperature */
-	float outsideHumidity;    /* Outside Humidity */
-	uint8_t * weather;
+	float outsideTemperature; 	/* Outside Temperature */
+	float outsideHumidity;    	/* Outside Humidity */
+	uint8_t * weather;			/* Outside weather description */
+
+	/* Device Analytics */
+	int databaseSize;			/* SQL database size */
+	float cpuTemperature;		/* CPU Temperature */
+
+	int uptimeDays;				/* Uptime Days */
+	int uptimeHours;			/* Uptime Hours */
+	int uptimeMinutes;			/* Uptime Minutes */
 } state_data_t;
 
 typedef struct
@@ -51,6 +60,11 @@ typedef struct
 /* State Prototypes */
 void State_ReadTemp( state_data_t * data );
 void State_ReadWeather( state_data_t * data );
+
+void State_ReadCPUTemp( state_data_t * data );
+void State_ReadUptime( state_data_t * data );
+void State_ReadDatabaseSize( state_data_t * data );
+
 void State_SendData( state_data_t * data );
 void State_RcvData( state_data_t * data );
 
