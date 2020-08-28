@@ -82,7 +82,7 @@ void State_SendData( state_data_t * data )
 	Comms_FormatTempData( weatherUUID, &data->outsideTemperature, &data->outsideHumidity, httpSend, HTTP_BUFFER_SIZE );	
 	Comms_Post( data->ip, data->port, "/raw", httpSend );
 
-	printf("");
+	printf("Transmitted data to cloud.\n");
 }
 
 void State_RcvData( state_data_t * data )
