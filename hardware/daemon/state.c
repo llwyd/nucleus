@@ -13,6 +13,9 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 
 #define HTTP_BUFFER_SIZE ( 2048 )
 
@@ -40,6 +43,20 @@ void State_ReadWeather( state_data_t * data )
 
 	printf("Outside Temperature: %.2f C\n", data->outsideTemperature );
 	printf("   Outside Humidity: %.2f\%\n", data->outsideHumidity );
+}
+
+void State_ReadCPUTemp( state_data_t * data )
+{
+	int fd = open("/sys/class/thermal/thermal_zone0/temp", O_RDONLY);
+	char temp[4] = {0};
+
+	read( fd, &temp,3);
+	close( fd );	
+
+	data->cpuTemperature = atof(temp);
+	data->cpuTemperature/=10;
+
+	printf("CPU Temp: %.1f Celsius\n", data->cpuTemperature);
 }
 
 

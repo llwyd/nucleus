@@ -19,6 +19,7 @@ static state_func_t StateTable[] =
 {
 	{state_ReadTemp,			State_ReadTemp, 		5,		0},
 	{state_ReadWeather,			State_ReadWeather,		120,	0},
+	{state_ReadCPUTemp,			State_ReadCPUTemp,		1,		0},
 	{state_ReadAuxData,			State_ReadAuxData,		60,		0},
 	{state_SendData,			State_SendData,			300,	0},
 	{state_RcvData,				State_RcvData,			0,		0},
