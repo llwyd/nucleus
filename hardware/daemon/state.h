@@ -18,7 +18,7 @@ typedef enum state_t
 {
 	state_ReadTemp,
 	state_ReadWeather,
-	state_ReadDatabaseSize,
+	state_ReadAuxData,
 	state_SendData,
 	state_RcvData,
 	/*---------*/
@@ -63,10 +63,9 @@ typedef struct
 void State_ReadTemp( state_data_t * data );
 void State_ReadWeather( state_data_t * data );
 
-void State_ReadCPUTemp( state_data_t * data );
-void State_ReadUptime( state_data_t * data );
-void State_ReadDatabaseSize( state_data_t * data );
+void State_ReadAuxData( state_data_t * data );
 
+void State_SendAuxData( state_data_t * data);
 void State_SendData( state_data_t * data );
 void State_RcvData( state_data_t * data );
 

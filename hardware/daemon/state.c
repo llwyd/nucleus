@@ -5,6 +5,7 @@
 */
 
 #include "apikey.h"
+#include <math.h>
 #include "state.h"
 #include "../common/sensor.h"
 #include "../common/comms.h"
@@ -42,14 +43,29 @@ void State_ReadWeather( state_data_t * data )
 }
 
 
-void State_ReadDatabaseSize( state_data_t * data )
+void State_ReadAuxData( state_data_t * data )
 {
+	/* Database size on website */
 	struct stat st;
 	stat( data->db, &st );
 
 	data->databaseSize = st.st_size;
 
+	/* Server uptime */
+	struct sysinfo info;
+	sysinfo( &info );
+
+	long uptime = info.uptime;
+	data->uptimeDays = (int)floor((float)uptime / ( 24.f * 3600.f ));
+	uptime -= ( data->uptimeDays * 3600 * 24) ;
+
+	data->uptimeHours = (int)floor(((float)uptime / 3600.f));
+	uptime -= ( data->uptimeHours * 3600);
+
+	data->uptimeMinutes = (int)floor(((float) uptime / 60.f ));
+
 	printf( "Database Size: %d Bytes\n", data->databaseSize );
+	printf("%d Days, %d hours and %d minutes\n", data->uptimeDays, data->uptimeHours, data->uptimeMinutes);
 }
 
 void State_SendData( state_data_t * data )
