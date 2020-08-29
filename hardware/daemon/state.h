@@ -20,6 +20,7 @@ typedef enum state_t
 	state_ReadWeather,
 	state_ReadAuxData,
 	state_ReadCPUTemp,
+	state_ToggleLED,
 	state_SendData,
 	state_RcvData,
 	/*---------*/
@@ -68,6 +69,7 @@ void State_ReadTemp( state_data_t * data );
 void State_ReadWeather( state_data_t * data );
 void State_ReadCPUTemp( state_data_t * data );
 
+void State_ToggleLED( state_data_t * data );
 void State_ReadAuxData( state_data_t * data );
 
 void State_SendAuxData( state_data_t * data);

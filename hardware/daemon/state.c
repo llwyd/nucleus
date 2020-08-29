@@ -22,11 +22,12 @@
 static uint8_t httpSend[ HTTP_BUFFER_SIZE ];
 static uint8_t httpRcv[ HTTP_BUFFER_SIZE ];
 
-static state_func_t StateTable[6] = 
+static state_func_t StateTable[ 7 ] = 
 {
 	{state_ReadTemp,			State_ReadTemp, 		5,		0},
 	{state_ReadWeather,			State_ReadWeather,		120,	0},
 	{state_ReadCPUTemp,			State_ReadCPUTemp,		1,		0},
+	{state_ToggleLED,			State_ToggleLED,		1,		0},
 	{state_ReadAuxData,			State_ReadAuxData,		60,		0},
 	{state_SendData,			State_SendData,			300,	0},
 	{state_RcvData,				State_RcvData,			0,		0},
@@ -71,9 +72,22 @@ void State_ReadCPUTemp( state_data_t * data )
 	data->cpuTemperature = atof(temp);
 	data->cpuTemperature/=10;
 
-	printf("CPU Temp: %.1f Celsius\n", data->cpuTemperature);
+	printf("CPU Temp: %.1f C\n", data->cpuTemperature);
 }
 
+void State_ToggleLED( state_data_t * data )
+{
+	const uint8_t ledState[2]= {'0', '1'};
+	static uint8_t idx = 0;
+	
+	int led_fd = open( "/sys/class/leds/led0/brightness", O_WRONLY );
+	
+	write( led_fd, &ledState[idx++], 1 );
+
+	close( led_fd );
+
+	idx %= 2;
+}
 
 void State_ReadAuxData( state_data_t * data )
 {
