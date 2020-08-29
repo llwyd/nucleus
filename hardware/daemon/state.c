@@ -134,7 +134,7 @@ void State_SendData( state_data_t * data )
 
 void State_SendAuxData( state_data_t * data)
 {
-	json_data_t auxData[ 4 ];
+	json_data_t auxData[ 5 ];
 	memset( httpSend, 0x00, HTTP_BUFFER_SIZE );
 	memset(  httpRcv, 0x00, HTTP_BUFFER_SIZE );
 
@@ -144,9 +144,13 @@ void State_SendAuxData( state_data_t * data)
 	
 	Comms_PopulateJSON( &auxData[3], "database_size", (json_field_t *)&data->databaseSize, json_int );
 
-	Comms_FormatData( httpSend, HTTP_BUFFER_SIZE, auxData, 4);
-	Comms_Post( data->ip, data->port, "/stats", httpSend );
+	Comms_PopulateJSON( &auxData[4], "cpu_temp", (json_field_t *)&data->cpuTemperature, json_float );
 
+	Comms_FormatData( httpSend, HTTP_BUFFER_SIZE, auxData,	5);
+	//Comms_Post( data->ip, data->port, "/stats", httpSend );
+
+
+	printf("%s\n", httpSend );
 }
 
 void State_RcvData( state_data_t * data )

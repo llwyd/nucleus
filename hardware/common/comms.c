@@ -98,7 +98,16 @@ extern void Comms_FormatData( uint8_t * buffer, uint16_t len, json_data_t * data
 	strcat( buffer, "{");
 	for( int i =0; i < numItems; i++ )
 	{
-		snprintf(tempBuffer, 128, "\"%s\":\"%d\"",dataItem[i].name, dataItem[i].data.i);
+		switch( dataItem[i].type )
+		{
+			case json_float:
+				snprintf(tempBuffer, 128, "\"%s\":\"%.1f\"",dataItem[i].name, dataItem[i].data.f);
+				break;
+
+			case json_int:
+				snprintf(tempBuffer, 128, "\"%s\":\"%d\"",dataItem[i].name, dataItem[i].data.i);
+				break;
+		}
 		strcat( buffer, tempBuffer );
 		if( i < (numItems - 1))
 		{
