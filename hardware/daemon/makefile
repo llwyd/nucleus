@@ -1,5 +1,5 @@
-sensorDaemon: ../common/comms.o ../common/sensor.o state.o daemon.o
-	gcc -g -lm ../common/comms.o ../common/sensor.o state.o daemon.o -o sensorDaemon
+homeAssistant: ../common/comms.o ../common/sensor.o state.o daemon.o
+	gcc -g -lm ../common/comms.o ../common/sensor.o state.o daemon.o -o homeAssistant
 daemon.o: daemon.c 
 	gcc -c -g daemon.c -o daemon.o
 state.o: state.c 
@@ -9,4 +9,4 @@ state.o: state.c
 ../common/comms.o: ../common/comms.c
 	gcc -c -g ../common/comms.c -o ../common/comms.o
 clean:
-	rm sensorDaemon state.o daemon.o ../common/sensor.o ../common/comms.o
+	rm homeAssistant state.o daemon.o ../common/sensor.o ../common/comms.o

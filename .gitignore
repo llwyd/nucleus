@@ -7,6 +7,7 @@ hardware/bin/*
 hardware/daemon/experiments/*
 hardware/daemon/daemon
 hardware/daemon/sensorDaemon
+hardware/daemon/homeAssistant
 hardware/temperature/apikey.h
 hardware/daemon/apikey.h
 hardware/apikeys/apikey.h
