@@ -58,6 +58,7 @@ void State_ReadWeather( state_data_t * data )
 	Comms_ExtractTemp( httpRcv, &data->outsideTemperature );
 	Comms_ExtractFloat( httpRcv, &data->outsideHumidity, "\"humidity\"" );
 
+	memset( data->weather, 0x00, 128U );
 	Comms_ExtractValue( httpRcv, data->weather, "\"description\":");
 
 	printf("Outside Temperature: %.2f C\n",	data->outsideTemperature );
@@ -81,7 +82,7 @@ void State_ReadCPUTemp( state_data_t * data )
 
 void State_ToggleLED( state_data_t * data )
 {
-	const uint8_t ledState[2]= {'0', '1'};
+	const uint8_t ledState[2]= {'0', '0'};
 	static uint8_t idx = 0;
 	
 	int led_fd = open( "/sys/class/leds/led0/brightness", O_WRONLY );
