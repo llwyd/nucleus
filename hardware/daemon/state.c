@@ -62,7 +62,7 @@ void State_ReadWeather( state_data_t * data )
 
 	printf("Outside Temperature: %.2f C\n",	data->outsideTemperature );
 	printf("   Outside Humidity: %.2f\%\n",	data->outsideHumidity );
-	printf("        Description:  %s\n", 	data->weather );
+	printf("        Description: %s\n", 	data->weather );
 }
 
 void State_ReadCPUTemp( state_data_t * data )
@@ -131,6 +131,14 @@ void State_SendData( state_data_t * data )
 	
 	Comms_FormatTempData( weatherUUID, &data->outsideTemperature, &data->outsideHumidity, httpSend, HTTP_BUFFER_SIZE );	
 	Comms_Post( data->ip, data->port, "/raw", httpSend );
+
+	memset( httpSend, 0x00, HTTP_BUFFER_SIZE );
+	memset(  httpRcv, 0x00, HTTP_BUFFER_SIZE );
+
+	Comms_FormatStringData( weatherUUID, data->weather, httpSend, HTTP_BUFFER_SIZE );
+	Comms_Post( data->ip, data->port, "/words", httpSend);
+
+	printf("%s\n", httpSend);
 
 	printf("Transmitted data to cloud.\n");
 }
