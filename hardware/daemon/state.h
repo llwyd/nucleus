@@ -22,6 +22,7 @@ typedef enum state_t
 	state_ReadCPUTemp,
 	state_ToggleLED,
 	state_SendData,
+	state_SendAuxData,
 	state_RcvData,
 	/*---------*/
 	state_Count,

@@ -22,7 +22,7 @@
 static uint8_t httpSend[ HTTP_BUFFER_SIZE ];
 static uint8_t httpRcv[ HTTP_BUFFER_SIZE ];
 
-static state_func_t StateTable[ 7 ] = 
+static state_func_t StateTable[ 8 ] = 
 {
 	{state_ReadTemp,			State_ReadTemp, 		5,		0},
 	{state_ReadWeather,			State_ReadWeather,		120,	0},
@@ -30,6 +30,7 @@ static state_func_t StateTable[ 7 ] =
 	{state_ToggleLED,			State_ToggleLED,		1,		0},
 	{state_ReadAuxData,			State_ReadAuxData,		60,		0},
 	{state_SendData,			State_SendData,			300,	0},
+	{state_SendAuxData,			State_SendAuxData,		60,		0},
 	{state_RcvData,				State_RcvData,			0,		0},
 };
 
@@ -129,6 +130,23 @@ void State_SendData( state_data_t * data )
 	Comms_Post( data->ip, data->port, "/raw", httpSend );
 
 	printf("Transmitted data to cloud.\n");
+}
+
+void State_SendAuxData( state_data_t * data)
+{
+	json_data_t auxData[ 4 ];
+	memset( httpSend, 0x00, HTTP_BUFFER_SIZE );
+	memset(  httpRcv, 0x00, HTTP_BUFFER_SIZE );
+
+	Comms_PopulateJSON( &auxData[0], "days",	(json_field_t *)&data->uptimeDays,		json_int );
+	Comms_PopulateJSON( &auxData[1], "hours",	(json_field_t *)&data->uptimeHours,		json_int );
+	Comms_PopulateJSON( &auxData[2], "minutes",	(json_field_t *)&data->uptimeMinutes,	json_int );
+	
+	Comms_PopulateJSON( &auxData[3], "database_size", (json_field_t *)&data->databaseSize, json_int );
+
+	Comms_FormatData( httpSend, HTTP_BUFFER_SIZE, auxData, 4);
+	Comms_Post( data->ip, data->port, "/stats", httpSend );
+
 }
 
 void State_RcvData( state_data_t * data )

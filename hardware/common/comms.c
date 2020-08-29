@@ -17,6 +17,25 @@ static const uint8_t * magicKey = "\"temp\":";
 static uint8_t httpRequest[ REQUEST_SIZE ];
 
 
+extern void Comms_PopulateJSON( json_data_t * strct, char * name, json_field_t * d, json_type_t d_type)
+{
+	memset( strct->name, 0, JSON_NAME_LEN );
+	strcat( strct->name, name );
+	
+	switch( d_type )
+	{
+		case json_float:
+			strct->data.f = d->f;
+			strct->type = json_float;
+			break;
+		
+		case json_int:
+			strct->data.i = d->i;
+			strct->type = json_int;
+			break;
+	}
+}
+
 extern void Comms_ExtractFloat( uint8_t * buffer,float * outputFloat, uint8_t * keyword)
 {
 	uint8_t * p = strstr( buffer, keyword );
