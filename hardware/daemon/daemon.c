@@ -23,6 +23,8 @@ static uint8_t * const databasePath = "../../homepage/app.db";
 
 static state_func_t * task;
 
+static uint8_t weatherDesc[ 128 ];
+
 uint8_t main( int16_t argc, uint8_t **argv )
 {
 	/* Data Structure for passing data between states */
@@ -32,7 +34,7 @@ uint8_t main( int16_t argc, uint8_t **argv )
 
 	s.ip = ip;
 	s.port = port;
-
+	s.weather = weatherDesc;
 	s.db = databasePath;
 
 	/* Master time struct for running states at set periods*/

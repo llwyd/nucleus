@@ -46,8 +46,8 @@ class Readings(db.Model):
     __tablename__ = "readings"
     id              = db.Column(db.Integer, primary_key=True)       #id for each record in the database
     deviceID        = db.Column(db.String(64))                      # id of the unit
-    datestamp       = db.Column(db.String(32))                     	# datestamp
-    timestamp       = db.Column(db.String(32))                     	# timestamp
+    datestamp       = db.Column(db.String(32))						# datestamp
+    timestamp       = db.Column(db.String(32))						# timestamp
     temperature     = db.Column(db.String(16))                      # temperature
     humidity        = db.Column(db.String(16))                      # humidity
 
@@ -80,9 +80,10 @@ index_page = html.Div([
 
 stats_page = html.Div([
     html.H1(children='H O M E'),
-   	html.Div(id = 'last-update'), 
+	html.Div(id = 'last-update'), 
     html.Div(id = 'server-uptime'),
     html.Div(id = 'database-size'),
+	html.Div(id = 'cpu-temp'),
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
@@ -122,13 +123,22 @@ def update_uptime(n):
     else:
         return [ html.Span("Database Size: ????")]	
 
+# database size
+@app.callback(Output('cpu-temp', 'children'),[Input('interval-component','n_intervals')])
+def update_cputemp(n):
+    if( cache.get("cpu_temp") is not None):
+        cpu_temp = cache.get("cpu_temp")
+        return [ html.Span("CPU Temp: " + str(cpu_temp) + " C")]	
+    else:
+        return [ html.Span("CPU Temp: ????")]	
+
 #   Temperature graph
 @app.callback(Output('static-temp-graph', 'figure'),[Input('interval-component','n_intervals')])
 def static_temp_graph(value):
-    todays_date 		= dt.datetime.now().strftime('%Y-%m-%d')
-    yesterdays_date 	= (dt.datetime.now() - dt.timedelta(days=1)).strftime('%Y-%m-%d') 
+    todays_date			= dt.datetime.now().strftime('%Y-%m-%d')
+    yesterdays_date		= (dt.datetime.now() - dt.timedelta(days=1)).strftime('%Y-%m-%d') 
 
-    yesterdays_time 	= (dt.datetime.now() - dt.timedelta(days=1)) 
+    yesterdays_time		= (dt.datetime.now() - dt.timedelta(days=1)) 
     
     todays_data = db.session.query( Readings ).filter( or_(Readings.datestamp == todays_date, Readings.datestamp == yesterdays_date) ).all()
     data = {
@@ -184,11 +194,11 @@ def raw_data():
         timestamp = dt.datetime.now().strftime('%H:%M')
         raw = request.get_json(force=True)
         print(raw)
-        reading = Readings(	deviceID 	= raw['device_id'],
-				datestamp 				= datestamp,
-				timestamp 				= timestamp,
-				temperature 			= raw['temperature'],
-				humidity 				= raw['humidity'])
+        reading = Readings(	deviceID	= raw['device_id'],
+				datestamp				= datestamp,
+				timestamp				= timestamp,
+				temperature				= raw['temperature'],
+				humidity				= raw['humidity'])
         db.session.add(reading)
         db.session.commit()
     return 'ta pal\n'
@@ -200,9 +210,11 @@ def receive_stats():
         print(raw)
         server_uptime = str( raw['days']) + " Day(s), " + str(raw['hours']) + " hour(s) and " + str(raw['minutes']) + " minute(s)."
         database_size = int(raw['database_size'])
+        cpu_temp = float(raw['cpu_temp'])
         databaze_size = int( database_size / 1000 )
         cache.set("server_uptime",server_uptime)
         cache.set("database_size",str(databaze_size))
+        cache.set("cpu_temp",str(cpu_temp))
     return 'ta pal\n'
 
 @app.server.route('/words', methods = ['GET', 'POST'])

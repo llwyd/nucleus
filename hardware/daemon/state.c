@@ -58,8 +58,11 @@ void State_ReadWeather( state_data_t * data )
 	Comms_ExtractTemp( httpRcv, &data->outsideTemperature );
 	Comms_ExtractFloat( httpRcv, &data->outsideHumidity, "\"humidity\"" );
 
-	printf("Outside Temperature: %.2f C\n", data->outsideTemperature );
-	printf("   Outside Humidity: %.2f\%\n", data->outsideHumidity );
+	Comms_ExtractValue( httpRcv, data->weather, "\"description\":");
+
+	printf("Outside Temperature: %.2f C\n",	data->outsideTemperature );
+	printf("   Outside Humidity: %.2f\%\n",	data->outsideHumidity );
+	printf("        Description:  %s\n", 	data->weather );
 }
 
 void State_ReadCPUTemp( state_data_t * data )
@@ -147,14 +150,13 @@ void State_SendAuxData( state_data_t * data)
 	Comms_PopulateJSON( &auxData[4], "cpu_temp", (json_field_t *)&data->cpuTemperature, json_float );
 
 	Comms_FormatData( httpSend, HTTP_BUFFER_SIZE, auxData,	5);
-	//Comms_Post( data->ip, data->port, "/stats", httpSend );
-
+	Comms_Post( data->ip, data->port, "/stats", httpSend );
 
 	printf("%s\n", httpSend );
 }
 
 void State_RcvData( state_data_t * data )
 {
-	printf("");
+	//printf("");
 }
 
