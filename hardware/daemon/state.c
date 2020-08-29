@@ -22,6 +22,21 @@
 static uint8_t httpSend[ HTTP_BUFFER_SIZE ];
 static uint8_t httpRcv[ HTTP_BUFFER_SIZE ];
 
+static state_func_t StateTable[6] = 
+{
+	{state_ReadTemp,			State_ReadTemp, 		5,		0},
+	{state_ReadWeather,			State_ReadWeather,		120,	0},
+	{state_ReadCPUTemp,			State_ReadCPUTemp,		1,		0},
+	{state_ReadAuxData,			State_ReadAuxData,		60,		0},
+	{state_SendData,			State_SendData,			300,	0},
+	{state_RcvData,				State_RcvData,			0,		0},
+};
+
+extern state_func_t * State_GetTaskList( void )
+{
+	return StateTable;
+}
+
 void State_ReadTemp( state_data_t * data )
 {
 	Sensor_Read( &data->temperature );

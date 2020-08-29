@@ -15,25 +15,20 @@
 #include <time.h>
 
 
-static state_func_t StateTable[] = 
-{
-	{state_ReadTemp,			State_ReadTemp, 		5,		0},
-	{state_ReadWeather,			State_ReadWeather,		120,	0},
-	{state_ReadCPUTemp,			State_ReadCPUTemp,		1,		0},
-	{state_ReadAuxData,			State_ReadAuxData,		60,		0},
-	{state_SendData,			State_SendData,			300,	0},
-	{state_RcvData,				State_RcvData,			0,		0},
-};
 
 static uint8_t * const ip 	= "0.0.0.0";
-static uint8_t * const port = "80";
+static uint8_t * const port	= "80";
 
 static uint8_t * const databasePath = "../../homepage/app.db";
+
+static state_func_t * task;
 
 uint8_t main( int16_t argc, uint8_t **argv )
 {
 	/* Data Structure for passing data between states */
 	static state_data_t s;
+
+	task = State_GetTaskList();
 
 	s.ip = ip;
 	s.port = port;
@@ -55,12 +50,12 @@ uint8_t main( int16_t argc, uint8_t **argv )
 		for( int i=0; i < state_Count; i++)
 		{			
 			time(&stateTime);
-			double delta = difftime(stateTime, StateTable[i].currentTime );
+			double delta = difftime(stateTime, task[i].currentTime );
 			
-			if( delta > StateTable[i].time )
+			if( delta > task[i].time )
 			{
-				StateTable[i].state_fn( &s );
-				StateTable[i].currentTime = stateTime;
+				task[i].state_fn( &s );
+				task[i].currentTime = stateTime;
 			}
 			/* Delay to stop CPU melting */
 			nanosleep(&delay, NULL);

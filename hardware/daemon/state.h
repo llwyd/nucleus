@@ -61,6 +61,9 @@ typedef struct
 } state_func_t;
 
 /* State Prototypes */
+
+extern state_func_t * State_GetTaskList( void );
+
 void State_ReadTemp( state_data_t * data );
 void State_ReadWeather( state_data_t * data );
 void State_ReadCPUTemp( state_data_t * data );
