@@ -12,6 +12,10 @@ hardware/temperature/apikey.h
 hardware/daemon/apikey.h
 hardware/apikeys/apikey.h
 hardware/.vscode
+
+hardware/mqtt/localdata.h
+hardware/mqtt/m
+
 network
 network.c
 homepage/devices.py
