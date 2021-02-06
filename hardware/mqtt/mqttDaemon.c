@@ -68,12 +68,35 @@ typedef enum mqtt_state_t
     mqtt_state_Ping, 
 } mqtt_state_t;
 
+typedef struct mqtt_func_t
+{
+    mqtt_state_t state;
+    mqtt_state_t (*mqtt_fn)(void);
+} mqtt_func_t;
 
 static int sock;
 uint8_t sendBuffer[128];
 uint8_t recvBuffer[128];
 
-static const uint8_t * client_name = "pi-livingroom";
+static const uint8_t * client_name      = "pi-livingroom";
+static const uint8_t * parent_topic     = "livingroom";
+
+
+mqtt_state_t MQTT_Connect( void );
+mqtt_state_t MQTT_Subscribe( void );
+mqtt_state_t MQTT_Publish( void );
+mqtt_state_t MQTT_Disconnect( void );
+mqtt_state_t MQTT_Ping( void );
+
+
+static mqtt_func_t StateTable [ 2 ] =
+{
+    { mqtt_state_Connect ,      MQTT_Connect },
+    { mqtt_state_Subscribe ,    MQTT_Subscribe },
+    //{ mqtt_state_Publish ,      MQTT_Publish },
+    //{ mqtt_state_Disconnect ,   MQTT_Disconnect },
+    //{ mqtt_state_Ping ,         MQTT_Ping },
+};
 
 mqtt_state_t MQTT_Connect( void )
 {
@@ -160,7 +183,7 @@ mqtt_state_t MQTT_Connect( void )
                 else
                 {
                     /* 5. Wait for response */
-                    printf("%d Bytes Transmitted\n", snd);    
+                    printf("%d Bytes Sent\n", snd);    
                     int rcv = recv(sock, recvBuffer, 128, 0);
                     
                     if( rcv < 0 )
@@ -175,6 +198,7 @@ mqtt_state_t MQTT_Connect( void )
                     }
                     else
                     {
+                        printf("%d Bytes Received\n", rcv);    
                         if( rcv == 4 )
                         {
                             if(recvBuffer[3] == 0x00)
@@ -202,10 +226,94 @@ mqtt_state_t MQTT_Connect( void )
     return ret;
 }
 
+mqtt_state_t MQTT_Subscribe( void )
+{
+    /* Default return state incase of error */
+    mqtt_state_t ret = mqtt_state_Connect;
+    
+    const unsigned char mqtt_template_subscribe[] =
+    {
+        0x82,                                                                   // message type, qos, no retain
+        0x00,                                                                   // length of message
+        0x00,0x01,                                                              // message identifier
+    };
+    
+    uint8_t full_topic[64];
+    memset( full_topic, 0x00, 64);
+
+    strcat(full_topic, parent_topic);
+    strcat(full_topic,"/#");
+
+    memset(sendBuffer, 0x00, 128);
+    memset(recvBuffer, 0x00, 128);
+
+    /* Construct Packet */
+    uint8_t * msg_ptr = sendBuffer;
+    uint16_t packet_size = (uint16_t)sizeof( mqtt_template_subscribe );
+    uint16_t topic_size = strlen(full_topic );
+
+    memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
+    msg_ptr+= packet_size;
+    msg_ptr++;
+    *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
+    memcpy(msg_ptr, full_topic, topic_size);
+     
+    uint16_t total_packet_size = packet_size + topic_size + 1;
+    sendBuffer[1] = (uint8_t)(total_packet_size&0xFF);
+    uint16_t full_packet_size = total_packet_size + 2;
+    
+    int snd = send(sock, sendBuffer, full_packet_size, 0);
+    if( snd < 0 )
+    {
+        printf("Error Sending Data\n");
+        ret = mqtt_state_Connect;
+    }
+    else
+    {
+        printf("%d Bytes Sent\n", snd);    
+        int rcv = recv(sock, recvBuffer, 128, 0);                
+        if( rcv < 0 )
+        {
+            printf("Error Sending Data\n");
+            ret = mqtt_state_Connect;
+        }
+        else if( rcv == 0 )
+        {
+            printf("Connection Closed\n");
+            ret = mqtt_state_Connect;
+        }
+        else
+        {
+            printf("%d Bytes Received\n", rcv);    
+            
+            if( rcv == 5 )
+            {
+                if(recvBuffer[0] == 0x90)
+                {
+                    printf("Subscription to %s Acknowledged Successfully\n", full_topic);
+                    ret = mqtt_state_Subscribe;
+                }
+                else
+                {
+                    printf("Error Receiving Data\n");
+                    ret = mqtt_state_Connect;
+                }
+            }
+            else
+            {
+                printf("Error Receiving Data\n");
+                ret = mqtt_state_Connect;
+            }
+        }
+    }
+    return ret; 
+}
 
 void main( void )
 {
-    printf("%d\n", status);
-    mqtt_state_t status = MQTT_Connect();
-    printf("%d\n", status);
+    mqtt_func_t * task = StateTable;
+    mqtt_state_t current_state = mqtt_state_Connect;    
+
+    current_state = task[current_state].mqtt_fn();
+    current_state = task[current_state].mqtt_fn();
 }
