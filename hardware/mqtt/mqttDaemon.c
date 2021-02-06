@@ -73,6 +73,8 @@ static int sock;
 uint8_t sendBuffer[128];
 uint8_t recvBuffer[128];
 
+static const uint8_t * client_name = "pi-livingroom";
+
 mqtt_state_t MQTT_Connect( void )
 {
     /* Default return state incase of error */
@@ -133,10 +135,66 @@ mqtt_state_t MQTT_Connect( void )
                 /* 4. Send Connect MQTT Packet */
                 memset( sendBuffer, 0x00, 128 );
                 memset( recvBuffer, 0x00, 128 );
-                uint8_t * msg_ptr = sendBuffer;
                 
+                /* Construct Packet */
+                uint8_t * msg_ptr = sendBuffer;
+                uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
+                uint16_t name_size = strlen( client_name );
 
-
+                memcpy( msg_ptr, mqtt_template_connect, packet_size );
+                msg_ptr+= packet_size;
+                msg_ptr++;
+                *msg_ptr++ = (uint8_t)(name_size & 0xFF);
+                memcpy(msg_ptr, client_name, name_size);
+                
+                uint16_t total_packet_size = packet_size + name_size;
+                sendBuffer[1] = (uint8_t)(total_packet_size&0xFF);
+                uint16_t full_packet_size = total_packet_size + 2;
+ 
+                int snd = send(sock, sendBuffer, full_packet_size, 0);
+                if( snd < 0 )
+                {
+                    printf("Error Sending Data\n");
+                    ret = mqtt_state_Connect;
+                }
+                else
+                {
+                    /* 5. Wait for response */
+                    printf("%d Bytes Transmitted\n", snd);    
+                    int rcv = recv(sock, recvBuffer, 128, 0);
+                    
+                    if( rcv < 0 )
+                    {
+                        printf("Error Sending Data\n");
+                        ret = mqtt_state_Connect;
+                    }
+                    else if( rcv == 0 )
+                    {
+                        printf("Connection Closed\n");
+                        ret = mqtt_state_Connect;
+                    }
+                    else
+                    {
+                        if( rcv == 4 )
+                        {
+                            if(recvBuffer[3] == 0x00)
+                            {
+                                printf("Connected to broker successfully\n");
+                                ret = mqtt_state_Subscribe;
+                            }
+                            else
+                            {
+                                printf("Error Receiving Data\n");
+                                ret = mqtt_state_Connect;
+                            }
+                        }
+                        else
+                        {
+                            printf("Error Receiving Data\n");
+                            ret = mqtt_state_Connect;
+                        }
+                    }
+                }
             }
         }
     }
