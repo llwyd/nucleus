@@ -198,10 +198,14 @@ mqtt_state_t MQTT_Connect( void )
             }
         }
     }
+    
+    return ret;
 }
 
 
 void main( void )
 {
+    printf("%d\n", status);
     mqtt_state_t status = MQTT_Connect();
+    printf("%d\n", status);
 }
