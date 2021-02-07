@@ -121,7 +121,7 @@ mqtt_state_t MQTT_Connect( void )
         0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
         0x03,                                   /* Version MQTT v3.1 */
         0x02,                                   /* Fire and forget */
-        0x00, 0x3c,                             /* Keep alive timeout */
+        0x00, 0xb4,                             /* Keep alive timeout */
     };
 
     int status;
