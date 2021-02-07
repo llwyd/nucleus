@@ -344,17 +344,20 @@ mqtt_state_t MQTT_Idle( void )
             
             if( recvBuffer[0] == 0x30 )
             {
+                uint8_t topic[64];
+                uint8_t data[32];
+                memset(topic,0x00,64);
+                memset(data,0x00,32);
+                
                 unsigned char msgLen = recvBuffer[1];
                 unsigned char topLen = recvBuffer[2] << 8 | recvBuffer[3];
                 unsigned char * msg = &recvBuffer[4];
                 
-                for(int i =0; i < topLen; i++)
-                {
-                    printf("%c", *msg++);
-                }
+                memcpy(topic, msg, topLen);
+                msg+=topLen;
                 msgLen -= topLen;
-                printf(": ");
-                printf("%s\n", msg);
+                memcpy(data, msg, msgLen);
+                printf("Topic:%s, Data: %s\n", topic, data);
         
                 memset(recvBuffer, 0x00, 128);
             }
