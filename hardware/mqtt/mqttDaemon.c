@@ -63,6 +63,7 @@ typedef enum mqtt_state_t
 {
     mqtt_state_Connect,
     mqtt_state_Subscribe,
+    mqtt_state_Idle,
     mqtt_state_Publish,
     mqtt_state_Disconnect,
     mqtt_state_Ping, 
@@ -75,6 +76,8 @@ typedef struct mqtt_func_t
 } mqtt_func_t;
 
 static int sock;
+static struct pollfd mqtt_poll;
+
 uint8_t sendBuffer[128];
 uint8_t recvBuffer[128];
 
@@ -84,15 +87,17 @@ static const uint8_t * parent_topic     = "livingroom";
 
 mqtt_state_t MQTT_Connect( void );
 mqtt_state_t MQTT_Subscribe( void );
+mqtt_state_t MQTT_Idle( void );
 mqtt_state_t MQTT_Publish( void );
 mqtt_state_t MQTT_Disconnect( void );
 mqtt_state_t MQTT_Ping( void );
 
 
-static mqtt_func_t StateTable [ 2 ] =
+static mqtt_func_t StateTable [ 3 ] =
 {
     { mqtt_state_Connect ,      MQTT_Connect },
     { mqtt_state_Subscribe ,    MQTT_Subscribe },
+    { mqtt_state_Idle,          MQTT_Idle },
     //{ mqtt_state_Publish ,      MQTT_Publish },
     //{ mqtt_state_Disconnect ,   MQTT_Disconnect },
     //{ mqtt_state_Ping ,         MQTT_Ping },
@@ -291,7 +296,13 @@ mqtt_state_t MQTT_Subscribe( void )
                 if(recvBuffer[0] == 0x90)
                 {
                     printf("Subscription to %s Acknowledged Successfully\n", full_topic);
-                    ret = mqtt_state_Subscribe;
+
+                    /* Create poll instance to monitor for incoming messages from broker */                    
+                    mqtt_poll.fd = sock;
+                    mqtt_poll.events = POLLIN;
+                    memset(recvBuffer, 0x00, 128);
+
+                    ret = mqtt_state_Idle;
                 }
                 else
                 {
@@ -309,11 +320,58 @@ mqtt_state_t MQTT_Subscribe( void )
     return ret; 
 }
 
+mqtt_state_t MQTT_Idle( void )
+{
+    mqtt_state_t ret = mqtt_state_Idle;
+    int rv = poll( &mqtt_poll, 1, 2000);
+    
+    if( rv & POLLIN )
+    {
+        int rcv = recv(sock, recvBuffer, 256, 0U);
+        if( rcv < 0 )
+        {
+            printf("Error Sending Data\n");
+            ret = mqtt_state_Connect;
+        }
+        else if( rcv == 0 )
+        {
+            printf("Connection Closed\n");
+            ret = mqtt_state_Connect;
+        }
+        else
+        {
+            printf("%d Bytes Received\n", rcv);    
+            
+            if( recvBuffer[0] == 0x30 )
+            {
+                unsigned char msgLen = recvBuffer[1];
+                unsigned char topLen = recvBuffer[2] << 8 | recvBuffer[3];
+                unsigned char * msg = &recvBuffer[4];
+                
+                for(int i =0; i < topLen; i++)
+                {
+                    printf("%c", *msg++);
+                }
+                msgLen -= topLen;
+                printf(": ");
+                printf("%s\n", msg);
+        
+                memset(recvBuffer, 0x00, 128);
+            }
+            ret = mqtt_state_Idle;
+        }
+    }
+    
+    return ret;
+}
+
 void main( void )
 {
     mqtt_func_t * task = StateTable;
     mqtt_state_t current_state = mqtt_state_Connect;    
 
-    current_state = task[current_state].mqtt_fn();
-    current_state = task[current_state].mqtt_fn();
+    while(1)
+    {
+        current_state = task[current_state].mqtt_fn();
+    }
 }
