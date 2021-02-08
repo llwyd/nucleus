@@ -78,8 +78,10 @@ typedef struct mqtt_func_t
 static int sock;
 static struct pollfd mqtt_poll;
 
-uint8_t sendBuffer[128];
-uint8_t recvBuffer[128];
+#define BUFFER_SIZE (128)
+
+uint8_t sendBuffer[BUFFER_SIZE];
+uint8_t recvBuffer[BUFFER_SIZE];
 
 static const uint8_t * client_name      = "pi-livingroom";
 static const uint8_t * parent_topic     = "livingroom";
@@ -92,6 +94,18 @@ mqtt_state_t MQTT_Publish( void );
 mqtt_state_t MQTT_Disconnect( void );
 mqtt_state_t MQTT_Ping( void );
 
+
+typedef enum mqtt_msg_type_t
+{
+    mqtt_msg_Connect,
+    mqtt_msg_Subscribe,
+    mqtt_msg_Publish,
+    mqtt_msg_Ping,
+    mqtt_msg_Disconnect,
+} mqtt_msg_type_t;
+
+uint16_t MQTT_Format( mqtt_msg_type_t msg_type, uint8_t * buffer, void * msg_data );
+void MQTT_Transmit( mqtt_msg_type_t msg_type, uint8_t * out, uint8_t * in, void * msg_data );
 
 static mqtt_func_t StateTable [ 3 ] =
 {
@@ -110,19 +124,7 @@ mqtt_state_t MQTT_Connect( void )
 
     /* ip information from localdata.h */
     const uint8_t * ip = broker_ip;
-    const uint8_t * port = broker_port;
-    
-    /* Message Template for mqtt connect */
-    const unsigned char mqtt_template_connect[] =
-    {
-        0x10,                                   /* connect */
-        0x00,                                   /* payload size */
-        0x00, 0x06,                             /* Protocol name size */
-        0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
-        0x03,                                   /* Version MQTT v3.1 */
-        0x02,                                   /* Fire and forget */
-        0x00, 0xb4,                             /* Keep alive timeout */
-    };
+    const uint8_t * port = broker_port;    
 
     int status;
     struct addrinfo hints, l_hints;
@@ -164,21 +166,8 @@ mqtt_state_t MQTT_Connect( void )
                 memset( sendBuffer, 0x00, 128 );
                 memset( recvBuffer, 0x00, 128 );
                 
-                /* Construct Packet */
-                uint8_t * msg_ptr = sendBuffer;
-                uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
-                uint16_t name_size = strlen( client_name );
+                uint16_t full_packet_size = MQTT_Format( mqtt_msg_Connect, sendBuffer, NULL);
 
-                memcpy( msg_ptr, mqtt_template_connect, packet_size );
-                msg_ptr+= packet_size;
-                msg_ptr++;
-                *msg_ptr++ = (uint8_t)(name_size & 0xFF);
-                memcpy(msg_ptr, client_name, name_size);
-                
-                uint16_t total_packet_size = packet_size + name_size;
-                sendBuffer[1] = (uint8_t)(total_packet_size&0xFF);
-                uint16_t full_packet_size = total_packet_size + 2;
- 
                 int snd = send(sock, sendBuffer, full_packet_size, 0);
                 if( snd < 0 )
                 {
@@ -368,6 +357,75 @@ mqtt_state_t MQTT_Idle( void )
     return ret;
 }
 
+uint16_t MQTT_Format( mqtt_msg_type_t msg_type, uint8_t * buffer, void * msg_data )
+{
+    uint16_t full_packet_size = 0;
+
+    switch( msg_type )
+    {
+        case mqtt_msg_Connect:
+            {
+            /* Message Template for mqtt connect */
+            unsigned char mqtt_template_connect[] =
+            {
+                0x10,                                   /* connect */
+                0x00,                                   /* payload size */
+                0x00, 0x06,                             /* Protocol name size */
+                0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
+                0x03,                                   /* Version MQTT v3.1 */
+                0x02,                                   /* Fire and forget */
+                0x00, 0xb4,                             /* Keep alive timeout */
+            };
+            
+            uint8_t * msg_ptr = sendBuffer;
+            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
+            uint16_t name_size = strlen( client_name );
+
+            memcpy( msg_ptr, mqtt_template_connect, packet_size );
+            msg_ptr+= packet_size;
+            msg_ptr++;
+            *msg_ptr++ = (uint8_t)(name_size & 0xFF);
+            memcpy(msg_ptr, client_name, name_size);
+                
+            uint16_t total_packet_size = packet_size + name_size;
+            sendBuffer[1] = (uint8_t)(total_packet_size&0xFF);
+            full_packet_size = total_packet_size + 2;
+            }
+            break;
+        case mqtt_msg_Subscribe:
+            break;
+        case mqtt_msg_Publish:
+            break;
+        case mqtt_msg_Ping:
+            break;
+        case mqtt_msg_Disconnect:
+            break;
+    }
+    return full_packet_size;
+}
+
+void MQTT_Transmit( mqtt_msg_type_t msg_type, uint8_t * out, uint8_t * in, void * msg_data )
+{
+    memset(sendBuffer, 0x00, 128);
+    memset(recvBuffer, 0x00, 128);
+    
+    uint16_t packet_size = MQTT_Format( msg_type, out, NULL );
+
+    switch( msg_type )
+    {
+        case mqtt_msg_Connect:
+            break;
+        case mqtt_msg_Subscribe:
+            break;
+        case mqtt_msg_Publish:
+            break;
+        case mqtt_msg_Ping:
+            break;
+        case mqtt_msg_Disconnect:
+            break;
+    }
+}
+
 void main( void )
 {
     mqtt_func_t * task = StateTable;
@@ -378,3 +436,4 @@ void main( void )
         current_state = task[current_state].mqtt_fn();
     }
 }
+
