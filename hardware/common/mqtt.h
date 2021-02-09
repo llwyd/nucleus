@@ -77,9 +77,15 @@ typedef struct mqtt_func_t
     mqtt_state_t (*mqtt_fn)(void);
 } mqtt_func_t;
 
+typedef struct mqtt_pairs_t
+{
+    mqtt_msg_type_t msg_type;
+    uint8_t send_code;
+    uint8_t recv_code;
+} mqtt_pairs_t;
 
-uint16_t MQTT_Format( mqtt_msg_type_t msg_type, uint8_t * buffer, void * msg_data );
-void MQTT_Transmit( mqtt_msg_type_t msg_type, uint8_t * out, uint8_t * in, void * msg_data );
+uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data );
+bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data );
 
 mqtt_state_t MQTT_Connect( void );
 mqtt_state_t MQTT_Subscribe( void );

@@ -25,6 +25,17 @@ static mqtt_func_t StateTable [ 3 ] =
     //{ mqtt_state_Ping ,         MQTT_Ping },
 };
 
+/* transmit and acknowledge code pairs */
+static mqtt_pairs_t msg_code [ 5 ] =
+{
+    { mqtt_msg_Connect,         0x10, 0x20 },
+    { mqtt_msg_Subscribe,       0x82, 0x90 },
+    { mqtt_msg_Publish,         0x32, 0x40 },
+    { mqtt_msg_Ping,            0xc0, 0xd0 },
+    { mqtt_msg_Disconnect,      0x00, 0x00 },
+};
+
+
 mqtt_state_t MQTT_Connect( void )
 {
     /* Default return state incase of error */
@@ -70,61 +81,15 @@ mqtt_state_t MQTT_Connect( void )
             }
             else
             {
-                /* 4. Send Connect MQTT Packet */
-                memset( sendBuffer, 0x00, 128 );
-                memset( recvBuffer, 0x00, 128 );
-                
-                uint16_t full_packet_size = MQTT_Format( mqtt_msg_Connect, sendBuffer, NULL);
-
-                int snd = send(sock, sendBuffer, full_packet_size, 0);
-                if( snd < 0 )
+                /* 4. Send Connect MQTT Packet */ 
+                bool success = MQTT_Transmit( mqtt_msg_Connect, NULL);
+                if( success )
                 {
-                    printf("Error Sending Data\n");
-                    ret = mqtt_state_Connect;
-                }
-                else
-                {
-                    /* 5. Wait for response */
-                    printf("%d Bytes Sent\n", snd);    
-                    int rcv = recv(sock, recvBuffer, 128, 0);
-                    
-                    if( rcv < 0 )
-                    {
-                        printf("Error Sending Data\n");
-                        ret = mqtt_state_Connect;
-                    }
-                    else if( rcv == 0 )
-                    {
-                        printf("Connection Closed\n");
-                        ret = mqtt_state_Connect;
-                    }
-                    else
-                    {
-                        printf("%d Bytes Received\n", rcv);    
-                        if( rcv == 4 )
-                        {
-                            if(recvBuffer[3] == 0x00)
-                            {
-                                printf("Connected to broker successfully\n");
-                                ret = mqtt_state_Subscribe;
-                            }
-                            else
-                            {
-                                printf("Error Receiving Data\n");
-                                ret = mqtt_state_Connect;
-                            }
-                        }
-                        else
-                        {
-                            printf("Error Receiving Data\n");
-                            ret = mqtt_state_Connect;
-                        }
-                    }
+                    ret = mqtt_state_Subscribe;
                 }
             }
         }
-    }
-    
+    } 
     return ret;
 }
 
@@ -265,14 +230,14 @@ mqtt_state_t MQTT_Idle( void )
     return ret;
 }
 
-uint16_t MQTT_Format( mqtt_msg_type_t msg_type, uint8_t * buffer, void * msg_data )
+uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
 {
     uint16_t full_packet_size = 0;
 
     switch( msg_type )
     {
         case mqtt_msg_Connect:
-            {
+        {
             /* Message Template for mqtt connect */
             unsigned char mqtt_template_connect[] =
             {
@@ -298,7 +263,7 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, uint8_t * buffer, void * msg_dat
             uint16_t total_packet_size = packet_size + name_size;
             sendBuffer[1] = (uint8_t)(total_packet_size&0xFF);
             full_packet_size = total_packet_size + 2;
-            }
+        }
             break;
         case mqtt_msg_Subscribe:
             break;
@@ -312,26 +277,58 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, uint8_t * buffer, void * msg_dat
     return full_packet_size;
 }
 
-void MQTT_Transmit( mqtt_msg_type_t msg_type, uint8_t * out, uint8_t * in, void * msg_data )
-{
-    memset(sendBuffer, 0x00, 128);
-    memset(recvBuffer, 0x00, 128);
-    
-    uint16_t packet_size = MQTT_Format( msg_type, out, NULL );
 
-    switch( msg_type )
+
+bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
+{
+    memset(sendBuffer, 0x00, BUFFER_SIZE);
+    memset(recvBuffer, 0x00, BUFFER_SIZE);
+   
+    bool ret = false;
+    /* Construct Data Packet */ 
+    uint16_t packet_size = MQTT_Format( msg_type, NULL );
+    
+    /* Send */
+    int snd = send(sock, sendBuffer, packet_size, 0);
+    if( snd < 0 )
     {
-        case mqtt_msg_Connect:
-            break;
-        case mqtt_msg_Subscribe:
-            break;
-        case mqtt_msg_Publish:
-            break;
-        case mqtt_msg_Ping:
-            break;
-        case mqtt_msg_Disconnect:
-            break;
+        printf("Error Sending Data\n");
+        ret = false;
     }
+    else
+    {
+        printf("%d Bytes Sent\n", snd);    
+        int rcv = recv(sock, recvBuffer, 128, 0);                
+        if( rcv < 0 )
+        {
+            printf("Error Sending Data\n");
+            ret = false;
+        }
+        else if( rcv == 0 )
+        {
+            printf("Connection Closed\n");
+            ret = false;
+        }
+        else
+        {
+            printf("%d Bytes Received\n", rcv);    
+            
+            if( recvBuffer[0] == msg_code[msg_type].recv_code )
+            {
+                uint8_t msg_length = recvBuffer[1];
+                printf("Correct ACK code received (0x%x)\n", recvBuffer[0]);
+                printf("MQTT Message Length: 0x%x\n", msg_length);
+                ret = true;
+            }
+            else
+            {
+                printf("Incorrect ACK code received (0x%x)\n", recvBuffer[0]);
+                ret = false;
+            }
+        }
+    }
+
+    return ret;
 }
 
 void MQTT_Task( void )
