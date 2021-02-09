@@ -84,6 +84,7 @@ typedef struct mqtt_pairs_t
     uint8_t recv_code;
     bool (*ack_fn)(uint8_t * buff, uint8_t len);
     const uint8_t * name;
+    const uint8_t * ack_name;
 } mqtt_pairs_t;
 
 uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data );

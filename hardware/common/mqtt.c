@@ -35,11 +35,11 @@ bool Ack_Disconnect( uint8_t * buff, uint8_t len );
 /* transmit and acknowledge code pairs */
 static mqtt_pairs_t msg_code [ 5 ] =
 {
-    { mqtt_msg_Connect,         0x10, 0x20, Ack_Connect, "CONNECT" },
-    { mqtt_msg_Subscribe,       0x82, 0x90, Ack_Subscribe, "SUBSCRIBE" },
-    { mqtt_msg_Publish,         0x32, 0x40, Ack_Publish, "PUBLISH" },
-    { mqtt_msg_Ping,            0xc0, 0xd0, Ack_Ping, "PING" },
-    { mqtt_msg_Disconnect,      0x00, 0x00, Ack_Disconnect, "DISCONNECT" },
+    { mqtt_msg_Connect,         0x10, 0x20, Ack_Connect, "CONNECT", "CONNACK" },
+    { mqtt_msg_Subscribe,       0x82, 0x90, Ack_Subscribe, "SUBSCRIBE", "SUBACK" },
+    { mqtt_msg_Publish,         0x32, 0x40, Ack_Publish, "PUBLISH", "PUBACK" },
+    { mqtt_msg_Ping,            0xc0, 0xd0, Ack_Ping, "PINGREQ", "PINGRESP" },
+    { mqtt_msg_Disconnect,      0x00, 0x00, Ack_Disconnect, "DISCONNECT", "DISCONNECT" },
 };
 
 
@@ -52,12 +52,12 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
     
     if( *buff == 0x00 )
     {
-        printf("CONNACK: Connection Accepted!\n");
+        printf("OK");
         ret = true;
     }
     else
     {
-        printf("CONNACK: Connection Refused\n");
+        printf("FAIL");
         ret = false;
     }
 
@@ -70,7 +70,7 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
     uint16_t msg_id =  ( *buff++ << 0 ) | *buff++;
     uint8_t qos = *buff;
 
-    printf("SUBACK: msg id=%d, qos = %d\n", msg_id, qos);
+    printf("OK->msg id=%d, qos = %d", msg_id, qos);
     
     mqtt_poll.fd = sock;
     mqtt_poll.events = POLLIN;
@@ -309,33 +309,34 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     }
     else
     {
-        printf("%s: Sending Packet\n", msg_code[msg_type].name);
-        printf("%d Bytes Sent\n", snd);    
+        printf("%s->", msg_code[msg_type].name);
+        printf("sent:%d->", snd);    
         int rcv = recv(sock, recvBuffer, 128, 0);                
         if( rcv < 0 )
         {
-            printf("Error Sending Data\n");
+            printf("FAIL\n");
             ret = false;
         }
         else if( rcv == 0 )
         {
-            printf("Connection Closed\n");
+            printf("FAIL\n");
             ret = false;
         }
         else
         {
-            printf("%d Bytes Received\n", rcv);    
+            printf("recv:%d->", rcv);    
             
             if( recvBuffer[0] == msg_code[msg_type].recv_code )
             {
                 uint8_t msg_length = recvBuffer[1];
-                printf("Correct ACK code received (0x%x)\n", recvBuffer[0]);
-                printf("MQTT Message Length: 0x%x\n", msg_length);
+                printf("%s->", msg_code[msg_type].ack_name);
+                printf("msglen:%d->", msg_length);
                 ret = msg_code[msg_type].ack_fn( &recvBuffer[2], msg_length );
+                printf("\n");
             }
             else
             {
-                printf("Incorrect ACK code received (0x%x)\n", recvBuffer[0]);
+                printf("FAIL\n");
                 ret = false;
             }
         }
