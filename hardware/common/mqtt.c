@@ -25,16 +25,60 @@ static mqtt_func_t StateTable [ 3 ] =
     //{ mqtt_state_Ping ,         MQTT_Ping },
 };
 
+/* Functions for handlinmg acks */
+bool Ack_Connect( uint8_t * buff, uint8_t len );
+bool Ack_Subscribe( uint8_t * buff, uint8_t len );
+bool Ack_Publish( uint8_t * buff, uint8_t len );
+bool Ack_Ping( uint8_t * buff, uint8_t len );
+bool Ack_Disconnect( uint8_t * buff, uint8_t len );
+
 /* transmit and acknowledge code pairs */
 static mqtt_pairs_t msg_code [ 5 ] =
 {
-    { mqtt_msg_Connect,         0x10, 0x20 },
-    { mqtt_msg_Subscribe,       0x82, 0x90 },
-    { mqtt_msg_Publish,         0x32, 0x40 },
-    { mqtt_msg_Ping,            0xc0, 0xd0 },
-    { mqtt_msg_Disconnect,      0x00, 0x00 },
+    { mqtt_msg_Connect,         0x10, 0x20, Ack_Connect },
+    { mqtt_msg_Subscribe,       0x82, 0x90, Ack_Subscribe },
+    { mqtt_msg_Publish,         0x32, 0x40, Ack_Publish },
+    { mqtt_msg_Ping,            0xc0, 0xd0, Ack_Ping },
+    { mqtt_msg_Disconnect,      0x00, 0x00, Ack_Disconnect },
 };
 
+
+bool Ack_Connect( uint8_t * buff, uint8_t len )
+{
+    bool ret = false;
+    
+    /* First byte is reserved */
+    buff++;
+    
+    if( *buff == 0x00 )
+    {
+        printf("CONNACK: Connection Accepted!\n");
+        ret = true;
+    }
+    else
+    {
+        printf("CONNACK: Connection Refused\n");
+        ret = false;
+    }
+
+    return true;
+}
+bool Ack_Subscribe( uint8_t * buff, uint8_t len )
+{
+    return true;
+}
+bool Ack_Publish( uint8_t * buff, uint8_t len )
+{
+    return true;
+}
+bool Ack_Ping( uint8_t * buff, uint8_t len )
+{
+    return true;
+}
+bool Ack_Disconnect( uint8_t * buff, uint8_t len )
+{
+    return true;
+}
 
 mqtt_state_t MQTT_Connect( void )
 {
@@ -318,7 +362,7 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
                 uint8_t msg_length = recvBuffer[1];
                 printf("Correct ACK code received (0x%x)\n", recvBuffer[0]);
                 printf("MQTT Message Length: 0x%x\n", msg_length);
-                ret = true;
+                ret = msg_code[msg_type].ack_fn( &recvBuffer[2], msg_length );
             }
             else
             {
