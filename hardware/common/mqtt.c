@@ -61,11 +61,22 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
         ret = false;
     }
 
-    return true;
+    return ret;
 }
 bool Ack_Subscribe( uint8_t * buff, uint8_t len )
 {
-    return true;
+    bool ret = true;
+    
+    uint16_t msg_id =  ( *buff++ << 0 ) | *buff++;
+    uint8_t qos = *buff;
+
+    printf("SUBACK: msg id=%d, qos = %d\n", msg_id, qos);
+    
+    mqtt_poll.fd = sock;
+    mqtt_poll.events = POLLIN;
+    memset(recvBuffer, 0x00, 128);
+
+    return ret;
 }
 bool Ack_Publish( uint8_t * buff, uint8_t len )
 {
@@ -141,88 +152,13 @@ mqtt_state_t MQTT_Subscribe( void )
 {
     /* Default return state incase of error */
     mqtt_state_t ret = mqtt_state_Connect;
-    
-    const unsigned char mqtt_template_subscribe[] =
+
+    bool success = MQTT_Transmit( mqtt_msg_Subscribe, NULL);    
+    if( success )
     {
-        0x82,                                                                   // message type, qos, no retain
-        0x00,                                                                   // length of message
-        0x00,0x01,                                                              // message identifier
-    };
-    
-    uint8_t full_topic[64];
-    memset( full_topic, 0x00, 64);
-
-    strcat(full_topic, parent_topic);
-    strcat(full_topic,"/#");
-
-    memset(sendBuffer, 0x00, 128);
-    memset(recvBuffer, 0x00, 128);
-
-    /* Construct Packet */
-    uint8_t * msg_ptr = sendBuffer;
-    uint16_t packet_size = (uint16_t)sizeof( mqtt_template_subscribe );
-    uint16_t topic_size = strlen(full_topic );
-
-    memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
-    msg_ptr+= packet_size;
-    msg_ptr++;
-    *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
-    memcpy(msg_ptr, full_topic, topic_size);
-     
-    uint16_t total_packet_size = packet_size + topic_size + 1;
-    sendBuffer[1] = (uint8_t)(total_packet_size&0xFF);
-    uint16_t full_packet_size = total_packet_size + 2;
-    
-    int snd = send(sock, sendBuffer, full_packet_size, 0);
-    if( snd < 0 )
-    {
-        printf("Error Sending Data\n");
-        ret = mqtt_state_Connect;
+        ret = mqtt_state_Idle;
     }
-    else
-    {
-        printf("%d Bytes Sent\n", snd);    
-        int rcv = recv(sock, recvBuffer, 128, 0);                
-        if( rcv < 0 )
-        {
-            printf("Error Sending Data\n");
-            ret = mqtt_state_Connect;
-        }
-        else if( rcv == 0 )
-        {
-            printf("Connection Closed\n");
-            ret = mqtt_state_Connect;
-        }
-        else
-        {
-            printf("%d Bytes Received\n", rcv);    
-            
-            if( rcv == 5 )
-            {
-                if(recvBuffer[0] == 0x90)
-                {
-                    printf("Subscription to %s Acknowledged Successfully\n", full_topic);
 
-                    /* Create poll instance to monitor for incoming messages from broker */                    
-                    mqtt_poll.fd = sock;
-                    mqtt_poll.events = POLLIN;
-                    memset(recvBuffer, 0x00, 128);
-
-                    ret = mqtt_state_Idle;
-                }
-                else
-                {
-                    printf("Error Receiving Data\n");
-                    ret = mqtt_state_Connect;
-                }
-            }
-            else
-            {
-                printf("Error Receiving Data\n");
-                ret = mqtt_state_Connect;
-            }
-        }
-    }
     return ret; 
 }
 
@@ -310,6 +246,38 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
         }
             break;
         case mqtt_msg_Subscribe:
+        {
+            const unsigned char mqtt_template_subscribe[] =
+            {
+                0x82,                                                                   // message type, qos, no retain
+                0x00,                                                                   // length of message
+                0x00,0x01,                                                              // message identifier
+            };
+    
+            uint8_t full_topic[64];
+            memset( full_topic, 0x00, 64);
+
+            strcat(full_topic, parent_topic);
+            strcat(full_topic,"/#");
+
+            memset(sendBuffer, 0x00, 128);
+            memset(recvBuffer, 0x00, 128);
+
+            /* Construct Packet */
+            uint8_t * msg_ptr = sendBuffer;
+            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_subscribe );
+            uint16_t topic_size = strlen(full_topic );
+
+            memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
+            msg_ptr+= packet_size;
+            msg_ptr++;
+            *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
+            memcpy(msg_ptr, full_topic, topic_size);
+     
+            uint16_t total_packet_size = packet_size + topic_size + 1;
+            sendBuffer[1] = (uint8_t)(total_packet_size&0xFF);
+            full_packet_size = total_packet_size + 2;
+        }
             break;
         case mqtt_msg_Publish:
             break;
