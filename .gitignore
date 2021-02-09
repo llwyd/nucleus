@@ -13,6 +13,10 @@ hardware/daemon/apikey.h
 hardware/apikeys/apikey.h
 hardware/.vscode
 
+hardware/common/mqtt.o
+
+*.swp
+
 hardware/mqtt/localdata.h
 hardware/mqtt/m
 

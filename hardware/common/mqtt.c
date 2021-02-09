@@ -35,11 +35,11 @@ bool Ack_Disconnect( uint8_t * buff, uint8_t len );
 /* transmit and acknowledge code pairs */
 static mqtt_pairs_t msg_code [ 5 ] =
 {
-    { mqtt_msg_Connect,         0x10, 0x20, Ack_Connect },
-    { mqtt_msg_Subscribe,       0x82, 0x90, Ack_Subscribe },
-    { mqtt_msg_Publish,         0x32, 0x40, Ack_Publish },
-    { mqtt_msg_Ping,            0xc0, 0xd0, Ack_Ping },
-    { mqtt_msg_Disconnect,      0x00, 0x00, Ack_Disconnect },
+    { mqtt_msg_Connect,         0x10, 0x20, Ack_Connect, "CONNECT" },
+    { mqtt_msg_Subscribe,       0x82, 0x90, Ack_Subscribe, "SUBSCRIBE" },
+    { mqtt_msg_Publish,         0x32, 0x40, Ack_Publish, "PUBLISH" },
+    { mqtt_msg_Ping,            0xc0, 0xd0, Ack_Ping, "PING" },
+    { mqtt_msg_Disconnect,      0x00, 0x00, Ack_Disconnect, "DISCONNECT" },
 };
 
 
@@ -309,6 +309,7 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     }
     else
     {
+        printf("%s: Sending Packet\n", msg_code[msg_type].name);
         printf("%d Bytes Sent\n", snd);    
         int rcv = recv(sock, recvBuffer, 128, 0);                
         if( rcv < 0 )
