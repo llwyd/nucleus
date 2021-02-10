@@ -16,15 +16,13 @@ static uint8_t * client_name;
 static uint8_t * parent_topic;
 
 static mqtt_subs_t * sub;
+static uint8_t num_sub = 0;
 
 static mqtt_func_t StateTable [ 3 ] =
 {
     { mqtt_state_Connect ,      MQTT_Connect },
     { mqtt_state_Subscribe ,    MQTT_Subscribe },
     { mqtt_state_Idle,          MQTT_Idle },
-    //{ mqtt_state_Publish ,      MQTT_Publish },
-    //{ mqtt_state_Disconnect ,   MQTT_Disconnect },
-    //{ mqtt_state_Ping ,         MQTT_Ping },
 };
 
 /* Functions for handlinmg acks */
@@ -155,7 +153,12 @@ mqtt_state_t MQTT_Subscribe( void )
     /* Default return state incase of error */
     mqtt_state_t ret = mqtt_state_Connect;
 
-    bool success = MQTT_Transmit( mqtt_msg_Subscribe, NULL);    
+    bool success = true;
+    for( uint8_t i=0; i < num_sub; i++)
+    {
+        success &= MQTT_Transmit( mqtt_msg_Subscribe, &sub[i]);
+    }
+
     if( success )
     {
         ret = mqtt_state_Idle;
@@ -249,6 +252,7 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
             break;
         case mqtt_msg_Subscribe:
         {
+            mqtt_subs_t * sub_data = (mqtt_subs_t *) msg_data;
             const unsigned char mqtt_template_subscribe[] =
             {
                 0x82,                                                                   // message type, qos, no retain
@@ -258,9 +262,10 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
     
             uint8_t full_topic[64];
             memset( full_topic, 0x00, 64);
-
+            
             strcat(full_topic, parent_topic);
-            strcat(full_topic,"/#");
+            strcat(full_topic,"/");
+            strcat(full_topic, sub_data->name);
 
             memset(sendBuffer, 0x00, 128);
             memset(recvBuffer, 0x00, 128);
@@ -300,7 +305,7 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
    
     bool ret = false;
     /* Construct Data Packet */ 
-    uint16_t packet_size = MQTT_Format( msg_type, NULL );
+    uint16_t packet_size = MQTT_Format( msg_type, msg_data );
     
     /* Send */
     int snd = send(sock, sendBuffer, packet_size, 0);
@@ -351,7 +356,8 @@ void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, u
 {
     client_name         = host_name;
     parent_topic        = root_topic;
-    sub = subs; 
+    sub = subs;
+    num_sub = num_subs; 
     printf("INIT->host:%s->topic:%s->OK\n", client_name , parent_topic);
     for( uint8_t i=0; i < num_subs; i++ )
     {
