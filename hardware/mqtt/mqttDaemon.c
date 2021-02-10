@@ -23,8 +23,20 @@
 #include "../common/mqtt.h"
 
 
+
+void Sub_Led(mqtt_data_t * data)
+{
+    printf("Hello");
+} 
+
+static mqtt_subs_t subscriptions [1]=
+{
+    {"led", mqtt_type_bool, Sub_Led },
+};
+
 void main( void )
 {
+    MQTT_Init("pi-livingroom","livingroom",subscriptions,1);
     MQTT_Task();
 }
 

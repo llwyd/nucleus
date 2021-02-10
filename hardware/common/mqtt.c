@@ -12,8 +12,10 @@ static struct pollfd mqtt_poll;
 static uint8_t sendBuffer[BUFFER_SIZE];
 static uint8_t recvBuffer[BUFFER_SIZE];
 
-static const uint8_t * client_name      = "pi-livingroom";
-static const uint8_t * parent_topic     = "livingroom";
+static uint8_t * client_name;
+static uint8_t * parent_topic;
+
+static mqtt_subs_t * sub;
 
 static mqtt_func_t StateTable [ 3 ] =
 {
@@ -343,6 +345,18 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     }
 
     return ret;
+}
+
+void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs )
+{
+    client_name         = host_name;
+    parent_topic        = root_topic;
+    sub = subs; 
+    printf("INIT->host:%s->topic:%s->OK\n", client_name , parent_topic);
+    for( uint8_t i=0; i < num_subs; i++ )
+    {
+        printf("INIT->sub:%s->OK\n", sub[i].name);
+    }
 }
 
 void MQTT_Task( void )
