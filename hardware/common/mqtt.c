@@ -167,10 +167,58 @@ mqtt_state_t MQTT_Subscribe( void )
     return ret; 
 }
 
+void MQTT_Decode( uint8_t * buffer, uint16_t len )
+{
+    printf("PUBLISH->recv:%d->", len);
+    if( buffer[0] == 0x30 )
+    {
+        uint8_t topic[64];
+        uint8_t full_topic[64];
+        uint8_t data[32];
+
+        memset( topic, 0x00, 64);
+        memset( data, 0x00, 32);
+                
+        unsigned char msgLen = buffer[1];
+        unsigned char topLen = buffer[2] << 8 | buffer[3];
+        unsigned char * msg = &buffer[4];
+        
+        memcpy(topic, msg, topLen);
+        msg+=topLen;
+        msgLen -= topLen;
+        
+        for( uint8_t i = 0; i < num_sub ; i++ )
+        {
+            memset(full_topic, 0x00, 64);
+            
+            strcat(full_topic, parent_topic);
+            strcat(full_topic, "/");
+            strcat(full_topic, sub[i].name);
+            
+            if( strcmp( full_topic, topic) == 0)
+            {
+                printf("%s->",topic);
+                memcpy(data, msg, msgLen);
+                printf("data:%s->",data);
+                mqtt_data_t d;
+                d.s = data;
+                sub[i].sub_fn( &d );
+                printf("OK\n");
+            }
+        }
+
+
+    }
+    else
+    {
+        printf("FAIL\n");
+    }
+}
+
 mqtt_state_t MQTT_Idle( void )
 {
     mqtt_state_t ret = mqtt_state_Idle;
-    int rv = poll( &mqtt_poll, 1, 2000);
+    int rv = poll( &mqtt_poll, 1, 200);
     
     if( rv & POLLIN )
     {
@@ -187,27 +235,8 @@ mqtt_state_t MQTT_Idle( void )
         }
         else
         {
-            printf("%d Bytes Received\n", rcv);    
-            
-            if( recvBuffer[0] == 0x30 )
-            {
-                uint8_t topic[64];
-                uint8_t data[32];
-                memset(topic,0x00,64);
-                memset(data,0x00,32);
-                
-                unsigned char msgLen = recvBuffer[1];
-                unsigned char topLen = recvBuffer[2] << 8 | recvBuffer[3];
-                unsigned char * msg = &recvBuffer[4];
-                
-                memcpy(topic, msg, topLen);
-                msg+=topLen;
-                msgLen -= topLen;
-                memcpy(data, msg, msgLen);
-                printf("Topic:%s, Data: %s\n", topic, data);
-        
-                memset(recvBuffer, 0x00, 128);
-            }
+            MQTT_Decode( recvBuffer, rcv );
+            memset(recvBuffer, 0x00, 128);
             ret = mqtt_state_Idle;
         }
     }
