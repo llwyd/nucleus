@@ -14,6 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "task.h"
 
 typedef enum mqtt_type_t
 {
@@ -30,29 +31,6 @@ typedef union
     char * s;
     bool b;
 } mqtt_data_t;
-
-typedef struct mqtt_send_msg_t
-{
-    char * parent_topic;
-    char * topic;
-
-    mqtt_type_t type;
-    mqtt_data_t data;
-
-    double time;                /* How Often to send */
-    time_t currentTime;
-} mqtt_send_msg_t;
-
-typedef struct mqtt_recv_msg_t
-{
-    char * parent_topic;
-    char * topic;
-
-    mqtt_type_t type;
-    mqtt_data_t data;
-
-    void (*mqtt_fn) (void); /* Action to run when receiving a given message*/
-} mqtt_recv_msg_t;
 
 typedef enum mqtt_state_t
 {

@@ -19,10 +19,27 @@
 #include <time.h>
 #include <unistd.h>
 
-//#include "localdata.h"
 #include "../common/mqtt.h"
+#include "../common/task.h"
 
 
+void Test_Task(void);
+void Test_Task2(void);
+
+task_t TaskList [2] =
+{
+    {Test_Task, 2, 0},
+    {Test_Task2, 10, 0},
+};
+
+void Test_Task2(void)
+{
+    printf("Task 2 executed\n");
+}
+void Test_Task(void)
+{
+    printf("Task executed\n");
+}
 
 void Sub_Led(mqtt_data_t * data)
 {
@@ -37,6 +54,7 @@ static mqtt_subs_t subscriptions [2]=
 
 void main( void )
 {
+    Task_Init(TaskList, 2);
     MQTT_Init("pi-livingroom","livingroom",subscriptions,2);
     MQTT_Task();
 }

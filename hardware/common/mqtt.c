@@ -300,6 +300,7 @@ mqtt_state_t MQTT_Idle( void )
     mqtt_state_t ret = mqtt_state_Idle;
     bool ping = MQTT_CheckTime();    
     int rv = poll( &mqtt_poll, 1, 200);
+    static uint8_t task_idx = 0;
 
     if( rv & POLLIN )
     {
@@ -324,8 +325,13 @@ mqtt_state_t MQTT_Idle( void )
     }
     else if( ping )
     {
-        /*Ping*/
+        /*Ping watchdog has expired, send ping*/
         ret = MQTT_Ping();
+    }
+    else
+    {
+        /*Perform task */
+        Task_RunSingle();
     }
     
     return ret;
@@ -483,12 +489,13 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     return ret;
 }
 
-void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs )
+void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs)
 {
     client_name         = host_name;
     parent_topic        = root_topic;
     sub = subs;
     num_sub = num_subs; 
+
     printf("INIT->host:%s->topic:%s->OK\n", client_name , parent_topic);
     for( uint8_t i=0; i < num_subs; i++ )
     {
