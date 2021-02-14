@@ -2,9 +2,12 @@
 
 #include "../common/mqtt.h"
 #include "../mqtt/localdata.h"
+#include <time.h>
 
 #define MQTT_PORT ( 1883 )
 #define BUFFER_SIZE (128)
+
+#define MQTT_TIMEOUT ( 0x05 )
 
 static int sock;
 static struct pollfd mqtt_poll;
@@ -17,6 +20,10 @@ static uint8_t * parent_topic;
 
 static mqtt_subs_t * sub;
 static uint8_t num_sub = 0;
+
+/* This is used to keep track of time between MQTT events */
+static time_t watchdog;
+
 
 static mqtt_func_t StateTable [ 3 ] =
 {
@@ -84,6 +91,7 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
 }
 bool Ack_Ping( uint8_t * buff, uint8_t len )
 {
+    printf("OK");
     return true;
 }
 bool Ack_Disconnect( uint8_t * buff, uint8_t len )
@@ -167,9 +175,59 @@ mqtt_state_t MQTT_Subscribe( void )
     return ret; 
 }
 
+mqtt_state_t MQTT_Ping( void )
+{
+    mqtt_state_t ret = mqtt_state_Connect;
+    
+    bool success = MQTT_Transmit( mqtt_msg_Ping, NULL);
+    if( success )
+    {
+        ret = mqtt_state_Idle;
+    }
+    else
+    {
+        ret = mqtt_state_Connect;
+    }
+    
+    return ret;
+}
+
+mqtt_data_t MQTT_Extract( uint8_t * data, mqtt_type_t type )
+{
+    mqtt_data_t d;
+    
+    switch( type )
+    {
+        case mqtt_type_float:
+            d.f = (float)atof(data);
+            break;
+        case mqtt_type_int16:
+            d.i = (uint16_t)atoi(data);
+            break;
+        case mqtt_type_str:
+            d.s = data;
+            break;
+        case mqtt_type_bool:
+            if( strcmp("1", data) == 0) 
+            {
+                d.b = true; 
+            }
+            else
+            {
+                d.b = false;
+            }
+            break;
+        default:
+            break;
+    }
+    return d;
+}
+
+/* Function for decoding unsolicited messages */
 void MQTT_Decode( uint8_t * buffer, uint16_t len )
 {
     printf("PUBLISH->recv:%d->", len);
+    mqtt_data_t decode_data;
     if( buffer[0] == 0x30 )
     {
         uint8_t topic[64];
@@ -200,9 +258,8 @@ void MQTT_Decode( uint8_t * buffer, uint16_t len )
                 printf("%s->",topic);
                 memcpy(data, msg, msgLen);
                 printf("data:%s->",data);
-                mqtt_data_t d;
-                d.s = data;
-                sub[i].sub_fn( &d );
+                decode_data = MQTT_Extract( data, sub[i].format);
+                sub[i].sub_fn( &decode_data );
                 printf("OK\n");
             }
         }
@@ -215,11 +272,34 @@ void MQTT_Decode( uint8_t * buffer, uint16_t len )
     }
 }
 
+bool MQTT_CheckTime()
+{
+    time_t currentTime;
+    time(&currentTime);
+    bool ret = false;
+    double delta = difftime( currentTime, watchdog );
+    if( delta > 5 )
+    {
+        ret = true;
+    }
+    else
+    {
+        ret = false;
+    }
+    return ret;
+}
+
+void MQTT_KickWatchdog(void)
+{
+    time(&watchdog);
+}
+
 mqtt_state_t MQTT_Idle( void )
 {
     mqtt_state_t ret = mqtt_state_Idle;
+    bool ping = MQTT_CheckTime();    
     int rv = poll( &mqtt_poll, 1, 200);
-    
+
     if( rv & POLLIN )
     {
         int rcv = recv(sock, recvBuffer, 256, 0U);
@@ -236,9 +316,15 @@ mqtt_state_t MQTT_Idle( void )
         else
         {
             MQTT_Decode( recvBuffer, rcv );
+            MQTT_KickWatchdog();
             memset(recvBuffer, 0x00, 128);
             ret = mqtt_state_Idle;
         }
+    }
+    else if( ping )
+    {
+        /*Ping*/
+        ret = MQTT_Ping();
     }
     
     return ret;
@@ -318,6 +404,20 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
         case mqtt_msg_Publish:
             break;
         case mqtt_msg_Ping:
+        {
+            const unsigned char mqtt_template_ping[] =
+            {
+                0xc0,0x00,
+            };
+            
+            memset(sendBuffer, 0x00, 128);
+            memset(recvBuffer, 0x00, 128);
+            
+            uint8_t * msg_ptr = sendBuffer;
+            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_ping );
+            memcpy( msg_ptr, mqtt_template_ping, packet_size );
+            full_packet_size = packet_size;
+         }   
             break;
         case mqtt_msg_Disconnect:
             break;
@@ -378,6 +478,7 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
         }
     }
 
+    MQTT_KickWatchdog();
     return ret;
 }
 
@@ -392,6 +493,7 @@ void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, u
     {
         printf("INIT->sub:%s->OK\n", sub[i].name);
     }
+    time(&watchdog);
 }
 
 void MQTT_Task( void )

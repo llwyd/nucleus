@@ -26,7 +26,7 @@
 
 void Sub_Led(mqtt_data_t * data)
 {
-    printf("led_status: %s->", data->s );
+    printf("led_status: %d->", data->b );
 } 
 
 static mqtt_subs_t subscriptions [1]=

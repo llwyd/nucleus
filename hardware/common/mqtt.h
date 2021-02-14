@@ -28,7 +28,7 @@ typedef union
     float f;
     uint16_t i;
     char * s;
-    bool * b;
+    bool b;
 } mqtt_data_t;
 
 typedef struct mqtt_send_msg_t
@@ -93,11 +93,12 @@ typedef struct mqtt_subs_t
 {
     uint8_t * name;
     mqtt_type_t format;
-    void (*sub_fn)(mqtt_data_t* );
+    void (*sub_fn)( mqtt_data_t* );
 } mqtt_subs_t;
 
 /* Utility functions */
 uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data );
+mqtt_data_t MQTT_Extract( uint8_t * data, mqtt_type_t type );
 bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data );
 void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs );
 
