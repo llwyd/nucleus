@@ -7,7 +7,7 @@
 #define MQTT_PORT ( 1883 )
 #define BUFFER_SIZE (128)
 
-#define MQTT_TIMEOUT ( 0x05 )
+#define MQTT_TIMEOUT ( 0xb4 )
 
 static int sock;
 static struct pollfd mqtt_poll;
@@ -276,9 +276,10 @@ bool MQTT_CheckTime()
 {
     time_t currentTime;
     time(&currentTime);
+    double mqtt_timeout = (double)MQTT_TIMEOUT;
     bool ret = false;
     double delta = difftime( currentTime, watchdog );
-    if( delta > 5 )
+    if( delta > mqtt_timeout )
     {
         ret = true;
     }
@@ -347,7 +348,7 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
                 0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
                 0x03,                                   /* Version MQTT v3.1 */
                 0x02,                                   /* Fire and forget */
-                0x00, 0xb4,                             /* Keep alive timeout */
+                0x00, MQTT_TIMEOUT,                     /* Keep alive timeout */
             };
             
             uint8_t * msg_ptr = sendBuffer;

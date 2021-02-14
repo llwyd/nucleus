@@ -29,14 +29,15 @@ void Sub_Led(mqtt_data_t * data)
     printf("led_status: %d->", data->b );
 } 
 
-static mqtt_subs_t subscriptions [1]=
+static mqtt_subs_t subscriptions [2]=
 {
     {"led", mqtt_type_bool, Sub_Led },
+    {"switch", mqtt_type_bool, Sub_Led },
 };
 
 void main( void )
 {
-    MQTT_Init("pi-livingroom","livingroom",subscriptions,1);
+    MQTT_Init("pi-livingroom","livingroom",subscriptions,2);
     MQTT_Task();
 }
 
