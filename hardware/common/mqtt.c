@@ -299,7 +299,7 @@ mqtt_state_t MQTT_Idle( void )
 {
     mqtt_state_t ret = mqtt_state_Idle;
     bool ping = MQTT_CheckTime();    
-    int rv = poll( &mqtt_poll, 1, 200);
+    int rv = poll( &mqtt_poll, 1, 10);
     static uint8_t task_idx = 0;
 
     if( rv & POLLIN )
