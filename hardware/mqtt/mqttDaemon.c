@@ -23,25 +23,42 @@
 #include "../common/task.h"
 
 
+
 void Test_Task(void);
-void Test_Task2(void);
+void Test_Random(void);
 
 
 task_t TaskList [2] =
 {
     {Test_Task, 2, 0},
-    {Test_Task2, 10, 0},
+    {Test_Random, 5, 0},
 };
 
 
 
-void Test_Task2(void)
+void Test_Random(void)
 {
-    printf("Task 2 executed\n");
+    float r = (((float)rand()/(float)RAND_MAX)*2.f)-1.f;
+    printf("Float: %.4f\n", r);
+
+    mqtt_pub_t random;
+    random.name = "random";
+    random.format = mqtt_type_float;
+    random.data.f = r;
+
+    MQTT_Transmit(mqtt_msg_Publish, &random);
+
 }
 void Test_Task(void)
 {
     printf("Task executed\n");
+
+    mqtt_pub_t random;
+    random.name = "location";
+    random.format = mqtt_type_str;
+    random.data.s = "UK";
+
+    MQTT_Transmit(mqtt_msg_Publish, &random);
 }
 
 void Sub_Led(mqtt_data_t * data)

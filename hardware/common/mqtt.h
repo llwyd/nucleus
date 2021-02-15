@@ -74,6 +74,13 @@ typedef struct mqtt_subs_t
     void (*sub_fn)( mqtt_data_t* );
 } mqtt_subs_t;
 
+typedef struct mqtt_pub_t
+{
+    uint8_t * name;
+    mqtt_type_t format;
+    mqtt_data_t data;
+} mqtt_pub_t;
+
 /* Utility functions */
 uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data );
 mqtt_data_t MQTT_Extract( uint8_t * data, mqtt_type_t type );

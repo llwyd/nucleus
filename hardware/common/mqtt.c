@@ -409,6 +409,64 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
         }
             break;
         case mqtt_msg_Publish:
+        {
+            mqtt_pub_t * pub_data = (mqtt_pub_t *) msg_data;
+            
+            memset(sendBuffer, 0x00, 128);
+            memset(recvBuffer, 0x00, 128);
+            
+            uint8_t text_buff[64];
+            memset( text_buff, 0x00, 64);
+            
+            strcat(text_buff, parent_topic);
+            strcat(text_buff,"/");
+            strcat(text_buff, pub_data->name);
+            uint16_t topic_size = strlen(text_buff);
+            
+
+            uint8_t * msg_ptr = sendBuffer;
+            *msg_ptr++ = msg_code[mqtt_msg_Publish].send_code;
+            msg_ptr++; /* This is where message length would go */ 
+            msg_ptr++; /* MSB topic length */
+            *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
+            memcpy(msg_ptr, text_buff, topic_size);
+            memset( text_buff, 0x00, 64);
+            msg_ptr+=topic_size;
+
+            /* Message ID */
+            msg_ptr++;
+            *msg_ptr++ = 0x01;
+            switch( pub_data->format )
+            {
+                case mqtt_type_float:
+                    snprintf(text_buff, 64, "%.4f", pub_data->data.f);
+                    break;
+                case mqtt_type_int16:
+                    snprintf(text_buff, 64, "%df", pub_data->data.i);
+                    break;
+                case mqtt_type_str:
+                    strcat(text_buff, pub_data->data.s);
+                    break;
+                case mqtt_type_bool:
+                    if( pub_data->data.b)
+                    {
+                        strcat(text_buff,"1");
+                    }
+                    else
+                    {
+                        strcat(text_buff,"0");
+                    }
+                    break;
+            }
+            uint8_t data_len = strlen(text_buff);
+            memcpy(msg_ptr,text_buff,data_len);
+            /* Topic len + topic + data + msg id */
+            uint8_t total_packet_size = (uint8_t)topic_size + data_len + 2 + 2;
+            sendBuffer[1] = total_packet_size;
+            /* header and size byte */
+            full_packet_size = total_packet_size + 2;
+
+        }
             break;
         case mqtt_msg_Ping:
         {
