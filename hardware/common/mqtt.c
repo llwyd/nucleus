@@ -593,7 +593,7 @@ void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, u
     time(&watchdog);
 }
 
-void MQTT_Task( void )
+void MQTT_Loop( void )
 {
     mqtt_func_t * task = StateTable;
     mqtt_state_t current_state = mqtt_state_Connect;    

@@ -94,7 +94,8 @@ mqtt_state_t MQTT_Publish( void );
 mqtt_state_t MQTT_Disconnect( void );
 mqtt_state_t MQTT_Ping( void );
 
-void MQTT_Task( void );
+/* main event loop */
+void MQTT_Loop( void );
 
 
 #endif /* MQTT_H */
