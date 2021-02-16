@@ -33,11 +33,11 @@ static mqtt_func_t StateTable [ 3 ] =
 };
 
 /* Functions for handlinmg acks */
-bool Ack_Connect( uint8_t * buff, uint8_t len );
-bool Ack_Subscribe( uint8_t * buff, uint8_t len );
-bool Ack_Publish( uint8_t * buff, uint8_t len );
-bool Ack_Ping( uint8_t * buff, uint8_t len );
-bool Ack_Disconnect( uint8_t * buff, uint8_t len );
+bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id );
+bool Ack_Subscribe( uint8_t * buff, uint8_t len, uint16_t id );
+bool Ack_Publish( uint8_t * buff, uint8_t len, uint16_t id );
+bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id );
+bool Ack_Disconnect( uint8_t * buff, uint8_t len, uint16_t id );
 
 /* transmit and acknowledge code pairs */
 static mqtt_pairs_t msg_code [ 5 ] =
@@ -50,7 +50,7 @@ static mqtt_pairs_t msg_code [ 5 ] =
 };
 
 
-bool Ack_Connect( uint8_t * buff, uint8_t len )
+bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id )
 {
     bool ret = false;
     
@@ -70,14 +70,25 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
 
     return ret;
 }
-bool Ack_Subscribe( uint8_t * buff, uint8_t len )
+bool Ack_Subscribe( uint8_t * buff, uint8_t len, uint16_t id )
 {
-    bool ret = true;
+    bool ret = false;
     
-    uint16_t msg_id =  ( *buff++ << 0 ) | *buff++;
+    uint16_t msg_id =  ( *buff++ << 8 ) | *buff++;
     uint8_t qos = *buff;
 
-    printf("OK->msg id=%d, qos = %d", msg_id, qos);
+    printf("msg id=%d, qos = %d->", msg_id, qos);
+    
+    if(msg_id == id)
+    {
+        ret = true;
+        printf("OK");
+    }
+    else
+    {
+        ret = false;
+        printf("FAIL");
+    }
     
     mqtt_poll.fd = sock;
     mqtt_poll.events = POLLIN;
@@ -85,16 +96,31 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
 
     return ret;
 }
-bool Ack_Publish( uint8_t * buff, uint8_t len )
+bool Ack_Publish( uint8_t * buff, uint8_t len, uint16_t id )
 {
-    return true;
+    bool ret = false;
+    uint16_t msg_id =  ( *buff++ << 8 ) | *buff++;
+    printf("msg id=%d->", msg_id);
+    
+    if(msg_id == id)
+    {
+        ret = true;
+        printf("OK");
+    }
+    else
+    {
+        ret = false;
+        printf("FAIL");
+    }
+
+    return ret;
 }
-bool Ack_Ping( uint8_t * buff, uint8_t len )
+bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id )
 {
     printf("OK");
     return true;
 }
-bool Ack_Disconnect( uint8_t * buff, uint8_t len )
+bool Ack_Disconnect( uint8_t * buff, uint8_t len, uint16_t id )
 {
     return true;
 }
@@ -299,7 +325,7 @@ mqtt_state_t MQTT_Idle( void )
 {
     mqtt_state_t ret = mqtt_state_Idle;
     bool ping = MQTT_CheckTime();    
-    int rv = poll( &mqtt_poll, 1, 10);
+    int rv = poll( &mqtt_poll, 1, 1);
     static uint8_t task_idx = 0;
 
     if( rv & POLLIN )
@@ -337,7 +363,7 @@ mqtt_state_t MQTT_Idle( void )
     return ret;
 }
 
-uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
+uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id )
 {
     uint16_t full_packet_size = 0;
 
@@ -379,7 +405,6 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
             {
                 0x82,                                                                   // message type, qos, no retain
                 0x00,                                                                   // length of message
-                0x00,0x01,                                                              // message identifier
             };
     
             uint8_t full_topic[64];
@@ -399,11 +424,15 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
 
             memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
             msg_ptr+= packet_size;
+            
+            *msg_ptr++ = (uint8_t)((*id >> 8U)&0xFF);
+            *msg_ptr++ = (uint8_t)(*id&0xFF);
+            
             msg_ptr++;
             *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
             memcpy(msg_ptr, full_topic, topic_size);
      
-            uint16_t total_packet_size = packet_size + topic_size + 1;
+            uint16_t total_packet_size = packet_size + topic_size + 1 + 2;
             sendBuffer[1] = (uint8_t)(total_packet_size&0xFF);
             full_packet_size = total_packet_size + 2;
         }
@@ -434,8 +463,8 @@ uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data )
             msg_ptr+=topic_size;
 
             /* Message ID */
-            msg_ptr++;
-            *msg_ptr++ = 0x01;
+            *msg_ptr++ = (uint8_t)((*id >> 8U)&0xFF);
+            *msg_ptr++ = (uint8_t)(*id&0xFF);
             switch( pub_data->format )
             {
                 case mqtt_type_float:
@@ -498,8 +527,9 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     memset(recvBuffer, 0x00, BUFFER_SIZE);
    
     bool ret = false;
+    static uint16_t msg_id = 0x0000;
     /* Construct Data Packet */ 
-    uint16_t packet_size = MQTT_Format( msg_type, msg_data );
+    uint16_t packet_size = MQTT_Format( msg_type, msg_data, &msg_id );
     
     /* Send */
     int snd = send(sock, sendBuffer, packet_size, 0);
@@ -532,7 +562,8 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
                 uint8_t msg_length = recvBuffer[1];
                 printf("%s->", msg_code[msg_type].ack_name);
                 printf("msglen:%d->", msg_length);
-                ret = msg_code[msg_type].ack_fn( &recvBuffer[2], msg_length );
+                ret = msg_code[msg_type].ack_fn( &recvBuffer[2], msg_length, msg_id );
+                msg_id++;
                 printf("\n");
             }
             else
