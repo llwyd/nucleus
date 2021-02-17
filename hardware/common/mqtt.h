@@ -62,7 +62,7 @@ typedef struct mqtt_pairs_t
     mqtt_msg_type_t msg_type;
     uint8_t send_code;
     uint8_t recv_code;
-    bool (*ack_fn)(uint8_t * buff, uint8_t len);
+    bool (*ack_fn)(uint8_t * buff, uint8_t len, uint16_t id);
     const uint8_t * name;
     const uint8_t * ack_name;
 } mqtt_pairs_t;
@@ -82,7 +82,7 @@ typedef struct mqtt_pub_t
 } mqtt_pub_t;
 
 /* Utility functions */
-uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data );
+uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id );
 mqtt_data_t MQTT_Extract( uint8_t * data, mqtt_type_t type );
 bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data );
 void MQTT_Init(uint8_t * ip, uint8_t * port, uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs);
@@ -94,7 +94,8 @@ mqtt_state_t MQTT_Publish( void );
 mqtt_state_t MQTT_Disconnect( void );
 mqtt_state_t MQTT_Ping( void );
 
-void MQTT_Task( void );
+/* main event loop */
+void MQTT_Loop( void );
 
 
 #endif /* MQTT_H */

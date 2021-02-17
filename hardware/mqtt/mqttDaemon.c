@@ -76,6 +76,6 @@ void main( void )
 {
     Task_Init(TaskList, 2);
     MQTT_Init("pi-livingroom","livingroom",subscriptions,2);
-    MQTT_Task();
+    MQTT_Loop();
 }
 
