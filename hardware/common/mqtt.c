@@ -1,7 +1,6 @@
 /* mqtt.c */
 
 #include "../common/mqtt.h"
-#include "../mqtt/localdata.h"
 #include <time.h>
 
 #define MQTT_PORT ( 1883 )
@@ -20,6 +19,10 @@ static uint8_t * parent_topic;
 
 static mqtt_subs_t * sub;
 static uint8_t num_sub = 0;
+
+static uint8_t * broker_ip;
+static uint8_t * broker_port;
+
 
 /* This is used to keep track of time between MQTT events */
 static time_t watchdog;
@@ -547,7 +550,7 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     return ret;
 }
 
-void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs)
+void MQTT_Init(uint8_t * ip, uint8_t * port, uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs)
 {
     client_name         = host_name;
     parent_topic        = root_topic;

@@ -85,7 +85,7 @@ typedef struct mqtt_pub_t
 uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data );
 mqtt_data_t MQTT_Extract( uint8_t * data, mqtt_type_t type );
 bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data );
-void MQTT_Init( uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs );
+void MQTT_Init(uint8_t * ip, uint8_t * port, uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs);
 
 mqtt_state_t MQTT_Connect( void );
 mqtt_state_t MQTT_Subscribe( void );
