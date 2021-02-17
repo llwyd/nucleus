@@ -583,6 +583,9 @@ bool MQTT_Transmit( mqtt_msg_type_t msg_type, void * msg_data )
 
 void MQTT_Init(uint8_t * ip, uint8_t * port, uint8_t * host_name, uint8_t * root_topic, mqtt_subs_t * subs, uint8_t num_subs)
 {
+	broker_ip = ip;
+	broker_port = port;
+
     client_name         = host_name;
     parent_topic        = root_topic;
     sub = subs;

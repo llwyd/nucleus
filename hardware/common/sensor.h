@@ -2,6 +2,7 @@
 #define SENSOR_H
 
 /* Read TMP102 */
-extern void Sensor_Read( float * temperature );
+extern void Sensor_ReadTemperature(void);
+extern float Sensor_GetTemperature(void);
 
 #endif /* SENSOR_H */

@@ -21,7 +21,10 @@ static const uint8_t * device = "/dev/i2c-1";
 // TMP102 sensor address
 static const uint8_t address = 0x48;
 
-extern void Sensor_Read( float * temperature )
+/* Cache temperature */
+static float temperature = 0.0f;
+
+extern void Sensor_ReadTemperature( void )
 {
 	uint16_t file = open( device, O_RDWR );
 	uint8_t data[ 2 ]={ 0x00 };
@@ -44,5 +47,11 @@ extern void Sensor_Read( float * temperature )
 
 	uint16_t rawTemp = ( (( uint16_t )data[ 0 ] << 4) | data[ 1 ] >> 4 );
 
-	*temperature = ( ( float )rawTemp ) * tempScaling;
+	temperature = ( ( float )rawTemp ) * tempScaling;
 }
+
+extern float Sensor_GetTemperature(void)
+{
+	return temperature;
+}
+
