@@ -17,9 +17,11 @@
 #include <unistd.h>
 #include <time.h>
 
+#include "apikey.h"
 #include "../common/mqtt.h"
 #include "../common/task.h"
 #include "../common/sensor.h"
+#include "version.h"
 
 static uint8_t * const ip 	= "0.0.0.0";
 static uint8_t * const port	= "1883";
