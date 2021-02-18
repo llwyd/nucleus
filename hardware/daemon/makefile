@@ -11,4 +11,4 @@ daemon.o: daemon.c
 ../common/task.o: ../common/task.c
 	gcc -c -g ../common/task.c -o ../common/task.o
 clean:
-	rm homeAssistant daemon.o ../common/task.o ../common/sensor.o ../common/comms.o ../common/mqtt.o
+	rm ../bin/homeAssistant daemon.o ../common/task.o ../common/sensor.o ../common/comms.o ../common/mqtt.o
