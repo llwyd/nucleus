@@ -28,8 +28,6 @@ static uint8_t * const ip 	= "0.0.0.0";
 static uint8_t * const port	= "1883";
 
 static uint8_t * const databasePath = "../../homepage/app.db";
-static uint8_t weatherDesc[ 128 ];
-
 
 void Daemon_ProcessTemperature(void);
 void Daemon_SetLED( mqtt_data_t * data);
@@ -64,6 +62,11 @@ void Daemon_ProcessTemperature(void)
 	outside.data.f = Weather_GetTemperature();
 	
 	printf("SENSOR->outside_temp->%.2foC->", outside.data.f);
+	success = MQTT_Transmit(mqtt_msg_Publish, &outside);
+
+	outside.format = mqtt_type_str;
+	outside.data.s = Weather_GetDescription(); 
+	printf("SENSOR->outside_desc->%s->", outside.data.s);
 	success = MQTT_Transmit(mqtt_msg_Publish, &outside);
 }
 

@@ -12,5 +12,6 @@ typedef struct weather_t
 void Weather_Init(const uint8_t * loc, const uint8_t * key);
 void Weather_Update(void);
 float Weather_GetTemperature(void);
+uint8_t * Weather_GetDescription(void);
 
 #endif /* WEATHER_h */
