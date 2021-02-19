@@ -2,7 +2,7 @@
 #define COMMS_H
 
 #include <inttypes.h>
-
+#include <stdbool.h>
 
 #define JSON_NAME_LEN ( 64 )
 

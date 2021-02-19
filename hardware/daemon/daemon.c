@@ -21,6 +21,7 @@
 #include "../common/mqtt.h"
 #include "../common/task.h"
 #include "../common/sensor.h"
+#include "../common/weather.h"
 #include "version.h"
 
 static uint8_t * const ip 	= "0.0.0.0";
@@ -33,10 +34,11 @@ static uint8_t weatherDesc[ 128 ];
 void Daemon_ProcessTemperature(void);
 void Daemon_SetLED( mqtt_data_t * data);
 
-static task_t taskList[2] = 
+static task_t taskList[3] = 
 {
-	{ Sensor_ReadTemperature, 1, 0},
-	{ Daemon_ProcessTemperature, 60, 0},
+	{ Sensor_ReadTemperature, 		1,		0},
+	{ Weather_Update, 				300, 	0},
+	{ Daemon_ProcessTemperature, 	300, 	0},
 };
 
 static mqtt_subs_t subs[1] = 
@@ -47,12 +49,22 @@ static mqtt_subs_t subs[1] =
 
 void Daemon_ProcessTemperature(void)
 {
-	mqtt_pub_t temperature;
-	temperature.name = "temperature";
-	temperature.format = mqtt_type_float;
-	temperature.data.f = Sensor_GetTemperature();
-	printf("SENSOR->TEMPERATURE->%.2foC->", temperature.data.f);
-	bool success = MQTT_Transmit(mqtt_msg_Publish, &temperature);
+	mqtt_pub_t  inside;
+	mqtt_pub_t outside;
+
+	inside.name = "inside_temp";
+	inside.format = mqtt_type_float;
+	inside.data.f = Sensor_GetTemperature();
+	
+	printf("SENSOR->inside_temp->%.2foC->", inside.data.f);
+	bool success = MQTT_Transmit(mqtt_msg_Publish, &inside);
+	
+	outside.name = "outside_temp";
+	outside.format = mqtt_type_float;
+	outside.data.f = Weather_GetTemperature();
+	
+	printf("SENSOR->outside_temp->%.2foC->", outside.data.f);
+	success = MQTT_Transmit(mqtt_msg_Publish, &outside);
 }
 
 void Daemon_SetLED( mqtt_data_t * data)
@@ -72,7 +84,8 @@ void Daemon_SetLED( mqtt_data_t * data)
 
 uint8_t main( int16_t argc, uint8_t **argv )
 {
-	Task_Init(taskList,2);
+	Weather_Init(weatherLocation, weatherKey);
+	Task_Init(taskList,3);
 	MQTT_Init(ip,port,"pi-livingroom","livingroom",subs,1);
 	MQTT_Loop();
 	return 0;

@@ -1,5 +1,5 @@
-../bin/homeAssistant: ../common/comms.o ../common/task.o ../common/sensor.o ../common/mqtt.o daemon.o
-	gcc -g -lm ../common/comms.o ../common/task.o ../common/sensor.o ../common/mqtt.o daemon.o -o ../bin/homeAssistant
+../bin/homeAssistant: ../common/weather.o ../common/comms.o ../common/task.o ../common/sensor.o ../common/mqtt.o daemon.o
+	gcc -g -lm ../common/weather.o ../common/comms.o ../common/task.o ../common/sensor.o ../common/mqtt.o daemon.o -o ../bin/homeAssistant
 daemon.o: daemon.c 
 	gcc -c -g daemon.c -o daemon.o
 ../common/sensor.o: ../common/sensor.c
@@ -10,5 +10,7 @@ daemon.o: daemon.c
 	gcc -c -g ../common/mqtt.c -o ../common/mqtt.o
 ../common/task.o: ../common/task.c
 	gcc -c -g ../common/task.c -o ../common/task.o
+../common/weather.o: ../common/weather.c
+	gcc -c -g ../common/weather.c -o ../common/weather.o
 clean:
-	rm ../bin/homeAssistant daemon.o ../common/task.o ../common/sensor.o ../common/comms.o ../common/mqtt.o
+	rm ../bin/homeAssistant daemon.o ../common/weather ../common/task.o ../common/sensor.o ../common/comms.o ../common/mqtt.o
