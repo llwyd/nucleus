@@ -158,14 +158,15 @@ extern void Comms_Post( uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * 
     close( sock );
 }
 
-extern void Comms_Get(  uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * data, uint16_t len)
+extern bool Comms_Get(  uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * data, uint16_t len)
 {
     int status;
-	struct addrinfo hints;
-	struct addrinfo *servinfo;
+    struct addrinfo hints;
+    struct addrinfo *servinfo;
+    bool ret = false;
+    int sock;
 
-
-	memset( &hints, 0U, sizeof( hints ) );
+    memset( &hints, 0U, sizeof( hints ) );
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
@@ -174,17 +175,58 @@ extern void Comms_Get(  uint8_t * ip, uint8_t * port, uint8_t * path, uint8_t * 
                 REQUEST_SIZE,
                 "GET %s HTTP/1.1\r\nHost: %s:%s\r\nAccept: */*\r\nUser-Agent: pi\r\n\r\n",path,ip,port);
 
-    getaddrinfo( ip, port, &hints, &servinfo );
-
-    int sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
-
-    int c = connect( sock, servinfo->ai_addr, servinfo->ai_addrlen);
-
-    int snd = send( sock, httpRequest, strlen(httpRequest), 0);
-
-    int rcv = recv( sock, data, len, 0U);
-
-    freeaddrinfo(servinfo);
-
-    close( sock );
+    status =getaddrinfo( ip, port, &hints, &servinfo );
+    if( status != 0U )
+    {
+        fprintf( stderr, "Comms Error: %s\n", gai_strerror( status ) );	
+        ret = false;
+    }
+    else
+    {   
+        sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+        if( sock < 0 )
+        {
+            printf("Error creating socket\n");
+            ret = false;
+        }
+        else
+        {
+            int c = connect( sock, servinfo->ai_addr, servinfo->ai_addrlen);
+            if( c < 0 )
+            {
+                printf("Connection Failed\n");
+                ret = false;
+            }
+            else
+            {
+                int snd = send( sock, httpRequest, strlen(httpRequest), 0);
+                if( snd < 0 )
+                {
+                    printf("Error Sending Data\n");
+                    ret = false;
+                }
+                else
+                {
+                    int rcv = recv( sock, data, len, 0U);
+                    if( rcv < 0 )
+                    {
+                        printf("FAIL\n");
+                        ret = false;
+                    }
+                    else if( rcv == 0 )
+                    {
+                        printf("FAIL\n");
+                        ret = false;
+                    }
+                    else
+                    {
+                        freeaddrinfo(servinfo);
+                        close( sock );
+                        ret = true;
+                    }
+                }
+            }
+        }
+    } 
+    return ret;
 }
