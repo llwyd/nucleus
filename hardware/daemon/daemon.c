@@ -29,23 +29,23 @@ static uint8_t * const port	= "1883";
 
 static uint8_t * const databasePath = "../../homepage/app.db";
 
-void Daemon_ProcessTemperature(void);
-void Daemon_SetLED( mqtt_data_t * data);
+void Daemon_TransmitTemperature(void);
+void Daemon_OnBoardLED( mqtt_data_t * data);
 
 static task_t taskList[3] = 
 {
 	{ Sensor_ReadTemperature, 		1,		0},
 	{ Weather_Update, 				300, 	0},
-	{ Daemon_ProcessTemperature, 	300, 	0},
+	{ Daemon_TransmitTemperature, 	300, 	0},
 };
 
 static mqtt_subs_t subs[1] = 
 {
-	{"led", mqtt_type_bool, Daemon_SetLED},
+	{"onboard_led", mqtt_type_bool, Daemon_OnBoardLED},
 };
 
 
-void Daemon_ProcessTemperature(void)
+void Daemon_TransmitTemperature(void)
 {
 	mqtt_pub_t  inside;
 	mqtt_pub_t outside;
@@ -62,15 +62,15 @@ void Daemon_ProcessTemperature(void)
 	outside.data.f = Weather_GetTemperature();
 	
 	printf("SENSOR->outside_temp->%.2foC->", outside.data.f);
-	success = MQTT_Transmit(mqtt_msg_Publish, &outside);
+	success &= MQTT_Transmit(mqtt_msg_Publish, &outside);
 
 	outside.format = mqtt_type_str;
 	outside.data.s = Weather_GetDescription(); 
 	printf("SENSOR->outside_desc->%s->", outside.data.s);
-	success = MQTT_Transmit(mqtt_msg_Publish, &outside);
+	success &= MQTT_Transmit(mqtt_msg_Publish, &outside);
 }
 
-void Daemon_SetLED( mqtt_data_t * data)
+void Daemon_OnBoardLED( mqtt_data_t * data)
 {	
 	int led_fd = open( "/sys/class/leds/led0/brightness", O_WRONLY );
 
