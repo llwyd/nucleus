@@ -18,6 +18,7 @@
 #include <time.h>
 
 #include "apikey.h"
+#include "../common/aux.h"
 #include "../common/mqtt.h"
 #include "../common/task.h"
 #include "../common/sensor.h"
@@ -30,11 +31,13 @@ static uint8_t * const port	= "1883";
 static uint8_t * const databasePath = "../../homepage/app.db";
 
 void Daemon_TransmitTemperature(void);
+void Daemon_TransmitAux(void);
 void Daemon_OnBoardLED( mqtt_data_t * data);
 
-static task_t taskList[3] = 
+static task_t taskList[4] = 
 {
 	{ Sensor_ReadTemperature, 		1,		0},
+	{ Aux_Update, 					1,		0},
 	{ Weather_Update, 				300, 	0},
 	{ Daemon_TransmitTemperature, 	300, 	0},
 };
@@ -87,8 +90,9 @@ void Daemon_OnBoardLED( mqtt_data_t * data)
 
 uint8_t main( int16_t argc, uint8_t **argv )
 {
+	Aux_Init(databasePath);
 	Weather_Init(weatherLocation, weatherKey);
-	Task_Init(taskList,3);
+	Task_Init(taskList,4);
 	MQTT_Init(ip,port,"pi-livingroom","livingroom",subs,1);
 	MQTT_Loop();
 	return 0;
