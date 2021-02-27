@@ -2,6 +2,7 @@ from flask import Flask, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_basicauth import BasicAuth
 from flask_caching import Cache
+from flask_mqtt import Mqtt
 from sqlalchemy import or_
 import datetime as dt
 import dash
@@ -33,6 +34,20 @@ cache_config = {
 
 app.server.config.from_mapping(cache_config)
 cache = Cache(app.server)
+
+app.server.config['MQTT_BROKER_URL'] = 'localhost' 
+app.server.config['MQTT_CLIENT_ID'] = 'pi-homepage'
+app.server.config['MQTT_BROKER_PORT'] = 1883 
+app.server.config['MQTT_USERNAME'] = ''
+app.server.config['MQTT_PASSWORD'] = '' 
+app.server.config['MQTT_KEEPALIVE'] = 60
+app.server.config['MQTT_TLS_ENABLED'] = False
+
+# STart MQTT Connection
+mqtt = Mqtt(app=app.server,connect_async=False)
+
+# Subscribe to defaults
+mqtt.subscribe('livingroom/inside_temp')
 
 SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
 app.server.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
@@ -230,6 +245,22 @@ def receive_weather():
 @app.server.route('/dump', methods = ['GET', 'POST'])
 def dump_data():
 	return render_template("raw_data.html", readings = Readings.query.all())
+
+# A bug, this callback DOES NOT call, even with connect_async=True
+@mqtt.on_connect()
+def handle_connect(client,userdata,flags,rc):
+    print("Connected!")
+    mqtt.publish('livingroom/test','Connected!')
+    mqtt.subscribe('livingroom/inside_temp')
+
+@mqtt.on_message()
+def handle_mqtt_message(client,userdata,flags):
+    print("Message Received!")
+    #mqtt.publish('livingroom/test','Received!')
+
+#@mqtt.on_log()
+#def handle_logging(client,userdata,level,buf):
+#    print(client,userdata,level,buf)
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0')

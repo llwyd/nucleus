@@ -39,7 +39,7 @@ static task_t taskList[4] =
 	{ Sensor_ReadTemperature, 		1,		0},
 	{ Aux_Update, 					1,		0},
 	{ Weather_Update, 				300, 	0},
-	{ Daemon_TransmitTemperature, 	300, 	0},
+	{ Daemon_TransmitTemperature, 	2, 	0},
 };
 
 static mqtt_subs_t subs[1] = 
