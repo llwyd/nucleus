@@ -249,14 +249,12 @@ def dump_data():
 # A bug, this callback DOES NOT call, even with connect_async=True
 @mqtt.on_connect()
 def handle_connect(client,userdata,flags,rc):
-    print("Connected!")
-    mqtt.publish('livingroom/test','Connected!')
+    mqtt.publish('livingroom/homepage_status','Connected!')
     mqtt.subscribe('livingroom/inside_temp')
 
 @mqtt.on_message()
 def handle_mqtt_message(client,userdata,flags):
-    print("Message Received!")
-    #mqtt.publish('livingroom/test','Received!')
+    mqtt.publish('livingroom/test','Received!')
 
 #@mqtt.on_log()
 #def handle_logging(client,userdata,level,buf):
