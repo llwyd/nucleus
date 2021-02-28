@@ -67,6 +67,7 @@ void Daemon_TransmitTemperature(void)
 	printf("SENSOR->outside_temp->%.2foC->", outside.data.f);
 	success &= MQTT_Transmit(mqtt_msg_Publish, &outside);
 
+	outside.name = "outside_desc";
 	outside.format = mqtt_type_str;
 	outside.data.s = Weather_GetDescription(); 
 	printf("SENSOR->outside_desc->%s->", outside.data.s);

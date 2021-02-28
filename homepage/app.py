@@ -19,7 +19,6 @@ import os
 def mqtt_subscribe_all():
     # Subscribe to defaults
     # Note, shouldn't have to do it this way
-    print("Test?")
     mqtt.subscribe('livingroom/inside_temp')
     mqtt.subscribe('livingroom/outside_temp')
     mqtt.subscribe('livingroom/outside_desc')
@@ -263,7 +262,9 @@ def handle_connect(client,userdata,flags,rc):
     mqtt_subscribe_all()
 
 @mqtt.on_message()
-def handle_mqtt_message(client,userdata,flags):
+def handle_mqtt_message(client,userdata,message):
+    #print(message.topic)
+    #print(message.payload.decode())
     mqtt.publish('livingroom/test','Received!')
 
 #@mqtt.on_log()
