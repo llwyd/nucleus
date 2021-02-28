@@ -14,6 +14,17 @@ import devices as dv
 from dash.dependencies import Input, Output
 import numpy as np
 import os
+
+
+def mqtt_subscribe_all():
+    # Subscribe to defaults
+    # Note, shouldn't have to do it this way
+    print("Test?")
+    mqtt.subscribe('livingroom/inside_temp')
+    mqtt.subscribe('livingroom/outside_temp')
+    mqtt.subscribe('livingroom/outside_desc')
+
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -46,8 +57,7 @@ app.server.config['MQTT_TLS_ENABLED'] = False
 # STart MQTT Connection
 mqtt = Mqtt(app=app.server,connect_async=False)
 
-# Subscribe to defaults
-mqtt.subscribe('livingroom/inside_temp')
+mqtt_subscribe_all()
 
 SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
 app.server.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
@@ -244,13 +254,13 @@ def receive_weather():
 
 @app.server.route('/dump', methods = ['GET', 'POST'])
 def dump_data():
-	return render_template("raw_data.html", readings = Readings.query.all())
+    return render_template("raw_data.html", readings = Readings.query.all())
 
 # A bug, this callback DOES NOT call, even with connect_async=True
 @mqtt.on_connect()
 def handle_connect(client,userdata,flags,rc):
     mqtt.publish('livingroom/homepage_status','Connected!')
-    mqtt.subscribe('livingroom/inside_temp')
+    mqtt_subscribe_all()
 
 @mqtt.on_message()
 def handle_mqtt_message(client,userdata,flags):
