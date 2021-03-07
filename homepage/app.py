@@ -38,7 +38,9 @@ app.server.config["DEBUG"] = True
 
 cache_config = {
     "DEBUG": True,         
-    "CACHE_TYPE": "simple", 
+    "CACHE_TYPE": 'redis',
+    "CACHE_REDIS_HOST": 'localhost',
+    "CAHCE_REDIS_URL":'redis://localhost:6379',
     "CACHE_DEFAULT_TIMEOUT": 300
 }
 
@@ -88,6 +90,8 @@ app.layout = html.Div(children=[
 def display_page(pathname):
     if pathname == '/meta':
         return stats_page
+    if pathname == '/live':
+        return live_page
     else:
         return index_page
 
@@ -108,6 +112,17 @@ stats_page = html.Div([
     html.Div(id = 'server-uptime'),
     html.Div(id = 'database-size'),
 	html.Div(id = 'cpu-temp'),
+	dcc.Interval(   id='interval-component',
+                    interval = 1000 * 60 * 5,
+                    n_intervals = 0
+                ),
+])
+
+live_page = html.Div([
+    html.H1(children='H O M E'),
+	html.Div(id = 'inside-temp'), 
+	html.Div(id = 'outside-temp'), 
+	html.Div(id = 'outside-desc'), 
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
@@ -261,11 +276,49 @@ def handle_connect(client,userdata,flags,rc):
     mqtt.publish('livingroom/homepage_status','Connected!')
     mqtt_subscribe_all()
 
+# inside temp
+@app.callback(Output('inside-temp', 'children'),[Input('interval-component','n_intervals')])
+def update_inside_temp(n):
+    if( cache.get("inside_temp") is not None):
+        inside_temp = cache.get("inside_temp")
+        return [ html.Span("inside_temp: " + str(inside_temp))]	
+    else:
+        return [ html.Span("inside_temp: ????")]	
+
+@mqtt.on_topic('livingroom/inside_temp')
+def handle_inside_temp(client,userdata,message):
+    data = message.payload.decode()
+    cache.set("inside_temp", str(data))
+
+@app.callback(Output('outside-temp', 'children'),[Input('interval-component','n_intervals')])
+def update_outside_temp(n):
+    if( cache.get("outside_temp") is not None):
+        outside_temp = cache.get("outside_temp")
+        return [ html.Span("outside_temp: " + str(outside_temp))]	
+    else:
+        return [ html.Span("outside_temp: ????")]	
+
+@mqtt.on_topic('livingroom/outside_temp')
+def handle_inside_temp(client,userdata,message):
+    data = message.payload.decode()
+    cache.set("outside_temp", str(data))
+
+@app.callback(Output('outside-desc', 'children'),[Input('interval-component','n_intervals')])
+def update_outside_desc(n):
+    if( cache.get("outside_desc") is not None):
+        outside_desc = cache.get("outside_desc")
+        return [ html.Span("outside_desc: " + str(outside_desc))]	
+    else:
+        return [ html.Span("outside_desc: ????")]	
+
+@mqtt.on_topic('livingroom/outside_desc')
+def handle_inside_temp(client,userdata,message):
+    data = message.payload.decode()
+    cache.set("outside_desc", str(data))
+
 @mqtt.on_message()
 def handle_mqtt_message(client,userdata,message):
-    #print(message.topic)
-    #print(message.payload.decode())
-    mqtt.publish('livingroom/test','Received!')
+    mqtt.publish('livingroom/debug','Received!')
 
 #@mqtt.on_log()
 #def handle_logging(client,userdata,level,buf):
