@@ -94,7 +94,7 @@ uint8_t main( int16_t argc, uint8_t **argv )
 	Aux_Init(databasePath);
 	Weather_Init(weatherLocation, weatherKey);
 	Task_Init(taskList,4);
-	MQTT_Init(ip,port,"pi-livingroom","livingroom",subs,1);
+	MQTT_Init(ip,port,"pi-livingroom","home/livingroom",subs,1);
 	MQTT_Loop();
 	return 0;
 }

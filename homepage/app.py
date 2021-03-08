@@ -19,9 +19,7 @@ import os
 def mqtt_subscribe_all():
     # Subscribe to defaults
     # Note, shouldn't have to do it this way
-    mqtt.subscribe('livingroom/inside_temp')
-    mqtt.subscribe('livingroom/outside_temp')
-    mqtt.subscribe('livingroom/outside_desc')
+    mqtt.subscribe('home/livingroom/#')
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -270,55 +268,36 @@ def receive_weather():
 def dump_data():
     return render_template("raw_data.html", readings = Readings.query.all())
 
+# database size
+@app.callback(Output('inside-temp', 'children'),[Input('interval-component','n_intervals')])
+def update_inside_temp(n):
+    if( cache.get("inside_temp") is not None):
+        inside_temp = cache.get("inside_temp")
+        return [ html.Span("inside_temp: " + str(inside_temp) + " C")]	
+    else:
+        return [ html.Span("inside_temp: ????")]	
+
 # A bug, this callback DOES NOT call, even with connect_async=True
 @mqtt.on_connect()
 def handle_connect(client,userdata,flags,rc):
     mqtt.publish('livingroom/homepage_status','Connected!')
     mqtt_subscribe_all()
 
-# inside temp
-@app.callback(Output('inside-temp', 'children'),[Input('interval-component','n_intervals')])
-def update_inside_temp(n):
-    if( cache.get("inside_temp") is not None):
-        inside_temp = cache.get("inside_temp")
-        return [ html.Span("inside_temp: " + str(inside_temp))]	
-    else:
-        return [ html.Span("inside_temp: ????")]	
-
-@mqtt.on_topic('livingroom/inside_temp')
-def handle_inside_temp(client,userdata,message):
+@mqtt.on_topic('home/livingroom/#')
+def handle_livingroom_data(client,userdata,message):
+    full_topic = message.topic
+    topic = full_topic.replace('/',' ').split()[-1]
     data = message.payload.decode()
-    cache.set("inside_temp", str(data))
-
-@app.callback(Output('outside-temp', 'children'),[Input('interval-component','n_intervals')])
-def update_outside_temp(n):
-    if( cache.get("outside_temp") is not None):
-        outside_temp = cache.get("outside_temp")
-        return [ html.Span("outside_temp: " + str(outside_temp))]	
-    else:
-        return [ html.Span("outside_temp: ????")]	
-
-@mqtt.on_topic('livingroom/outside_temp')
-def handle_inside_temp(client,userdata,message):
-    data = message.payload.decode()
-    cache.set("outside_temp", str(data))
-
-@app.callback(Output('outside-desc', 'children'),[Input('interval-component','n_intervals')])
-def update_outside_desc(n):
-    if( cache.get("outside_desc") is not None):
-        outside_desc = cache.get("outside_desc")
-        return [ html.Span("outside_desc: " + str(outside_desc))]	
-    else:
-        return [ html.Span("outside_desc: ????")]	
-
-@mqtt.on_topic('livingroom/outside_desc')
-def handle_inside_temp(client,userdata,message):
-    data = message.payload.decode()
-    cache.set("outside_desc", str(data))
+    if topic == 'inside_temp':
+        cache.set("inside_temp",str(data)) 
+    elif topic == 'outside_temp':    
+        cache.set("outside_temp",str(data)) 
+    elif topic == 'outside_desc':    
+        cache.set("outside_desc",str(data)) 
 
 @mqtt.on_message()
 def handle_mqtt_message(client,userdata,message):
-    mqtt.publish('livingroom/debug','Received!')
+    mqtt.publish('home/debug','Received!')
 
 #@mqtt.on_log()
 #def handle_logging(client,userdata,level,buf):
