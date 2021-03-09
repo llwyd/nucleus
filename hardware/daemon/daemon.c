@@ -32,14 +32,16 @@ static uint8_t * const databasePath = "../../homepage/app.db";
 
 void Daemon_TransmitTemperature(void);
 void Daemon_TransmitAux(void);
+void Daemon_TransmitVersion(void);
 void Daemon_OnBoardLED( mqtt_data_t * data);
 
-static task_t taskList[4] = 
+static task_t taskList[5] = 
 {
 	{ Sensor_ReadTemperature, 		1,		0},
 	{ Aux_Update, 					1,		0},
 	{ Weather_Update, 				300, 	0},
-	{ Daemon_TransmitTemperature, 	2, 	0},
+	{ Daemon_TransmitTemperature, 	2, 		0},
+	{ Daemon_TransmitVersion, 		3600, 	0},
 };
 
 static mqtt_subs_t subs[1] = 
@@ -47,6 +49,16 @@ static mqtt_subs_t subs[1] =
 	{"onboard_led", mqtt_type_bool, Daemon_OnBoardLED},
 };
 
+void Daemon_TransmitVersion(void)
+{
+	mqtt_pub_t version;
+
+	version.name = "daemon_version";
+	version.format = mqtt_type_str;
+	version.data.s = (char *)daemonVersion;
+	printf("PUBLISH->daemon_version->%s->", version.data.s);
+	bool success = MQTT_Transmit(mqtt_msg_Publish, &version);
+}
 
 void Daemon_TransmitTemperature(void)
 {
@@ -93,7 +105,7 @@ uint8_t main( int16_t argc, uint8_t **argv )
 {
 	Aux_Init(databasePath);
 	Weather_Init(weatherLocation, weatherKey);
-	Task_Init(taskList,4);
+	Task_Init(taskList, 5);
 	MQTT_Init(ip,port,"pi-livingroom","home/livingroom",subs,1);
 	MQTT_Loop();
 	return 0;
