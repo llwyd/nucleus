@@ -121,6 +121,7 @@ live_page = html.Div([
 	html.Div(id = 'inside-temp'), 
 	html.Div(id = 'outside-temp'), 
 	html.Div(id = 'outside-desc'), 
+	html.Div(id = 'daemon-version'), 
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
@@ -268,7 +269,7 @@ def receive_weather():
 def dump_data():
     return render_template("raw_data.html", readings = Readings.query.all())
 
-# database size
+# inside-temp
 @app.callback(Output('inside-temp', 'children'),[Input('interval-component','n_intervals')])
 def update_inside_temp(n):
     if( cache.get("inside_temp") is not None):
@@ -276,6 +277,15 @@ def update_inside_temp(n):
         return [ html.Span("inside_temp: " + str(inside_temp) + " C")]	
     else:
         return [ html.Span("inside_temp: ????")]	
+
+# inside-temp
+@app.callback(Output('daemon-version', 'children'),[Input('interval-component','n_intervals')])
+def update_daemon_version(n):
+    if( cache.get("daemon_version") is not None):
+        daemon_version = cache.get("daemon_version")
+        return [ html.Span("daemon_version: " + str(daemon_version))]	
+    else:
+        return [ html.Span("daemon_version: ????")]	
 
 # A bug, this callback DOES NOT call, even with connect_async=True
 @mqtt.on_connect()
@@ -294,6 +304,8 @@ def handle_livingroom_data(client,userdata,message):
         cache.set("outside_temp",str(data)) 
     elif topic == 'outside_desc':    
         cache.set("outside_desc",str(data)) 
+    elif topic == 'daemon_version':    
+        cache.set("daemon_version",str(data)) 
 
 @mqtt.on_message()
 def handle_mqtt_message(client,userdata,message):
