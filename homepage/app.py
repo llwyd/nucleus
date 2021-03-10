@@ -69,11 +69,10 @@ db = SQLAlchemy(app.server)
 class Readings(db.Model):
     __tablename__ = "readings"
     id              = db.Column(db.Integer, primary_key=True)       #id for each record in the database
-    deviceID        = db.Column(db.String(64))                      # id of the unit
+    deviceID        = db.Column(db.String(32))                      # id of the unit
     datestamp       = db.Column(db.String(32))						# datestamp
     timestamp       = db.Column(db.String(32))						# timestamp
     temperature     = db.Column(db.String(16))                      # temperature
-    humidity        = db.Column(db.String(16))                      # humidity
 
 #   Entry point for the website
 app.layout = html.Div(children=[
@@ -86,8 +85,6 @@ app.layout = html.Div(children=[
 #   URL Handler
 @app.callback(Output('page_content', 'children'),[Input('url', 'pathname')])
 def display_page(pathname):
-    if pathname == '/meta':
-        return stats_page
     if pathname == '/live':
         return live_page
     else:
@@ -97,6 +94,7 @@ def display_page(pathname):
 index_page = html.Div([
     html.H1(children='H O M E'),
     html.Div(id = 'weather-description'),
+	html.Div(id = 'daemon-version'), 
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
@@ -128,12 +126,6 @@ live_page = html.Div([
                 ),
 ])
 
-# last update text
-@app.callback(Output('last-update', 'children'),[Input('interval-component','n_intervals')])
-def last_update(n):
-	last_entry = Readings.query.order_by(Readings.id.desc()).first()
-	return [ html.Span("Last Update: " + str( last_entry.datestamp ) +" at " +str( last_entry.timestamp ) ) ]
-
 # weather description
 @app.callback(Output('weather-description', 'children'),[Input('interval-component','n_intervals')])
 def update_uptime(n):
@@ -142,33 +134,6 @@ def update_uptime(n):
         return [ html.Span("Weather: " + str(weather_description))]	
     else:
         return [ html.Span("Weather: No idea :(")]	
-
-# server uptime
-@app.callback(Output('server-uptime', 'children'),[Input('interval-component','n_intervals')])
-def update_uptime(n):
-    if( cache.get("server_uptime") is not None):
-        server_uptime = cache.get("server_uptime")
-        return [ html.Span("Server Uptime: " + str(server_uptime))]	
-    else:
-        return [ html.Span("Server Uptime: ????")]	
-
-# database size
-@app.callback(Output('database-size', 'children'),[Input('interval-component','n_intervals')])
-def update_uptime(n):
-    if( cache.get("database_size") is not None):
-        database_size = cache.get("database_size")
-        return [ html.Span("Database Size: " + str(database_size) + "MB")]	
-    else:
-        return [ html.Span("Database Size: ????")]	
-
-# database size
-@app.callback(Output('cpu-temp', 'children'),[Input('interval-component','n_intervals')])
-def update_cputemp(n):
-    if( cache.get("cpu_temp") is not None):
-        cpu_temp = cache.get("cpu_temp")
-        return [ html.Span("CPU Temp: " + str(cpu_temp) + " C")]	
-    else:
-        return [ html.Span("CPU Temp: ????")]	
 
 #   Temperature graph
 @app.callback(Output('static-temp-graph', 'figure'),[Input('interval-component','n_intervals')])
@@ -190,13 +155,13 @@ def static_temp_graph(value):
     for d in todays_data:
         d_time = dt.datetime.strptime(d.datestamp + " " + d.timestamp,'%Y-%m-%d %H:%M')
         if(d_time >= yesterdays_time):
-            if(d.deviceID==dv.devices[0]['deviceID']):
+            if(d.deviceID=='livingroom'):
                 data['y'].append(d.temperature)
                 data['x'].append(d_time)
-            elif(d.deviceID==dv.devices[1]['deviceID']):
+            elif(d.deviceID=='outside'):
                 data['z'].append(d.temperature)
                 data['t'].append(d_time)
-            elif(d.deviceID==dv.devices[2]['deviceID']):
+            elif(d.deviceID=='unused'):
                 data['p'].append(d.temperature)
                 data['s'].append(d_time)
     figure={
@@ -225,46 +190,7 @@ def static_temp_graph(value):
     }
     return figure;
 
-@app.server.route('/raw', methods = ['GET', 'POST'])
-def raw_data():
-    if request.method == 'POST':
-        datestamp = dt.datetime.now().strftime('%Y-%m-%d')
-        timestamp = dt.datetime.now().strftime('%H:%M')
-        raw = request.get_json(force=True)
-        print(raw)
-        reading = Readings(	deviceID	= raw['device_id'],
-				datestamp				= datestamp,
-				timestamp				= timestamp,
-				temperature				= raw['temperature'],
-				humidity				= raw['humidity'])
-        db.session.add(reading)
-        db.session.commit()
-    return 'ta pal\n'
-
-@app.server.route('/stats', methods = ['GET', 'POST'])
-def receive_stats():
-    if request.method == 'POST':
-        raw = request.get_json(force = True)
-        print(raw)
-        server_uptime = str( raw['days']) + " Day(s), " + str(raw['hours']) + " hour(s) and " + str(raw['minutes']) + " minute(s)."
-        database_size = int(raw['database_size'])
-        cpu_temp = float(raw['cpu_temp'])
-        databaze_size = int( database_size / 1000 )
-        cache.set("server_uptime",server_uptime)
-        cache.set("database_size",str(databaze_size))
-        cache.set("cpu_temp",str(cpu_temp))
-    return 'ta pal\n'
-
-@app.server.route('/words', methods = ['GET', 'POST'])
-def receive_weather():
-    if request.method == 'POST':
-        raw = request.get_json(force = True)
-        print(raw)
-        weather_description = raw['weather']
-        weather_description = weather_description.capitalize();
-        cache.set("weather_description", weather_description)
-    return 'ta pal\n'
-
+# debug dump all of the data
 @app.server.route('/dump', methods = ['GET', 'POST'])
 def dump_data():
     return render_template("raw_data.html", readings = Readings.query.all())
@@ -278,7 +204,7 @@ def update_inside_temp(n):
     else:
         return [ html.Span("inside_temp: ????")]	
 
-# inside-temp
+# daemon-version
 @app.callback(Output('daemon-version', 'children'),[Input('interval-component','n_intervals')])
 def update_daemon_version(n):
     if( cache.get("daemon_version") is not None):
@@ -293,17 +219,27 @@ def handle_connect(client,userdata,flags,rc):
     mqtt.publish('livingroom/homepage_status','Connected!')
     mqtt_subscribe_all()
 
+def database_update(name, temperature):
+    datestamp = dt.datetime.now().strftime('%Y-%m-%d')
+    timestamp = dt.datetime.now().strftime('%H:%M')
+    reading = Readings(	deviceID = name, datestamp = datestamp, timestamp = timestamp, temperature	= temperature)
+    db.session.add(reading)
+    db.session.commit()
+
 @mqtt.on_topic('home/livingroom/#')
 def handle_livingroom_data(client,userdata,message):
     full_topic = message.topic
     topic = full_topic.replace('/',' ').split()[-1]
     data = message.payload.decode()
     if topic == 'inside_temp':
-        cache.set("inside_temp",str(data)) 
+        cache.set("inside_temp",str(data))
+        database_update("livingroom", data)
     elif topic == 'outside_temp':    
         cache.set("outside_temp",str(data)) 
+        database_update("outside", data)
     elif topic == 'outside_desc':    
         cache.set("outside_desc",str(data)) 
+        cache.set("weather_description",str(data)) 
     elif topic == 'daemon_version':    
         cache.set("daemon_version",str(data)) 
 
