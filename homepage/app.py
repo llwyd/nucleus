@@ -231,11 +231,13 @@ def handle_livingroom_data(client,userdata,message):
     full_topic = message.topic
     topic = full_topic.replace('/',' ').split()[-1]
     data = message.payload.decode()
-    if topic == 'inside_temp':
+    if topic == 'inside_temp_live':
         cache.set("inside_temp",str(data))
+    elif topic == 'inside_temp':
         database_update("livingroom", data)
-    elif topic == 'outside_temp':    
+    elif topic == 'outside_temp_live':    
         cache.set("outside_temp",str(data)) 
+    elif topic == 'outside_temp':    
         database_update("outside", data)
     elif topic == 'outside_desc':    
         cache.set("outside_desc",str(data)) 

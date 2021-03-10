@@ -604,9 +604,15 @@ void MQTT_Loop( void )
     mqtt_func_t * task = StateTable;
     mqtt_state_t current_state = mqtt_state_Connect;    
 
+	struct timespec delay;
+	delay.tv_sec = 0;
+	delay.tv_nsec = 100000000;
+
     while(1)
     {
         current_state = task[current_state].mqtt_fn();
+		/* Delay to stop CPU melting */
+		nanosleep(&delay, NULL);
     }
 }
 

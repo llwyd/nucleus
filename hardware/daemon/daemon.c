@@ -32,15 +32,17 @@ static uint8_t * const databasePath = "../../homepage/app.db";
 
 void Daemon_TransmitTemperature(void);
 void Daemon_TransmitAux(void);
+void Daemon_TransmitLive(void);
 void Daemon_TransmitVersion(void);
 void Daemon_OnBoardLED( mqtt_data_t * data);
 
-static task_t taskList[5] = 
+static task_t taskList[6] = 
 {
 	{ Sensor_ReadTemperature, 		1,		0},
 	{ Aux_Update, 					1,		0},
 	{ Weather_Update, 				300, 	0},
-	{ Daemon_TransmitTemperature, 	2, 		0},
+	{ Daemon_TransmitLive, 			1, 		0},
+	{ Daemon_TransmitTemperature, 	300, 	0},
 	{ Daemon_TransmitVersion, 		3600, 	0},
 };
 
@@ -58,6 +60,26 @@ void Daemon_TransmitVersion(void)
 	version.data.s = (char *)daemonVersion;
 	printf("PUBLISH->daemon_version->%s->", version.data.s);
 	bool success = MQTT_Transmit(mqtt_msg_Publish, &version);
+}
+
+void Daemon_TransmitLive(void)
+{
+	mqtt_pub_t  inside;
+	mqtt_pub_t outside;
+
+	inside.name = "inside_temp_live";
+	inside.format = mqtt_type_float;
+	inside.data.f = Sensor_GetTemperature();
+	
+	printf("SENSOR->inside_temp_live->%.2foC->", inside.data.f);
+	bool success = MQTT_Transmit(mqtt_msg_Publish, &inside);
+	
+	outside.name = "outside_temp_live";
+	outside.format = mqtt_type_float;
+	outside.data.f = Weather_GetTemperature();
+	
+	printf("SENSOR->outside_temp_live->%.2foC->", outside.data.f);
+	success &= MQTT_Transmit(mqtt_msg_Publish, &outside);
 }
 
 void Daemon_TransmitTemperature(void)
@@ -105,7 +127,7 @@ uint8_t main( int16_t argc, uint8_t **argv )
 {
 	Aux_Init(databasePath);
 	Weather_Init(weatherLocation, weatherKey);
-	Task_Init(taskList, 5);
+	Task_Init(taskList, 6);
 	MQTT_Init(ip,port,"pi-livingroom","home/livingroom",subs,1);
 	MQTT_Loop();
 	return 0;
