@@ -53,13 +53,19 @@ static mqtt_subs_t subs[1] =
 
 void Daemon_TransmitVersion(void)
 {
-	mqtt_pub_t version;
+	mqtt_pub_t version, location;
 
 	version.name = "daemon_version";
 	version.format = mqtt_type_str;
 	version.data.s = (char *)daemonVersion;
 	printf("PUBLISH->daemon_version->%s->", version.data.s);
 	bool success = MQTT_Transmit(mqtt_msg_Publish, &version);
+	
+	location.name = "location";
+	location.format = mqtt_type_str;
+	location.data.s = (char *)weatherLocation;
+	printf("PUBLISH->%s->%s->", location.name, location.data.s);
+	success &= MQTT_Transmit(mqtt_msg_Publish, &location);
 }
 
 void Daemon_TransmitLive(void)

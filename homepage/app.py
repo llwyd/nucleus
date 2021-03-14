@@ -95,6 +95,7 @@ index_page = html.Div([
     html.H1(children='H O M E'),
     html.Div(id = 'weather-description'),
 	html.Div(id = 'daemon-version'), 
+	html.Div(id = 'daemon-location'), 
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
@@ -213,6 +214,16 @@ def update_daemon_version(n):
     else:
         return [ html.Span("daemon_version: ????")]	
 
+
+# daemon-location
+@app.callback(Output('daemon-location', 'children'),[Input('interval-component','n_intervals')])
+def update_daemon_location(n):
+    if( cache.get("daemon_location") is not None):
+        daemon_location = cache.get("daemon_location")
+        return [ html.Span("Location: " + str(daemon_location))]	
+    else:
+        return [ html.Span("Location: ????")]	
+
 # A bug, this callback DOES NOT call, even with connect_async=True
 @mqtt.on_connect()
 def handle_connect(client,userdata,flags,rc):
@@ -243,7 +254,9 @@ def handle_livingroom_data(client,userdata,message):
         cache.set("outside_desc",str(data)) 
         cache.set("weather_description",str(data)) 
     elif topic == 'daemon_version':    
-        cache.set("daemon_version",str(data)) 
+        cache.set("daemon_version",str(data),timeout=7200) 
+    elif topic == 'location':    
+        cache.set("daemon_location",str(data),timeout=7200) 
 
 @mqtt.on_message()
 def handle_mqtt_message(client,userdata,message):
