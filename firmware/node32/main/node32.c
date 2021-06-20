@@ -23,12 +23,14 @@
 #include "mqtt_client.h"
 
 #include "sensing.h"
+#include "comms.h"
 
 void app_main(void)
 {
     TaskHandle_t xSensingHandle = NULL;
 
     Sensing_Init();
+    Comms_Init();
 
     xTaskCreate( Sensing_Task, "Sensing Task",  5000, (void *)1, (tskIDLE_PRIORITY + 1), &xSensingHandle );
 
