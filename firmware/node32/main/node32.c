@@ -30,10 +30,6 @@ void app_main(void)
 
     Sensing_Init();
 
-    xTaskCreate( Sensing_Task, "Sensing Task",  5000, (void *)1, 0, &xSensingHandle );
+    xTaskCreate( Sensing_Task, "Sensing Task",  5000, (void *)1, (tskIDLE_PRIORITY + 1), &xSensingHandle );
 
-    while(1)
-    {
-        vTaskDelay( 100 / portTICK_PERIOD_MS );
-    }
 }
