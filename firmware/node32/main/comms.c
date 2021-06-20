@@ -25,6 +25,8 @@
 static EventGroupHandle_t s_wifi_event_group;
 static const char * WIFI_TAG = "station";
 
+static void MQTT_Init( void );
+
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
     if( event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
@@ -39,7 +41,7 @@ static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
     {
         ip_event_got_ip_t * event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(WIFI_TAG, "Got ip: " IPSTR, IP2STR( &event->ip_info.ip ) );
-        //mqtt_init();
+        MQTT_Init();
     }
 }
 
@@ -90,5 +92,46 @@ void Comms_Init( void )
     esp_wifi_set_mode( WIFI_MODE_STA );
     esp_wifi_set_config( WIFI_IF_STA, &wifi_config );
     esp_wifi_start();
+}
+
+static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
+{
+    esp_mqtt_event_handle_t event = event_data;
+    esp_mqtt_client_handle_t client = event->client;
+    esp_mqtt_event_id_t currentEvent = (esp_mqtt_event_id_t)event_id;
+
+    /* TODO, improve this */
+    switch( currentEvent )
+    {
+        case MQTT_EVENT_CONNECTED:
+            printf("Connected to broker!\n");
+            esp_mqtt_client_subscribe( client, MQTT_TOPIC, 0 );
+            break;
+        case MQTT_EVENT_DISCONNECTED:
+            printf("Disconnected from broker\n");
+            break;
+        case MQTT_EVENT_DATA:
+            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+            printf("DATA=%.*s\r\n", event->data_len, event->data);
+            break;
+        default:
+            printf("Unhandled event\n");
+            break;
+    }
+
+}
+
+static void MQTT_Init( void )
+{
+    esp_mqtt_client_config_t mqtt_cfg =
+    {
+        .host = MQTT_BROKER,
+        .port = 1883,
+        .transport = MQTT_TRANSPORT_OVER_TCP,
+    };
+
+    esp_mqtt_client_handle_t client = esp_mqtt_client_init( &mqtt_cfg );
+    esp_mqtt_client_register_event( client, ESP_EVENT_ANY_ID, MQTT_EventHandler, NULL );
+    esp_mqtt_client_start(client);
 }
 
