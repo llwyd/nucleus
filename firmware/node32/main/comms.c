@@ -28,6 +28,10 @@ static const char * WIFI_TAG = "station";
 static void MQTT_Init( void );
 
 static QueueHandle_t * xCommsDataQueue;
+    
+static esp_mqtt_client_handle_t mqtt_client;
+
+static bool brokerConnected = false;
 
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
@@ -109,9 +113,11 @@ static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
     {
         case MQTT_EVENT_CONNECTED:
             printf("Connected to broker!\n");
+            brokerConnected = true;
             esp_mqtt_client_subscribe( client, MQTT_TOPIC, 0 );
             break;
         case MQTT_EVENT_DISCONNECTED:
+            brokerConnected = false;
             printf("Disconnected from broker\n");
             break;
         case MQTT_EVENT_DATA:
@@ -128,12 +134,19 @@ static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
 extern void Comms_Task( void * pvParameters )
 {
     float rxTemperature;
+    char temperatureString[16] = {0x00};
 
     while( 1U )
     {
         if( xQueueReceive( *xCommsDataQueue, &rxTemperature, (TickType_t)1000 ) == pdPASS )
         {
+            memset( temperatureString, 0x00, 16U);
+            snprintf( temperatureString, 16U, "%.3f", rxTemperature);
             printf("rxTemperature: %.3f\n", rxTemperature);
+            if( brokerConnected )
+            {
+                esp_mqtt_client_publish(mqtt_client, MQTT_TEMPERATURE, temperatureString, 0, 0, 0);
+            }
         }       
     } 
 }
@@ -147,8 +160,8 @@ static void MQTT_Init( void )
         .transport = MQTT_TRANSPORT_OVER_TCP,
     };
 
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init( &mqtt_cfg );
-    esp_mqtt_client_register_event( client, ESP_EVENT_ANY_ID, MQTT_EventHandler, NULL );
-    esp_mqtt_client_start(client);
+    mqtt_client = esp_mqtt_client_init( &mqtt_cfg );
+    esp_mqtt_client_register_event( mqtt_client, ESP_EVENT_ANY_ID, MQTT_EventHandler, NULL );
+    esp_mqtt_client_start(mqtt_client);
 }
 
