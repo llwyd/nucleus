@@ -27,6 +27,8 @@ static const char * WIFI_TAG = "station";
 
 static void MQTT_Init( void );
 
+static QueueHandle_t * xCommsDataQueue;
+
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
     if( event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
@@ -45,8 +47,10 @@ static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
     }
 }
 
-void Comms_Init( void )
+void Comms_Init( QueueHandle_t * xTemperature )
 {
+    xCommsDataQueue = xTemperature;
+    
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -119,6 +123,19 @@ static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
             break;
     }
 
+}
+
+extern void Comms_Task( void * pvParameters )
+{
+    float rxTemperature;
+
+    while( 1U )
+    {
+        if( xQueueReceive( *xCommsDataQueue, &rxTemperature, (TickType_t)1000 ) == pdPASS )
+        {
+            printf("rxTemperature: %.3f\n", rxTemperature);
+        }       
+    } 
 }
 
 static void MQTT_Init( void )

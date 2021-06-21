@@ -4,6 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/queue.h"
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "sdkconfig.h"
@@ -25,13 +26,19 @@
 #include "sensing.h"
 #include "comms.h"
 
+
+static QueueHandle_t xTemperatureQueue;
+
 void app_main(void)
 {
     TaskHandle_t xSensingHandle = NULL;
+    TaskHandle_t xCommsHandle = NULL;
 
-    Sensing_Init();
-    Comms_Init();
+    xTemperatureQueue = xQueueCreate( 16U, sizeof( float ) );
 
-    xTaskCreate( Sensing_Task, "Sensing Task",  5000, (void *)1, (tskIDLE_PRIORITY + 1), &xSensingHandle );
+    Sensing_Init( &xTemperatureQueue );
+    Comms_Init( &xTemperatureQueue );
 
+    xTaskCreate( Sensing_Task,  "Sensing Task", 5000, (void *)1, (tskIDLE_PRIORITY + 2), &xSensingHandle );
+    xTaskCreate( Comms_Task,    "Comms Task",   5000, (void *)1, (tskIDLE_PRIORITY + 1), &xCommsHandle );
 }

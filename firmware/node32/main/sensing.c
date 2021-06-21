@@ -21,7 +21,9 @@ static int taskDelay = 1000;
 
 static float TMP102_Read( void );
 
-void Sensing_Init( void )
+static QueueHandle_t * xDataQueue;
+
+void Sensing_Init( QueueHandle_t * xTemperature )
 {
     i2c_config_t conf =
     {
@@ -35,6 +37,8 @@ void Sensing_Init( void )
 
     i2c_param_config( i2c_master_port, &conf );
     i2c_driver_install( i2c_master_port, conf.mode, 0U, 0U, 0U );
+
+    xDataQueue = xTemperature;
 }
 
 extern void Sensing_Task( void * pvParameters )
@@ -48,6 +52,8 @@ extern void Sensing_Task( void * pvParameters )
 
         /* TODO - critical secion */
         temperature = TMP102_Read();
+
+        xQueueSend( *xDataQueue, ( void *)&temperature, (TickType_t) 0U );
 
         printf("Temperature: %.3f\n", temperature);
     }
