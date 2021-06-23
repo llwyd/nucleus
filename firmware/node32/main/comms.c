@@ -28,6 +28,7 @@ static const char * WIFI_TAG = "station";
 static void MQTT_Init( void );
 
 static QueueHandle_t * xCommsDataQueue;
+static QueueHandle_t * xSlowDataQueue;
     
 static esp_mqtt_client_handle_t mqtt_client;
 
@@ -51,9 +52,10 @@ static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
     }
 }
 
-void Comms_Init( QueueHandle_t * xTemperature )
+void Comms_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperature )
 {
     xCommsDataQueue = xTemperature;
+    xSlowDataQueue  = xSlowTemperature;
     
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -145,9 +147,20 @@ extern void Comms_Task( void * pvParameters )
             printf("rxTemperature: %.3f\n", rxTemperature);
             if( brokerConnected )
             {
+                esp_mqtt_client_publish(mqtt_client, MQTT_TEMPERATURE_LIVE, temperatureString, 0, 0, 0);
+            }
+        }
+
+       if( xQueueReceive( *xSlowDataQueue, &rxTemperature,(TickType_t)0U) == pdPASS )
+       {
+            memset( temperatureString, 0x00, 16U);
+            snprintf( temperatureString, 16U, "%.3f", rxTemperature);
+            printf("rxTemperature: %.3f\n", rxTemperature);
+            if( brokerConnected )
+            {
                 esp_mqtt_client_publish(mqtt_client, MQTT_TEMPERATURE, temperatureString, 0, 0, 0);
             }
-        }       
+       } 
     } 
 }
 

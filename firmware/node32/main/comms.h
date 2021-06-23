@@ -4,7 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-void Comms_Init( QueueHandle_t * xTemperature );
+void Comms_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperature );
 extern void Comms_Task( void * pvParameters );
 
 #endif /* _COMMS_H_ */

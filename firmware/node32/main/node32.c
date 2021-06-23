@@ -28,16 +28,18 @@
 
 
 static QueueHandle_t xTemperatureQueue;
+static QueueHandle_t xSlowTemperatureQueue;
 
 void app_main(void)
 {
     TaskHandle_t xSensingHandle = NULL;
-    TaskHandle_t xCommsHandle = NULL;
+    TaskHandle_t xCommsHandle   = NULL;
 
-    xTemperatureQueue = xQueueCreate( 16U, sizeof( float ) );
+    xTemperatureQueue       = xQueueCreate( 16U, sizeof( float ) );
+    xSlowTemperatureQueue   = xQueueCreate( 16U, sizeof( float ) );
 
-    Sensing_Init( &xTemperatureQueue );
-    Comms_Init( &xTemperatureQueue );
+    Sensing_Init( &xTemperatureQueue, &xSlowTemperatureQueue );
+    Comms_Init( &xTemperatureQueue, &xSlowTemperatureQueue );
 
     xTaskCreate( Sensing_Task,  "Sensing Task", 5000, (void *)1, (tskIDLE_PRIORITY + 2), &xSensingHandle );
     xTaskCreate( Comms_Task,    "Comms Task",   5000, (void *)1, (tskIDLE_PRIORITY + 1), &xCommsHandle );
