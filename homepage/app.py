@@ -20,6 +20,7 @@ def mqtt_subscribe_all():
     # Subscribe to defaults
     # Note, shouldn't have to do it this way
     mqtt.subscribe('home/livingroom/#')
+    mqtt.subscribe('home/inside_node/#')
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -162,14 +163,14 @@ def static_temp_graph(value):
             elif(d.deviceID=='outside'):
                 data['z'].append(d.temperature)
                 data['t'].append(d_time)
-            elif(d.deviceID=='unused'):
+            elif(d.deviceID=='inside_node'):
                 data['p'].append(d.temperature)
                 data['s'].append(d_time)
     figure={
         'data': [
             {'x': data['x'], 'y': data['y'], 'type': 'line', 'name': 'Inside'},
             {'x': data['t'], 'y': data['z'], 'type': 'line', 'name': 'Outside'},
-            {'x': data['s'], 'y': data['p'], 'type': 'line', 'name': 'Bedroom'}
+            {'x': data['s'], 'y': data['p'], 'type': 'line', 'name': 'Node'}
         ],
         'layout': {
 			'height': 700,
@@ -257,6 +258,14 @@ def handle_livingroom_data(client,userdata,message):
         cache.set("daemon_version",str(data),timeout=7200) 
     elif topic == 'location':    
         cache.set("daemon_location",str(data),timeout=7200) 
+
+@mqtt.on_topic('home/inside_node/#')
+def handle_inside_node_data(client,userdata,message):
+    full_topic = message.topic
+    topic = full_topic.replace('/',' ').split()[-1]
+    data = message.payload.decode()
+    if topic == 'node_temp':
+        database_update("inside_node", data)
 
 @mqtt.on_message()
 def handle_mqtt_message(client,userdata,message):
