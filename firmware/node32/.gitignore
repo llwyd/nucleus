@@ -1,3 +1,7 @@
 build/*
 main/build/*
 main/secretkeys.h
+
+bme280.*
+bme280_defs.h
+
