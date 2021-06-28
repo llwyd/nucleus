@@ -215,7 +215,7 @@ extern void Comms_Weather( void * pvParameters )
     };
     while( 1U )
     {
-        vTaskDelayUntil( &xLastWaitTime, 2000 / portTICK_PERIOD_MS );
+        vTaskDelayUntil( &xLastWaitTime, 60000 / portTICK_PERIOD_MS );
 
         if( wifiConnected )
         {
