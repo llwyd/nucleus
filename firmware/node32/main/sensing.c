@@ -26,6 +26,8 @@ static void  BME280_Setup( void );
 static QueueHandle_t * xDataQueue;
 static QueueHandle_t * xSlowDataQueue;
 
+static struct bme280_dev dev;
+static struct bme280_data combinedData;
 
 void Sensing_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperature )
 {
@@ -59,10 +61,10 @@ extern void Sensing_Task( void * pvParameters )
     while( 1U )
     {
         vTaskDelayUntil( &xLastWaitTime, taskDelay / portTICK_PERIOD_MS );
-
-        /* TODO - critical secion */
+        
         temperature = TMP102_Read();
-
+        bme280_get_sensor_data(BME280_ALL, &combinedData, &dev);
+        
         xQueueSend( *xDataQueue, ( void *)&temperature, (TickType_t) 0U );
 
         xCurrentTime = xTaskGetTickCount();
@@ -73,6 +75,9 @@ extern void Sensing_Task( void * pvParameters )
         }
 
         printf("Temperature: %.3f\n", temperature);
+        printf("BME280 T: %.2f\n", combinedData.temperature);
+        printf("BME280 H: %.2f\n", combinedData.humidity);
+        printf("BME280 P: %.2f\n", combinedData.pressure);
     }
 }
 
@@ -125,7 +130,6 @@ int8_t BME280_I2CRead(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *i
 
         i2c_master_start( cmd );
         i2c_master_write_byte( cmd, ( address << 1) | 0x1, 0x1 );
-
         if( len > 1 )
         {
             i2c_master_read( cmd, reg_data, len - 1, 0x0 );
@@ -170,9 +174,39 @@ int8_t BME280_I2CWrite(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
         return rslt;
 }
 
+static void BME280_Configure( void )
+{
+    uint8_t settings_sel;
+    int8_t rslt = BME280_OK;
+
+    dev.settings.osr_h     = BME280_OVERSAMPLING_1X;
+    dev.settings.osr_p     = BME280_OVERSAMPLING_16X;
+    dev.settings.osr_t     = BME280_OVERSAMPLING_2X;
+    dev.settings.filter    = BME280_FILTER_COEFF_2;
+    dev.settings.standby_time = BME280_STANDBY_TIME_500_MS;
+
+    settings_sel = BME280_OSR_PRESS_SEL;
+    settings_sel |= BME280_OSR_TEMP_SEL;
+    settings_sel |= BME280_OSR_HUM_SEL;
+    settings_sel |= BME280_STANDBY_SEL;
+    settings_sel |= BME280_FILTER_SEL;
+    
+    rslt = bme280_set_sensor_settings(settings_sel, &dev);
+    rslt = bme280_set_sensor_mode(BME280_NORMAL_MODE, &dev);
+
+    if( rslt != BME280_OK )
+    {
+        printf("BME280 Configure FAIL\n");
+    }
+    else 
+    {
+        printf("BME280 Configure OK\n");
+    }
+    dev.delay_us(1000, dev.intf_ptr);
+}
+
 static void BME280_Setup( void )
 {
-    struct bme280_dev dev;
     int8_t rslt = BME280_OK;
     uint8_t dev_addr = BME280_I2C_ADDR_PRIM;
 
@@ -190,6 +224,7 @@ static void BME280_Setup( void )
     else
     {
         printf("BME280 Init OK\n");
+        BME280_Configure();
     }
 }
 
