@@ -65,7 +65,8 @@ extern void Sensing_Task( void * pvParameters )
         
 //        temperature = TMP102_Read();
         bme280_get_sensor_data(BME280_ALL, &combinedData, &dev);
-        
+
+        temperature = combinedData.temperature;
         xQueueSend( *xDataQueue, ( void *)&temperature, (TickType_t) 0U );
 
         xCurrentTime = xTaskGetTickCount();
