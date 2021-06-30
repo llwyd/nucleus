@@ -26,8 +26,9 @@ static void  BME280_Setup( void );
 static QueueHandle_t * xDataQueue;
 static QueueHandle_t * xSlowDataQueue;
 
-static struct bme280_dev dev;
-static struct bme280_data combinedData;
+static struct   bme280_dev dev;
+static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
+static struct   bme280_data combinedData;
 
 void Sensing_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperature )
 {
@@ -62,7 +63,7 @@ extern void Sensing_Task( void * pvParameters )
     {
         vTaskDelayUntil( &xLastWaitTime, taskDelay / portTICK_PERIOD_MS );
         
-        temperature = TMP102_Read();
+//        temperature = TMP102_Read();
         bme280_get_sensor_data(BME280_ALL, &combinedData, &dev);
         
         xQueueSend( *xDataQueue, ( void *)&temperature, (TickType_t) 0U );
@@ -202,15 +203,13 @@ static void BME280_Configure( void )
     {
         printf("BME280 Configure OK\n");
     }
-    dev.delay_us(1000, dev.intf_ptr);
 }
 
 static void BME280_Setup( void )
 {
     int8_t rslt = BME280_OK;
-    uint8_t dev_addr = BME280_I2C_ADDR_PRIM;
 
-    dev.intf_ptr    = &dev_addr;
+    dev.intf_ptr    = &bme280_addr;
     dev.intf        = BME280_I2C_INTF;
     dev.read        = BME280_I2CRead;
     dev.write       = BME280_I2CWrite;
