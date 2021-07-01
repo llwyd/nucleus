@@ -183,9 +183,9 @@ static void BME280_Configure( void )
 
     dev.settings.osr_h     = BME280_OVERSAMPLING_1X;
     dev.settings.osr_p     = BME280_OVERSAMPLING_16X;
-    dev.settings.osr_t     = BME280_OVERSAMPLING_2X;
+    dev.settings.osr_t     = BME280_OVERSAMPLING_1X;
     dev.settings.filter    = BME280_FILTER_COEFF_2;
-    dev.settings.standby_time = BME280_STANDBY_TIME_500_MS;
+    dev.settings.standby_time = BME280_STANDBY_TIME_250_MS;
 
     settings_sel = BME280_OSR_PRESS_SEL;
     settings_sel |= BME280_OSR_TEMP_SEL;
