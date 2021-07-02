@@ -81,9 +81,6 @@ extern void Sensing_Task( void * pvParameters )
         
         bme280_get_sensor_data(BME280_ALL, &bme280_rawData, &dev);
 
-        temperature = bme280_rawData.temperature;
-        //xQueueSend( *xDataQueue, ( void *)&temperature, (TickType_t) 0U );
-
         AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)bme280_rawData.temperature, "temperature_live");
         AddDataToQueue( queue, sensing_type_humidity, (sensing_data_t)bme280_rawData.humidity, "humidity_live");
         AddDataToQueue( queue, sensing_type_pressure, (sensing_data_t)bme280_rawData.pressure, "pressure_live");
@@ -91,7 +88,8 @@ extern void Sensing_Task( void * pvParameters )
         xCurrentTime = xTaskGetTickCount();
         if( (xCurrentTime - xSlowWaitTime) > ( slowDelay / portTICK_PERIOD_MS ) )
         {
-            xQueueSend( *xSlowDataQueue, ( void *)&temperature, (TickType_t) 0U );
+            AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)bme280_rawData.temperature, "node_temp");
+            AddDataToQueue( queue, sensing_type_humidity, (sensing_data_t)bme280_rawData.humidity, "node_hum");
             xSlowWaitTime = xCurrentTime;
         }
 
