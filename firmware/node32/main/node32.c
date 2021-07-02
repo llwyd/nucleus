@@ -25,10 +25,12 @@
 
 #include "sensing.h"
 #include "comms.h"
-
+#include "types.h"
 
 static QueueHandle_t xTemperatureQueue;
 static QueueHandle_t xSlowTemperatureQueue;
+
+static QueueHandle_t xSensorDataQueue;
 
 void app_main(void)
 {
@@ -38,11 +40,12 @@ void app_main(void)
 
     xTemperatureQueue       = xQueueCreate( 16U, sizeof( float ) );
     xSlowTemperatureQueue   = xQueueCreate( 16U, sizeof( float ) );
+    xSensorDataQueue   = xQueueCreate( 16U, sizeof( sensing_t ) );
 
     Sensing_Init( &xTemperatureQueue, &xSlowTemperatureQueue );
     Comms_Init( &xTemperatureQueue, &xSlowTemperatureQueue );
 
-    xTaskCreate( Sensing_Task,  "Sensing Task", 5000, (void *)1, (tskIDLE_PRIORITY + 3), &xSensingHandle );
-    xTaskCreate( Comms_Task,    "Comms Task",   5000, (void *)1, (tskIDLE_PRIORITY + 2), &xCommsHandle );
+    xTaskCreate( Sensing_Task,  "Sensing Task", 5000, &xSensorDataQueue, (tskIDLE_PRIORITY + 3), &xSensingHandle );
+    xTaskCreate( Comms_Task,    "Comms Task",   5000, &xSensorDataQueue, (tskIDLE_PRIORITY + 2), &xCommsHandle );
     xTaskCreate( Comms_Weather, "Weather Task", 5000, (void *)1, (tskIDLE_PRIORITY + 1), &xWeatherHandle );
 }

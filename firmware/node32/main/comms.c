@@ -22,6 +22,7 @@
 
 #include "mqtt_client.h"
 #include "secretkeys.h"
+#include "types.h"
 
 static EventGroupHandle_t s_wifi_event_group;
 static const char * WIFI_TAG = "station";
@@ -141,31 +142,40 @@ static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
 extern void Comms_Task( void * pvParameters )
 {
     float rxTemperature;
-    char temperatureString[16] = {0x00};
+    char dataString[16] = {0x00};
+    char mqttTopic[64] = {0x00};
+
+    sensing_t sensorData;
+    QueueHandle_t * sensorQueue = (QueueHandle_t *)pvParameters;
 
     while( 1U )
     {
-        if( xQueueReceive( *xCommsDataQueue, &rxTemperature, (TickType_t)1000 ) == pdPASS )
+        if( xQueueReceive( *sensorQueue, &sensorData, (TickType_t)100 ) == pdPASS )
         {
-            memset( temperatureString, 0x00, 16U);
-            snprintf( temperatureString, 16U, "%.3f", rxTemperature);
-            printf("rxTemperature: %.3f\n", rxTemperature);
+            memset( dataString, 0x00, 16U);
+            memset( mqttTopic, 0x00, 64U );
+            strcat( mqttTopic, MQTT_MASTER_TOPIC );
+            switch( sensorData.type )
+            {
+                case sensing_type_temperature:
+                    snprintf( dataString, 16U, "%.3f", sensorData.data.f);
+                    strcat( mqttTopic, sensorData.mqtt_label );
+                    break;
+                case sensing_type_humidity:
+                    snprintf( dataString, 16U, "%.3f", sensorData.data.f);
+                    strcat( mqttTopic, sensorData.mqtt_label );
+                    break;
+                case sensing_type_pressure:
+                    snprintf( dataString, 16U, "%.3f", sensorData.data.f);
+                    strcat( mqttTopic, sensorData.mqtt_label );
+                    break;
+            }
             if( brokerConnected )
             {
-                esp_mqtt_client_publish(mqtt_client, MQTT_TEMPERATURE_LIVE, temperatureString, 0, 0, 0);
+                printf("transmitting: %s\n", mqttTopic);
+                esp_mqtt_client_publish(mqtt_client, mqttTopic, dataString, 0, 0, 0);
             }
-        }
-
-       if( xQueueReceive( *xSlowDataQueue, &rxTemperature,(TickType_t)0U) == pdPASS )
-       {
-            memset( temperatureString, 0x00, 16U);
-            snprintf( temperatureString, 16U, "%.3f", rxTemperature);
-            printf("rxTemperature: %.3f\n", rxTemperature);
-            if( brokerConnected )
-            {
-                esp_mqtt_client_publish(mqtt_client, MQTT_TEMPERATURE, temperatureString, 0, 0, 0);
-            }
-       } 
+        } 
     } 
 }
 

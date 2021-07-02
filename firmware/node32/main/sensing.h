@@ -4,9 +4,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
+#include "types.h"
+
 void Sensing_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperature );
-void Sensing_Read( void );
 extern void Sensing_Task( void * pvParameters );
-const float * Sensing_GetTemperature( void );
 
 #endif /* _SENSING_H_ */

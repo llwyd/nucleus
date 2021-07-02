@@ -28,7 +28,7 @@ static QueueHandle_t * xSlowDataQueue;
 
 static struct   bme280_dev dev;
 static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
-static struct   bme280_data combinedData;
+static struct   bme280_data bme280_rawData;
 
 void Sensing_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperature )
 {
@@ -51,23 +51,42 @@ void Sensing_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperatur
     BME280_Setup();
 }
 
+
+static void AddDataToQueue( QueueHandle_t * q, sensing_type_t type, sensing_data_t data, char * label )
+{    
+    sensing_t queueData;
+
+    queueData.type          = type;
+    queueData.data.f        = data.f;
+    queueData.mqtt_label    = label;
+
+    xQueueSend( *q, ( void *)&queueData, (TickType_t) 0U);
+}
+
 extern void Sensing_Task( void * pvParameters )
 {
     TickType_t xLastWaitTime = xTaskGetTickCount();
     TickType_t xSlowWaitTime = xTaskGetTickCount();
     TickType_t xCurrentTime  = xSlowWaitTime;
 
+    QueueHandle_t * queue = (QueueHandle_t *)pvParameters;
+
     int slowDelay = 1000 * 60 * 5;
+
+    static sensing_t sensor_data;
 
     while( 1U )
     {
         vTaskDelayUntil( &xLastWaitTime, taskDelay / portTICK_PERIOD_MS );
         
-//        temperature = TMP102_Read();
-        bme280_get_sensor_data(BME280_ALL, &combinedData, &dev);
+        bme280_get_sensor_data(BME280_ALL, &bme280_rawData, &dev);
 
-        temperature = combinedData.temperature;
-        xQueueSend( *xDataQueue, ( void *)&temperature, (TickType_t) 0U );
+        temperature = bme280_rawData.temperature;
+        //xQueueSend( *xDataQueue, ( void *)&temperature, (TickType_t) 0U );
+
+        AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)bme280_rawData.temperature, "temperature_live");
+        AddDataToQueue( queue, sensing_type_humidity, (sensing_data_t)bme280_rawData.humidity, "humidity_live");
+        AddDataToQueue( queue, sensing_type_pressure, (sensing_data_t)bme280_rawData.pressure, "pressure_live");
 
         xCurrentTime = xTaskGetTickCount();
         if( (xCurrentTime - xSlowWaitTime) > ( slowDelay / portTICK_PERIOD_MS ) )
@@ -77,15 +96,10 @@ extern void Sensing_Task( void * pvParameters )
         }
 
         printf("Temperature: %.3f\n", temperature);
-        printf("BME280 T: %.2f\n", combinedData.temperature);
-        printf("BME280 H: %.2f\n", combinedData.humidity);
-        printf("BME280 P: %.2f\n", combinedData.pressure);
+        printf("BME280 T: %.2f\n", bme280_rawData.temperature);
+        printf("BME280 H: %.2f\n", bme280_rawData.humidity);
+        printf("BME280 P: %.2f\n", bme280_rawData.pressure);
     }
-}
-
-const float * Sensing_GetTemperature( void )
-{
-    return &temperature;
 }
 
 static float TMP102_Read( void )
