@@ -37,6 +37,7 @@ static esp_mqtt_client_handle_t mqtt_client;
 static bool brokerConnected = false;
 static bool wifiConnected = false;
 
+
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
     if( event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
@@ -213,6 +214,22 @@ esp_err_t HTTP_EventHandler( esp_http_client_event_t *evt )
     return ESP_OK;
 }
 
+static void ExtractData( const char * inputBuffer, char * outputBuffer, const char * keyword )
+{
+    char * p = strstr( inputBuffer, keyword );
+    memset(outputBuffer, 0x00, 32);
+    if( p!= NULL )
+	{
+        p+=(int)strlen(keyword);
+        char * pch = strchr(p,',');
+        *pch = '\0';
+        strcat(outputBuffer,p + 2);
+        int stringLen = strlen(outputBuffer);
+        *(outputBuffer+stringLen-1) = '\0';
+        *pch = ',';
+	}
+
+}
 
 extern void Comms_Weather( void * pvParameters )
 {
@@ -220,12 +237,13 @@ extern void Comms_Weather( void * pvParameters )
 
     esp_http_client_config_t config =
     {
-        .url = DEBUG_URL,
+        .url = WEATHER_URL,
         .event_handler = HTTP_EventHandler,
     };
+    char extractedData[32] = {0};
     while( 1U )
     {
-        vTaskDelayUntil( &xLastWaitTime, 60000 / portTICK_PERIOD_MS );
+        vTaskDelayUntil( &xLastWaitTime, 10000 / portTICK_PERIOD_MS );
 
         if( wifiConnected )
         {
