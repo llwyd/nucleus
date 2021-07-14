@@ -206,7 +206,7 @@ esp_err_t HTTP_EventHandler( esp_http_client_event_t *evt )
             printf("HTTP Error!\n");
             break;
         case HTTP_EVENT_ON_DATA:
-            printf("%.*s", evt->data_len, (char*)evt->data);
+            printf("%.*s\n", evt->data_len, (char*)evt->data);
             ExtractAndTransmit( evt->data );
             break;
         default:
@@ -261,11 +261,12 @@ extern void Comms_Weather( void * pvParameters )
     {
         .url = WEATHER_URL,
         .event_handler = HTTP_EventHandler,
+        .buffer_size = 1024,
     };
     char extractedData[32] = {0};
     while( 1U )
     {
-        vTaskDelayUntil( &xLastWaitTime, 10000 / portTICK_PERIOD_MS );
+        vTaskDelayUntil( &xLastWaitTime, 60000 / portTICK_PERIOD_MS );
 
         if( wifiConnected )
         {
