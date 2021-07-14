@@ -38,6 +38,8 @@ static bool brokerConnected = false;
 static bool wifiConnected = false;
 
 
+static void ExtractAndTransmit( char * buffer );
+
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
     if( event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
@@ -205,6 +207,7 @@ esp_err_t HTTP_EventHandler( esp_http_client_event_t *evt )
             break;
         case HTTP_EVENT_ON_DATA:
             printf("%.*s", evt->data_len, (char*)evt->data);
+            ExtractAndTransmit( evt->data );
             break;
         default:
             printf("Unhandled HTTP Event\n");
@@ -216,19 +219,38 @@ esp_err_t HTTP_EventHandler( esp_http_client_event_t *evt )
 
 static void ExtractData( const char * inputBuffer, char * outputBuffer, const char * keyword )
 {
-    char * p = strstr( inputBuffer, keyword );
+    char quotedKeyword[32] = {0};
+
+    strcat(quotedKeyword, "\"");
+    strcat(quotedKeyword, keyword);
+    strcat(quotedKeyword, "\"");
+
+    char * p = strstr( inputBuffer, quotedKeyword );
     memset(outputBuffer, 0x00, 32);
     if( p!= NULL )
 	{
-        p+=(int)strlen(keyword);
+        p+=(int)strlen(quotedKeyword);
         char * pch = strchr(p,',');
         *pch = '\0';
-        strcat(outputBuffer,p + 2);
+        strcat(outputBuffer,p + 1);
         int stringLen = strlen(outputBuffer);
         *(outputBuffer+stringLen-1) = '\0';
         *pch = ',';
 	}
 
+}
+
+static void ExtractAndTransmit( char * buffer )
+{
+    char dataString[32] = {0};
+    ExtractData( buffer, dataString, "description" );
+    printf("Outside Descrption: %s\n", dataString );
+
+    ExtractData( buffer, dataString, "temp" );
+    printf("Outside Temperature: %s\n", dataString );
+
+    ExtractData( buffer, dataString, "humidity" );
+    printf("Outside Humidity: %s\n", dataString );
 }
 
 extern void Comms_Weather( void * pvParameters )
