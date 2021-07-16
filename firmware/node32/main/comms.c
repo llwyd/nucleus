@@ -263,16 +263,20 @@ extern void Comms_Weather( void * pvParameters )
         .event_handler = HTTP_EventHandler,
         .buffer_size = 1024,
     };
-    char extractedData[32] = {0};
+    
     while( 1U )
     {
-        vTaskDelayUntil( &xLastWaitTime, 60000 / portTICK_PERIOD_MS );
-
         if( wifiConnected )
         {
             esp_http_client_handle_t client = esp_http_client_init(&config);
             esp_err_t err = esp_http_client_perform(client);
             esp_http_client_cleanup(client);
+            
+            vTaskDelayUntil( &xLastWaitTime, 60000 / portTICK_PERIOD_MS );
+        }
+        else
+        {
+            vTaskDelayUntil( &xLastWaitTime, 1000 / portTICK_PERIOD_MS );
         }
     }
 }
