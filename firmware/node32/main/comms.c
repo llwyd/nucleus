@@ -149,7 +149,7 @@ extern void Comms_Task( void * pvParameters )
 
     while( 1U )
     {
-        if( xQueueReceive( *sensorQueue, &sensorData, (TickType_t)100 ) == pdPASS )
+        if( xQueueReceive( *sensorQueue, &sensorData, (TickType_t)0 ) == pdPASS )
         {
             memset( dataString, 0x00, 16U);
             memset( mqttTopic, 0x00, 64U );
