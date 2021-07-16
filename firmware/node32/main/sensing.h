@@ -6,7 +6,6 @@
 
 #include "types.h"
 
-void Sensing_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperature );
 extern void Sensing_Task( void * pvParameters );
 
 #endif /* _SENSING_H_ */

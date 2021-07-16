@@ -23,14 +23,11 @@ static int taskDelay = 1000;
 static float TMP102_Read( void );
 static void  BME280_Setup( void );
 
-static QueueHandle_t * xDataQueue;
-static QueueHandle_t * xSlowDataQueue;
-
 static struct   bme280_dev dev;
 static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
 static struct   bme280_data bme280_rawData;
 
-void Sensing_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperature )
+static void Init( void )
 {
     i2c_config_t conf =
     {
@@ -44,9 +41,6 @@ void Sensing_Init( QueueHandle_t * xTemperature, QueueHandle_t * xSlowTemperatur
 
     i2c_param_config( i2c_master_port, &conf );
     i2c_driver_install( i2c_master_port, conf.mode, 0U, 0U, 0U );
-
-    xDataQueue = xTemperature;
-    xSlowDataQueue = xSlowTemperature;
 
     BME280_Setup();
 }
@@ -72,8 +66,9 @@ extern void Sensing_Task( void * pvParameters )
     QueueHandle_t * queue = (QueueHandle_t *)pvParameters;
 
     int slowDelay = 1000 * 60 * 5;
-
     static sensing_t sensor_data;
+
+    Init();
 
     while( 1U )
     {
@@ -93,7 +88,6 @@ extern void Sensing_Task( void * pvParameters )
             xSlowWaitTime = xCurrentTime;
         }
 
-        printf("Temperature: %.3f\n", temperature);
         printf("BME280 T: %.2f\n", bme280_rawData.temperature);
         printf("BME280 H: %.2f\n", bme280_rawData.humidity);
         printf("BME280 P: %.2f\n", bme280_rawData.pressure);
