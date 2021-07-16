@@ -35,7 +35,7 @@ static bool brokerConnected = false;
 static bool wifiConnected = false;
 
 
-static void ExtractAndTransmit( char * buffer );
+static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer );
 
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
@@ -203,7 +203,8 @@ esp_err_t HTTP_EventHandler( esp_http_client_event_t *evt )
             break;
         case HTTP_EVENT_ON_DATA:
             printf("%.*s\n", evt->data_len, (char*)evt->data);
-            ExtractAndTransmit( evt->data );
+            QueueHandle_t * dataQueue = evt->user_data;
+            ExtractAndTransmit( dataQueue, evt->data );
             break;
         default:
             printf("Unhandled HTTP Event\n");
@@ -236,28 +237,48 @@ static void ExtractData( const char * inputBuffer, char * outputBuffer, const ch
 
 }
 
-static void ExtractAndTransmit( char * buffer )
+static void AddDataToQueue( QueueHandle_t * q, sensing_type_t type, sensing_data_t data, char * label )
+{    
+    sensing_t queueData;
+
+    queueData.type          = type;
+    queueData.data.f        = data.f;
+    queueData.mqtt_label    = label;
+
+    xQueueSend( *q, ( void *)&queueData, (TickType_t) 0U);
+}
+
+static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer )
 {
     char dataString[32] = {0};
+    double val = 0.0f;
+
+
     ExtractData( buffer, dataString, "description" );
     printf("Outside Descrption: %s\n", dataString );
 
     ExtractData( buffer, dataString, "temp" );
     printf("Outside Temperature: %s\n", dataString );
+    val = atof( dataString );
+    AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)val, "out_temp");
 
     ExtractData( buffer, dataString, "humidity" );
     printf("Outside Humidity: %s\n", dataString );
+    val = atof( dataString );
+    AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)val, "out_hum");
 }
 
 extern void Comms_Weather( void * pvParameters )
 {
     TickType_t xLastWaitTime = xTaskGetTickCount();
+    QueueHandle_t * sensorQueue = (QueueHandle_t *)pvParameters;
 
     esp_http_client_config_t config =
     {
-        .url = WEATHER_URL,
-        .event_handler = HTTP_EventHandler,
-        .buffer_size = 1024,
+        .url            = WEATHER_URL,
+        .event_handler  = HTTP_EventHandler,
+        .buffer_size    = 1024,
+        .user_data      = sensorQueue,
     };
     
     while( 1U )
