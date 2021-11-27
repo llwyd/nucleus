@@ -184,9 +184,8 @@ static void ConstructMQTTPacket( dq_data_t * data, char * topic, uint16_t topicS
 
 extern void Comms_Task( void * pvParameters )
 {
-    float rxTemperature;
     char mqttTopic[64] = {0x00};
-    char dataString[16] = {0x00};
+    char dataString[32] = {0x00};
 
     dq_data_t sensorData;
     QueueHandle_t * sensorQueue = (QueueHandle_t *)pvParameters;
@@ -197,7 +196,7 @@ extern void Comms_Task( void * pvParameters )
     {
         if( xQueueReceive( *sensorQueue, &sensorData, (TickType_t)0 ) == pdPASS )
         {
-            ConstructMQTTPacket( &sensorData, mqttTopic, 64U, dataString, 16U );
+            ConstructMQTTPacket( &sensorData, mqttTopic, 64U, dataString, 32U );
             
             if( brokerConnected )
             {
@@ -271,7 +270,8 @@ static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer )
     float val = 0.0f;
 
     ExtractData( buffer, dataString, "description" );
-    printf("Outside Descrption: %s\n", dataString );
+    printf("Outside Description: %s\n", dataString );
+    //DQ_AddDataToQueue( queue, dataString, dq_data_str, dq_desc_weather, "out_desc");  
 
     ExtractData( buffer, dataString, "temp" );
     printf("Outside Temperature: %s\n", dataString );
