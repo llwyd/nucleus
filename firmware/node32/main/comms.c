@@ -20,6 +20,9 @@
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
 
+#include "assert.h"
+
+#include "dataqueue.h"
 #include "mqtt_client.h"
 #include "secretkeys.h"
 #include "types.h"
@@ -33,7 +36,6 @@ static esp_mqtt_client_handle_t mqtt_client;
 
 static bool brokerConnected = false;
 static bool wifiConnected = false;
-
 
 static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer );
 
@@ -136,13 +138,57 @@ static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
 
 }
 
+static void ConstructMQTTPacket( dq_data_t * data, char * topic, uint16_t topicSize, char * dataBuffer, uint16_t dataBufferSize )
+{
+    assert( data != NULL );
+    assert( topic != NULL );
+    assert( dataBuffer != NULL );
+    
+    memset( topic, 0x00, topicSize );
+    memset( dataBuffer, 0x00, dataBufferSize );
+    
+    strcat( topic, MQTT_MASTER_TOPIC );
+    
+    switch( data->type )
+    { 
+        case dq_data_float:
+        {
+            snprintf( dataBuffer, 16U, "%.3f", data->data.f);
+            strcat( topic, data->mqtt_label );
+            break;
+        }
+        case dq_data_uint32:
+        {
+            snprintf( dataBuffer, 16U, "%d", data->data.ui);
+            strcat( topic, data->mqtt_label );
+            break;
+        }
+        case dq_data_uint16:
+        {
+            snprintf( dataBuffer, 16U, "%d", data->data.us);
+            strcat( topic, data->mqtt_label );
+            break;
+        }
+        case dq_data_str:
+        {
+            strcat( dataBuffer, data->data.s);
+            strcat( topic, data->mqtt_label );
+            break;
+        }
+        default:
+        {
+            assert( false );
+        }
+    }    
+}
+
 extern void Comms_Task( void * pvParameters )
 {
     float rxTemperature;
-    char dataString[16] = {0x00};
     char mqttTopic[64] = {0x00};
+    char dataString[16] = {0x00};
 
-    sensing_t sensorData;
+    dq_data_t sensorData;
     QueueHandle_t * sensorQueue = (QueueHandle_t *)pvParameters;
 
     Init();
@@ -151,24 +197,8 @@ extern void Comms_Task( void * pvParameters )
     {
         if( xQueueReceive( *sensorQueue, &sensorData, (TickType_t)0 ) == pdPASS )
         {
-            memset( dataString, 0x00, 16U);
-            memset( mqttTopic, 0x00, 64U );
-            strcat( mqttTopic, MQTT_MASTER_TOPIC );
-            switch( sensorData.type )
-            {
-                case sensing_type_temperature:
-                    snprintf( dataString, 16U, "%.3f", sensorData.data.f);
-                    strcat( mqttTopic, sensorData.mqtt_label );
-                    break;
-                case sensing_type_humidity:
-                    snprintf( dataString, 16U, "%.3f", sensorData.data.f);
-                    strcat( mqttTopic, sensorData.mqtt_label );
-                    break;
-                case sensing_type_pressure:
-                    snprintf( dataString, 16U, "%.3f", sensorData.data.f);
-                    strcat( mqttTopic, sensorData.mqtt_label );
-                    break;
-            }
+            ConstructMQTTPacket( &sensorData, mqttTopic, 64U, dataString, 16U );
+            
             if( brokerConnected )
             {
                 printf("transmitting: %s\n", mqttTopic);
@@ -191,8 +221,6 @@ static void MQTT_Init( void )
     esp_mqtt_client_register_event( mqtt_client, ESP_EVENT_ANY_ID, MQTT_EventHandler, NULL );
     esp_mqtt_client_start(mqtt_client);
 }
-
-
 
 esp_err_t HTTP_EventHandler( esp_http_client_event_t *evt )
 {
@@ -237,35 +265,23 @@ static void ExtractData( const char * inputBuffer, char * outputBuffer, const ch
 
 }
 
-static void AddDataToQueue( QueueHandle_t * q, sensing_type_t type, sensing_data_t data, char * label )
-{    
-    sensing_t queueData;
-
-    queueData.type          = type;
-    queueData.data.f        = data.f;
-    queueData.mqtt_label    = label;
-
-    xQueueSend( *q, ( void *)&queueData, (TickType_t) 0U);
-}
-
 static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer )
 {
     char dataString[32] = {0};
-    double val = 0.0f;
-
+    float val = 0.0f;
 
     ExtractData( buffer, dataString, "description" );
     printf("Outside Descrption: %s\n", dataString );
 
     ExtractData( buffer, dataString, "temp" );
     printf("Outside Temperature: %s\n", dataString );
-    val = atof( dataString );
-    AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)val, "out_temp");
+    val = (float)atof( dataString );
+    DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_temperature, "out_temp");  
 
     ExtractData( buffer, dataString, "humidity" );
     printf("Outside Humidity: %s\n", dataString );
-    val = atof( dataString );
-    AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)val, "out_hum");
+    val = (float)atof( dataString );
+    DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_humidity, "out_hum");  
 }
 
 extern void Comms_Weather( void * pvParameters )

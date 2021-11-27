@@ -24,7 +24,6 @@ extern void DQ_AddDataToQueue( QueueHandle_t *q, void * data, dq_type_t type, dq
         case dq_data_float:
         {
             float * d = data;
-            printf("TESTING: %.3f\n", *d );
             queueData.data.f = *d;
             break;
         }

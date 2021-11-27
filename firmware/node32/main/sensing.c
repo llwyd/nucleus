@@ -10,17 +10,13 @@
 #include "stdio.h"
 
 #include "bme280.h"
-
-/* current temperature value */
-static float temperature = 0.0f;
-
+#include "dataqueue.h"
 
 /* i2c config */
 static int i2c_master_port = 0U;
 
 static int taskDelay = 1000;
 
-static float TMP102_Read( void );
 static void  BME280_Setup( void );
 
 static struct   bme280_dev dev;
@@ -76,15 +72,20 @@ extern void Sensing_Task( void * pvParameters )
         
         bme280_get_sensor_data(BME280_ALL, &bme280_rawData, &dev);
 
-        AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)bme280_rawData.temperature, "temp_live");
-        AddDataToQueue( queue, sensing_type_humidity, (sensing_data_t)bme280_rawData.humidity, "hum_live");
-        AddDataToQueue( queue, sensing_type_pressure, (sensing_data_t)bme280_rawData.pressure, "pres_live");
+        float temperature   = bme280_rawData.temperature;
+        float humidity      = bme280_rawData.humidity;
+        float pressure      = bme280_rawData.pressure;
+        
+        DQ_AddDataToQueue( queue, &temperature, dq_data_float, dq_desc_temperature, "temp_live");  
+        DQ_AddDataToQueue( queue, &humidity, dq_data_float, dq_desc_temperature, "hum_live");  
+        DQ_AddDataToQueue( queue, &pressure, dq_data_float, dq_desc_temperature, "pres_live");  
 
         xCurrentTime = xTaskGetTickCount();
         if( (xCurrentTime - xSlowWaitTime) > ( slowDelay / portTICK_PERIOD_MS ) )
         {
-            AddDataToQueue( queue, sensing_type_temperature, (sensing_data_t)bme280_rawData.temperature, "node_temp");
-            AddDataToQueue( queue, sensing_type_humidity, (sensing_data_t)bme280_rawData.humidity, "node_hum");
+            DQ_AddDataToQueue( queue, &temperature, dq_data_float, dq_desc_temperature, "node_temp");  
+            DQ_AddDataToQueue( queue, &humidity, dq_data_float, dq_desc_temperature, "node_hum");  
+            
             xSlowWaitTime = xCurrentTime;
         }
 
@@ -92,33 +93,6 @@ extern void Sensing_Task( void * pvParameters )
         printf("BME280 H: %.2f\n", bme280_rawData.humidity);
         printf("BME280 P: %.2f\n", bme280_rawData.pressure);
     }
-}
-
-static float TMP102_Read( void )
-{
-    uint8_t data[2]             = {0U};
-    const uint8_t address       = 0x48;
-    const float scaling         = 0.0625f;
-
-    float currentTemperature    = 0.0f;
-    uint16_t rawTemperature     = 0x0U;
-
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start( cmd );
-    i2c_master_write_byte( cmd, ( address << 1) | 0x1, 0x1 );
-
-    i2c_master_read(cmd, &data[0], 1, 0x0 );
-    i2c_master_read(cmd, &data[1], 1, 0x1 );
-    i2c_master_stop(cmd);
-    
-    i2c_master_cmd_begin( i2c_master_port, cmd, 100 / portTICK_PERIOD_MS );
-    i2c_cmd_link_delete(cmd);
-
-    rawTemperature = ( (( uint16_t )data[ 0 ] << 4) | data[ 1 ] >> 4 );
-    currentTemperature = ( ( float )rawTemperature ) * scaling;
-
-    return currentTemperature;
 }
 
 void BME280_Delay(uint32_t period, void *intf_ptr)
