@@ -2,6 +2,7 @@
 #define _DATA_QUEUE_H
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -13,6 +14,7 @@ typedef union dq_val_t
     uint32_t ui;
     uint16_t us;
     char * s;
+    bool b;
 }
 dq_val_t;
 
@@ -22,6 +24,7 @@ typedef enum dq_type_t
     dq_data_uint32,
     dq_data_uint16,
     dq_data_str,
+    dq_data_bool,
 }
 dq_type_t;
 
@@ -42,6 +45,15 @@ typedef struct dq_data_t
     dq_val_t data;
 }
 dq_data_t;
+
+/* struct for handling data received */
+typedef struct dq_callback_t
+{
+    char * mqtt_label;
+    dq_type_t type;
+    void ( * dq_fn ) ( dq_val_t * );
+}
+dq_callback_t;
 
 extern void DQ_AddDataToQueue( QueueHandle_t *q, void * data, dq_type_t type, dq_desc_t desc, char * label );
 
