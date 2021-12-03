@@ -27,6 +27,8 @@
 #include "secretkeys.h"
 #include "types.h"
 
+#define MQTT_PIN ( 13U )
+
 static EventGroupHandle_t s_wifi_event_group;
 static const char * WIFI_TAG = "station";
 
@@ -44,7 +46,7 @@ static void MQTT_HandleReceivedData( const char * const topic, const uint32_t to
 static uint16_t numCallbacks = 1U;
 static dq_callback_t mqttCallbacks [ 1 ] = 
 {
-    { "test_callback", dq_data_bool, MQTT_ReceiveTest },
+    { "debug_led", dq_data_bool, MQTT_ReceiveTest },
 };
 
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
@@ -70,6 +72,11 @@ static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
 
 static void Init( void )
 {
+    /* DEBUG led for testing mqtt receive callbacks */
+    gpio_reset_pin( MQTT_PIN );
+    gpio_set_direction( MQTT_PIN, GPIO_MODE_OUTPUT );
+    gpio_set_level( MQTT_PIN, false );
+
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -120,6 +127,7 @@ static void Init( void )
 static void MQTT_ReceiveTest( dq_val_t * data )
 {
     printf("MQTT: Received data\n");
+    gpio_set_level( MQTT_PIN, data->b );
 }
 
 static dq_val_t MQTT_Extract( char * data, dq_type_t type )
