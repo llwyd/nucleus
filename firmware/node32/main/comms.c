@@ -38,6 +38,14 @@ static bool brokerConnected = false;
 static bool wifiConnected = false;
 
 static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer );
+static void MQTT_ReceiveTest ( dq_val_t * data );
+static void MQTT_HandleReceivedData( const char * const topic, const uint32_t topic_len, const char * const data );
+
+static uint16_t numCallbacks = 1U;
+static dq_callback_t mqttCallbacks [ 1 ] = 
+{
+    { "test_callback", dq_data_bool, MQTT_ReceiveTest },
+};
 
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
@@ -109,6 +117,37 @@ static void Init( void )
     esp_wifi_start();
 }
 
+static void MQTT_ReceiveTest( dq_val_t * data )
+{
+    printf("MQTT: Received data\n");
+}
+
+static void MQTT_HandleReceivedData( const char * const topic, const uint32_t topic_len, const char * const data )
+{
+    assert( topic != NULL );
+    assert( data != NULL );
+
+    char local_topic[64];
+    char recvd_topic[64];
+    memset( recvd_topic, 0x00, 64);
+
+    snprintf( recvd_topic, 64, "%.*s", topic_len, topic );
+    
+    for( uint16_t idx = 0U; idx < numCallbacks; idx++ )
+    {
+        memset( local_topic, 0x00, 64);
+        strcat( local_topic, MQTT_MASTER_TOPIC );
+        strcat( local_topic, mqttCallbacks[idx].mqtt_label );
+        
+        if( strcmp( local_topic, recvd_topic ) == 0U )
+        {
+            dq_val_t data;
+            data.b = true;
+            mqttCallbacks[idx].dq_fn( &data );
+        }
+    }
+}
+
 static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
     esp_mqtt_event_handle_t event = event_data;
@@ -130,6 +169,7 @@ static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
         case MQTT_EVENT_DATA:
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
             printf("DATA=%.*s\r\n", event->data_len, event->data);
+            MQTT_HandleReceivedData( event->topic, event->topic_len, event->data);
             break;
         default:
             printf("Unhandled event\n");
