@@ -39,7 +39,7 @@ static bool wifiConnected = false;
 
 static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer );
 static void MQTT_ReceiveTest ( dq_val_t * data );
-static void MQTT_HandleReceivedData( const char * const topic, const uint32_t topic_len, const char * const data );
+static void MQTT_HandleReceivedData( const char * const topic, const uint32_t topic_len, const char * const data, const uint32_t data_len );
 
 static uint16_t numCallbacks = 1U;
 static dq_callback_t mqttCallbacks [ 1 ] = 
@@ -122,16 +122,56 @@ static void MQTT_ReceiveTest( dq_val_t * data )
     printf("MQTT: Received data\n");
 }
 
-static void MQTT_HandleReceivedData( const char * const topic, const uint32_t topic_len, const char * const data )
+static dq_val_t MQTT_Extract( char * data, dq_type_t type )
+{
+    dq_val_t d;
+
+    switch( type )
+    {
+        case dq_data_float:
+            d.f = (float)atof(data);
+            break;
+        case dq_data_uint32:
+            d.ui = (uint32_t)atoi(data);
+            break;
+        case dq_data_uint16:
+            d.us = (uint16_t)atoi(data);
+            break;
+        case dq_data_str:
+            d.s = data;
+            break;
+        case dq_data_bool:
+            if( strcmp( "1", data ) == 0U )
+            {
+                d.b = true;
+            }
+            else
+            {
+                d.b = false;
+            }
+            break;
+        default:
+        {
+            assert( false );
+            break;
+        }
+    }
+    return d;
+}
+
+static void MQTT_HandleReceivedData( const char * const topic, const uint32_t topic_len, const char * const data, const uint32_t data_len )
 {
     assert( topic != NULL );
     assert( data != NULL );
 
     char local_topic[64];
     char recvd_topic[64];
+    char recvd_data [32];
     memset( recvd_topic, 0x00, 64);
+    memset( recvd_data, 0x00, 32);
 
     snprintf( recvd_topic, 64, "%.*s", topic_len, topic );
+    snprintf( recvd_data, 64, "%.*s", data_len, data );
     
     for( uint16_t idx = 0U; idx < numCallbacks; idx++ )
     {
@@ -141,8 +181,7 @@ static void MQTT_HandleReceivedData( const char * const topic, const uint32_t to
         
         if( strcmp( local_topic, recvd_topic ) == 0U )
         {
-            dq_val_t data;
-            data.b = true;
+            dq_val_t data = MQTT_Extract( recvd_data, mqttCallbacks[idx].type );
             mqttCallbacks[idx].dq_fn( &data );
         }
     }
@@ -169,7 +208,7 @@ static void MQTT_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
         case MQTT_EVENT_DATA:
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
             printf("DATA=%.*s\r\n", event->data_len, event->data);
-            MQTT_HandleReceivedData( event->topic, event->topic_len, event->data);
+            MQTT_HandleReceivedData( event->topic, event->topic_len, event->data, event->data_len);
             break;
         default:
             printf("Unhandled event\n");
