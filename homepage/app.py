@@ -21,6 +21,7 @@ def mqtt_subscribe_all():
     # Note, shouldn't have to do it this way
     mqtt.subscribe('home/livingroom/#')
     mqtt.subscribe('home/inside_node/#')
+    mqtt.subscribe('home/lounge_area/#')
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -151,6 +152,8 @@ def static_temp_graph(value):
             'y':[],
             'p':[],
             's':[],
+            'c':[],
+            'd':[],
             't':[],
             'z':[],}
 
@@ -166,11 +169,15 @@ def static_temp_graph(value):
             elif(d.deviceID=='inside_node'):
                 data['p'].append(d.temperature)
                 data['s'].append(d_time)
+            elif(d.deviceID=='lounge_area'):
+                data['c'].append(d.temperature)
+                data['d'].append(d_time)
     figure={
         'data': [
             {'x': data['x'], 'y': data['y'], 'type': 'line', 'name': 'Inside'},
             {'x': data['t'], 'y': data['z'], 'type': 'line', 'name': 'Outside'},
-            {'x': data['s'], 'y': data['p'], 'type': 'line', 'name': 'Node'}
+            {'x': data['s'], 'y': data['p'], 'type': 'line', 'name': 'Node'},
+            {'x': data['d'], 'y': data['c'], 'type': 'line', 'name': 'Lounge Area'}
         ],
         'layout': {
 			'height': 700,
@@ -266,6 +273,14 @@ def handle_inside_node_data(client,userdata,message):
     data = message.payload.decode()
     if topic == 'node_temp':
         database_update("inside_node", data)
+
+@mqtt.on_topic('home/lounge_area/#')
+def handle_lounge_area_data(client,userdata,message):
+    full_topic = message.topic
+    topic = full_topic.replace('/',' ').split()[-1]
+    data = message.payload.decode()
+    if topic == 'node_temp':
+        database_update("lounge_area", data)
 
 @mqtt.on_message()
 def handle_mqtt_message(client,userdata,message):
