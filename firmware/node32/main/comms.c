@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -328,13 +329,13 @@ esp_err_t HTTP_EventHandler( esp_http_client_event_t *evt )
     return ESP_OK;
 }
 
-static void ExtractData( const char * inputBuffer, char * outputBuffer, const char * keyword )
+static void ExtractStringData( const char * inputBuffer, char * outputBuffer, const char * keyword )
 {
     char quotedKeyword[32] = {0};
 
     strcat(quotedKeyword, "\"");
     strcat(quotedKeyword, keyword);
-    strcat(quotedKeyword, "\"");
+    strcat(quotedKeyword, "\":");
 
     char * p = strstr( inputBuffer, quotedKeyword );
     memset(outputBuffer, 0x00, 32);
@@ -351,23 +352,41 @@ static void ExtractData( const char * inputBuffer, char * outputBuffer, const ch
 
 }
 
+static void ExtractFloatData( const char * inputBuffer, float * outputValue, const char * keyword )
+{
+    char quotedKeyword[32] = {0};
+
+    strcat(quotedKeyword, "\"");
+    strcat(quotedKeyword, keyword);
+    strcat(quotedKeyword, "\"");
+
+    char * p = strstr( inputBuffer, quotedKeyword );
+    if( p!= NULL )
+	{
+        p+=(int)strlen(quotedKeyword);
+        char * pch = strchr(p,',');
+        *pch = '\0';
+        *outputValue = (float)strtod( p + 1, NULL );
+        *pch = ',';
+	}
+
+}
+
 static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer )
 {
     char dataString[32] = {0};
     float val = 0.0f;
 
-    ExtractData( buffer, dataString, "description" );
+    ExtractStringData( buffer, dataString, "description" );
     printf("Outside Description: %s\n", dataString );
-    //DQ_AddDataToQueue( queue, dataString, dq_data_str, dq_desc_weather, "out_desc");  
+    DQ_AddDataToQueue( queue, dataString, dq_data_str, dq_desc_weather, "out_desc");  
 
-    ExtractData( buffer, dataString, "temp" );
-    printf("Outside Temperature: %s\n", dataString );
-    val = (float)atof( dataString );
+    ExtractFloatData( buffer, &val, "temp" );
+    printf("Outside Temperature: %.2f\n", val );
     DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_temperature, "out_temp");  
 
-    ExtractData( buffer, dataString, "humidity" );
-    printf("Outside Humidity: %s\n", dataString );
-    val = (float)atof( dataString );
+    ExtractFloatData( buffer, &val, "humidity" );
+    printf("Outside Humidity: %.2f\n", val );
     DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_humidity, "out_hum");  
 }
 
