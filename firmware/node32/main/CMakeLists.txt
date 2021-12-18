@@ -4,6 +4,7 @@ set(srcs
     "sensing.c"
     "comms.c"
     "dataqueue.c"
+    "mqtt.c"
     "weather.c"
     "bme280.c")
 
