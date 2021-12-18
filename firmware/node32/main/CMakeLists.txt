@@ -4,6 +4,7 @@ set(srcs
     "sensing.c"
     "comms.c"
     "dataqueue.c"
+    "weather.c"
     "bme280.c")
 
 idf_component_register(SRCS "${srcs}"

@@ -23,6 +23,7 @@
 
 #include "assert.h"
 
+#include "comms.h" 
 #include "dataqueue.h"
 #include "mqtt_client.h"
 #include "secretkeys.h"
@@ -49,6 +50,11 @@ static dq_callback_t mqttCallbacks [ 1 ] =
 {
     { "debug_led", dq_data_bool, MQTT_ReceiveTest },
 };
+
+extern bool Comms_WifiConnected( void )
+{
+    return wifiConnected;
+}
 
 static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t event_id, void* event_data )
 {
@@ -309,7 +315,7 @@ static void MQTT_Init( void )
     esp_mqtt_client_start(mqtt_client);
 }
 
-esp_err_t HTTP_EventHandler( esp_http_client_event_t *evt )
+extern esp_err_t Comms_HTTPEventHandler( esp_http_client_event_t *evt )
 {
     switch( evt->event_id )
     {
@@ -388,35 +394,5 @@ static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer )
     ExtractFloatData( buffer, &val, "humidity" );
     printf("Outside Humidity: %.2f\n", val );
     DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_humidity, "out_hum");  
-}
-
-extern void Comms_Weather( void * pvParameters )
-{
-    TickType_t xLastWaitTime = xTaskGetTickCount();
-    QueueHandle_t * sensorQueue = (QueueHandle_t *)pvParameters;
-
-    esp_http_client_config_t config =
-    {
-        .url            = WEATHER_URL,
-        .event_handler  = HTTP_EventHandler,
-        .buffer_size    = 1024,
-        .user_data      = sensorQueue,
-    };
-    
-    while( 1U )
-    {
-        if( wifiConnected )
-        {
-            esp_http_client_handle_t client = esp_http_client_init(&config);
-            esp_err_t err = esp_http_client_perform(client);
-            esp_http_client_cleanup(client);
-            
-            vTaskDelayUntil( &xLastWaitTime, 60000 / portTICK_PERIOD_MS );
-        }
-        else
-        {
-            vTaskDelayUntil( &xLastWaitTime, 1000 / portTICK_PERIOD_MS );
-        }
-    }
 }
 
