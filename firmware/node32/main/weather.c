@@ -29,11 +29,21 @@
 #include "secretkeys.h"
 #include "types.h"
 
+#define WEATHER_PIN ( 21U )
+
+static void Init( void )
+{
+    gpio_reset_pin( WEATHER_PIN );
+    gpio_set_direction( WEATHER_PIN, GPIO_MODE_INPUT );
+    gpio_pullup_en( WEATHER_PIN );
+}
+
 extern void Weather_Task( void * pvParameters )
 {
     TickType_t xLastWaitTime = xTaskGetTickCount();
     QueueHandle_t * sensorQueue = (QueueHandle_t *)pvParameters;
 
+    Init();
     esp_http_client_config_t config =
     {
         .url            = WEATHER_URL,
@@ -42,9 +52,13 @@ extern void Weather_Task( void * pvParameters )
         .user_data      = sensorQueue,
     };
     
+    bool weatherPin = 0;
     while( 1U )
     {
-        if( Comms_WifiConnected() )
+        weatherPin = (bool) gpio_get_level( WEATHER_PIN );
+
+        /* Only attempt to get weather if wifi connected and pin is not grounded */
+        if( Comms_WifiConnected() && weatherPin )
         {
             esp_http_client_handle_t client = esp_http_client_init(&config);
             esp_err_t err = esp_http_client_perform(client);
