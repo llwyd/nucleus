@@ -96,7 +96,6 @@ def display_page(pathname):
 index_page = html.Div([
     html.H1(children='H O M E'),
     html.Div(id = 'weather-description'),
-	html.Div(id = 'daemon-version'), 
 	html.Div(id = 'daemon-location'), 
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
