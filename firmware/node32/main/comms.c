@@ -61,7 +61,6 @@ static void Wifi_EventHandler( void * arg, esp_event_base_t event_base, int32_t 
         ip_event_got_ip_t * event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(WIFI_TAG, "Got ip: " IPSTR, IP2STR( &event->ip_info.ip ) );
         wifiConnected = true;
-        MQTT_Init();
     }
 }
 
@@ -112,6 +111,7 @@ static void Init( void )
     esp_wifi_set_mode( WIFI_MODE_STA );
     esp_wifi_set_config( WIFI_IF_STA, &wifi_config );
     esp_wifi_start();
+    MQTT_Init();
 }
 
 extern void Comms_Task( void * pvParameters )
@@ -126,7 +126,7 @@ extern void Comms_Task( void * pvParameters )
     esp_mqtt_client_handle_t * mqtt = MQTT_GetClient();
     while( 1U )
     {
-        if( xQueueReceive( *sensorQueue, &sensorData, (TickType_t)0 ) == pdPASS )
+        if( xQueueReceive( *sensorQueue, &sensorData, (TickType_t)10 ) == pdPASS )
         {
             MQTT_ConstructPacket( &sensorData, mqttTopic, 64U, dataString, 32U );
             
@@ -136,7 +136,7 @@ extern void Comms_Task( void * pvParameters )
                 printf("transmitting: %s\n", mqttTopic);
                 esp_mqtt_client_publish( *mqtt, mqttTopic, dataString, 0, 0, 0);
             }
-        } 
+        }
     } 
 }
 

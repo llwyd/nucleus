@@ -37,7 +37,7 @@ void app_main(void)
     TaskHandle_t xCommsHandle   = NULL;
     TaskHandle_t xWeatherHandle = NULL;
 
-    xSensorDataQueue   = xQueueCreate( 16U, sizeof( dq_data_t ) );
+    xSensorDataQueue   = xQueueCreate( 32U, sizeof( dq_data_t ) );
 
     xTaskCreate( Sensing_Task,  "Sensing Task", 5000, &xSensorDataQueue, (tskIDLE_PRIORITY + 3), &xSensingHandle );
     xTaskCreate( Comms_Task,    "Comms Task",   5000, &xSensorDataQueue, (tskIDLE_PRIORITY + 2), &xCommsHandle );
