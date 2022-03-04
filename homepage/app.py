@@ -255,11 +255,6 @@ def handle_livingroom_data(client,userdata,message):
         database_update("livingroom", data)
     elif topic == 'outside_temp_live':    
         cache.set("outside_temp",str(data)) 
-    elif topic == 'outside_temp':    
-        database_update("outside", data)
-    elif topic == 'outside_desc':    
-        cache.set("outside_desc",str(data)) 
-        cache.set("weather_description",str(data)) 
     elif topic == 'daemon_version':    
         cache.set("daemon_version",str(data),timeout=7200) 
     elif topic == 'location':    
@@ -272,6 +267,10 @@ def handle_lounge_area_data(client,userdata,message):
     data = message.payload.decode()
     if topic == 'node_temp':
         database_update("lounge_area", data)
+    elif topic == 'out_temp':
+        database_update("outside", data)
+    elif topic == 'out_desc':    
+        cache.set("weather_description",str(data).capitalize()) 
 
 @mqtt.on_topic('home/bedroom_area/#')
 def handle_bedroom_area_data(client,userdata,message):
@@ -290,4 +289,4 @@ def handle_mqtt_message(client,userdata,message):
 #    print(client,userdata,level,buf)
 
 if __name__ == '__main__':
-    app.run_server(host='0.0.0.0')
+    app.run_server(host='0.0.0.0', use_reloader=False)
