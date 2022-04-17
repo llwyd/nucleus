@@ -10,7 +10,6 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 import plotly
-import devices as dv
 from dash.dependencies import Input, Output
 import numpy as np
 import os
@@ -57,8 +56,6 @@ app.server.config['MQTT_TLS_ENABLED'] = False
 
 # STart MQTT Connection
 mqtt = Mqtt(app=app.server,connect_async=False)
-
-mqtt_subscribe_all()
 
 SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
 app.server.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
