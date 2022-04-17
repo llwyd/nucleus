@@ -55,7 +55,7 @@ app.server.config['MQTT_KEEPALIVE'] = 60
 app.server.config['MQTT_TLS_ENABLED'] = False
 
 # STart MQTT Connection
-mqtt = Mqtt(app=app.server,connect_async=False)
+mqtt = Mqtt(app=app.server,connect_async=True)
 
 SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
 app.server.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
@@ -231,8 +231,10 @@ def update_daemon_location(n):
 # A bug, this callback DOES NOT call, even with connect_async=True
 @mqtt.on_connect()
 def handle_connect(client,userdata,flags,rc):
-    mqtt.publish('livingroom/homepage_status','Connected!')
-    mqtt_subscribe_all()
+    print("Hello")
+    mqtt.subscribe('home/livingroom/#')
+    mqtt.subscribe('home/lounge_area/#')
+    mqtt.subscribe('home/bedroom_area/#')
 
 def database_update(name, temperature):
     datestamp = dt.datetime.now().strftime('%Y-%m-%d')
@@ -281,9 +283,9 @@ def handle_bedroom_area_data(client,userdata,message):
 def handle_mqtt_message(client,userdata,message):
     mqtt.publish('home/debug','Received!')
 
-#@mqtt.on_log()
-#def handle_logging(client,userdata,level,buf):
-#    print(client,userdata,level,buf)
+@mqtt.on_log()
+def handle_logging(client,userdata,level,buf):
+    print(client,userdata,level,buf)
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', use_reloader=False)
