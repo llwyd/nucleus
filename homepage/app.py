@@ -33,7 +33,7 @@ app = dash.Dash(__name__,server=server, external_stylesheets=external_stylesheet
 app.config.suppress_callback_exceptions = True
 
 app.title='Home Assistant'
-app.server.config["DEBUG"] = True
+app.server.config["DEBUG"] = False
 
 cache_config = {
     "DEBUG": True,         
@@ -93,7 +93,6 @@ def display_page(pathname):
 index_page = html.Div([
     html.H1(children='H O M E'),
     html.Div(id = 'weather-description'),
-	html.Div(id = 'daemon-location'), 
 	dcc.Interval(   id='interval-component',
                     interval = 1000 * 60 * 5,
                     n_intervals = 0
@@ -232,9 +231,10 @@ def update_daemon_location(n):
 @mqtt.on_connect()
 def handle_connect(client,userdata,flags,rc):
     print("Hello")
-    mqtt.subscribe('home/livingroom/#')
-    mqtt.subscribe('home/lounge_area/#')
-    mqtt.subscribe('home/bedroom_area/#')
+    mqtt.subscribe('home/lounge_area/node_temp')
+    mqtt.subscribe('home/lounge_area/out_temp')
+    mqtt.subscribe('home/lounge_area/out_desc')
+    mqtt.subscribe('home/bedroom_area/node_temp')
 
 def database_update(name, temperature):
     datestamp = dt.datetime.now().strftime('%Y-%m-%d')
