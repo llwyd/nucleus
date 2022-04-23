@@ -41,8 +41,8 @@ def on_message(client, userdata, message):
         rcv_bedroom_hum = True
 
     if( rcv_lounge_temp and rcv_bedroom_temp and rcv_lounge_hum and rcv_bedroom_hum ):
-        print(" Lounge: " + lounge_temp + "C")
-        print("Bedroom: " + bedroom_temp + "C")
+        print("  Lounge: ","{0:.1f}".format(float(lounge_temp)), "C ", "{0:.1f}".format(float(lounge_hum)),"%")
+        print(" Bedroom: ","{0:.1f}".format(float(bedroom_temp)), "C ", "{0:.1f}".format(float(bedroom_hum)),"%")
 
         client.loop_stop()
 
