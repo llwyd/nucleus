@@ -82,18 +82,21 @@ img = Image.new( "P", (display.WIDTH, display.HEIGHT) )
 draw = ImageDraw.Draw(img)
 
 # Init font
-font = ImageFont.truetype(HankenGroteskBold, 22)
+font = ImageFont.truetype(HankenGroteskBold, 16)
 
-def AddText( d, xy, s, data, f ):
+def AddText( d, xy,xy_data, s, temp, hum , f ):
     label = s
-    data_str = "{0:.1f}".format(float(data))+"C"
-    full_string = label + data_str
-    d.text( xy, full_string, display.BLACK, f )
+    temp_str = "{0:.1f}".format(float(temp))+"C"
+    hum_str = "{0:.1f}".format(float(hum))+"%"
+    full_string = "t: " + temp_str + ", h: " + hum_str
+    d.text( xy, label, display.BLACK, f )
+    d.text( xy_data, full_string, display.BLACK, f )
 
 #draw.text( (0, 0),  "    Lounge:", display.YELLOW, font)
 
-AddText( draw, (0, 44), "    Lounge: ", lounge_temp, font )
-AddText( draw, (0, 66), "Bedroom: ", bedroom_temp, font )
+AddText( draw, (0, 0),  (45,16), "Lounge: ", lounge_temp, lounge_hum, font )
+AddText( draw, (0, 32), (45,48), "Bedroom: ", bedroom_temp, bedroom_hum, font )
+AddText( draw, (0, 64), (45,80), "Outside: ", "0.0", "0.0", font )
 
 print("Updating display...")
 display.set_image(img)
