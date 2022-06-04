@@ -61,7 +61,7 @@ extern void Sensing_Task( void * pvParameters )
 
     QueueHandle_t * queue = (QueueHandle_t *)pvParameters;
 
-    int slowDelay = 1000 * 60 * 5;
+    int slowDelay = 1000 * 60 * 1;
     static sensing_t sensor_data;
 
     Init();

@@ -153,7 +153,7 @@ extern esp_err_t Comms_HTTPEventHandler( esp_http_client_event_t *evt )
             ExtractAndTransmit( dataQueue, evt->data );
             break;
         default:
-            printf("Unhandled HTTP Event\n");
+            printf("Unhandled HTTP Event %d\n", evt->event_id);
             break;
     }
 
@@ -203,21 +203,63 @@ static void ExtractFloatData( const char * inputBuffer, float * outputValue, con
 
 }
 
+static int ExtractIntData( const char * inputBuffer, const char * keyword )
+{
+    char quotedKeyword[32] = {0};
+    int val = 0U;
+
+    strcat(quotedKeyword, "\"");
+    strcat(quotedKeyword, keyword);
+    strcat(quotedKeyword, "\"");
+
+    char * p = strstr( inputBuffer, quotedKeyword );
+    if( p!= NULL )
+	{
+        p+=(int)strlen(quotedKeyword);
+        
+        char * pch = strchr(p,',');
+        char tempChar;
+        if( pch != NULL )
+        {
+            tempChar = *pch;
+        }
+        else
+        {
+            pch = strchr(p,'}');
+            tempChar = *pch;
+        }
+
+        *pch = '\0';
+        val = (int)strtol( p + 1, NULL, 0 );
+        *pch = tempChar;
+
+	}
+    return val;
+}
+
 static void ExtractAndTransmit( QueueHandle_t * queue, char * buffer )
 {
     char dataString[32] = {0};
     float val = 0.0f;
 
-    ExtractStringData( buffer, dataString, "description" );
-    printf("Outside Description: %s\n", dataString );
-    DQ_AddDataToQueue( queue, dataString, dq_data_str, dq_desc_weather, "out_desc");  
+    int code = ExtractIntData( buffer, "cod" );
+    if( code == 200 )
+    {
+        ExtractStringData( buffer, dataString, "description" );
+        printf("Outside Description: %s\n", dataString );
+        DQ_AddDataToQueue( queue, dataString, dq_data_str, dq_desc_weather, "out_desc");  
 
-    ExtractFloatData( buffer, &val, "temp" );
-    printf("Outside Temperature: %.2f\n", val );
-    DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_temperature, "out_temp");  
+        ExtractFloatData( buffer, &val, "temp" );
+        printf("Outside Temperature: %.2f\n", val );
+        DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_temperature, "out_temp");  
 
-    ExtractFloatData( buffer, &val, "humidity" );
-    printf("Outside Humidity: %.2f\n", val );
-    DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_humidity, "out_hum");  
+        ExtractFloatData( buffer, &val, "humidity" );
+        printf("Outside Humidity: %.2f\n", val );
+        DQ_AddDataToQueue( queue, &val, dq_data_float, dq_desc_humidity, "out_hum");  
+    }
+    else
+    {
+        printf("Error in weather data, code: %d\n", code );
+    }
 }
 

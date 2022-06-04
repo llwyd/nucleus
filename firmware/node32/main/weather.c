@@ -63,8 +63,16 @@ extern void Weather_Task( void * pvParameters )
             esp_http_client_handle_t client = esp_http_client_init(&config);
             esp_err_t err = esp_http_client_perform(client);
             esp_http_client_cleanup(client);
-            
-            vTaskDelayUntil( &xLastWaitTime, 60000 / portTICK_PERIOD_MS );
+
+            if( err == ESP_OK )
+            {
+                vTaskDelayUntil( &xLastWaitTime, 60000 / portTICK_PERIOD_MS );
+            }
+            else
+            {
+                printf("Weather data request FAILURE.. Retrying\n");
+                vTaskDelayUntil( &xLastWaitTime, 10000 / portTICK_PERIOD_MS );
+            }
         }
         else
         {
