@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "fsm.h"
+#include "sensor.h"
 
 enum Signals
 {
@@ -40,6 +41,7 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
             break;
         case signal_Tick:
             printf("[Idle] Tick Signal\n");
+            Sensor_Read();
             break;
         case signal_None:
             assert(false);
