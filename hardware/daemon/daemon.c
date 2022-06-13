@@ -21,6 +21,10 @@
 #include "fsm.h"
 #include "version.h"
 
+enum Signals
+{
+    signal_Tick = signal_Count,
+};
 
 fsm_status_t Daemon_Idle( fsm_t * this, signal s )
 {
@@ -35,6 +39,12 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
             printf("[Idle] Exit Signal\n");
             ret = fsm_Handled;
             break;
+        case signal_Tick:
+            printf("[Idle] Tick Signal\n");
+            break;
+        case signal_None:
+            assert(false);
+            break;
         default:
             printf("[Idle] Default Signal\n");
             ret = fsm_Ignored;
@@ -44,18 +54,47 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
     return ret;
 }
 
+signal GetEvent( void )
+{
+    static time_t current_time;
+    static time_t last_tick;
+    const double period = 1;
+
+    signal ret = signal_None;
+
+    time( &current_time );
+
+    double delta = difftime( current_time, last_tick );
+
+    if( delta > period )
+    {   
+        ret = signal_Tick;
+        last_tick = current_time;
+    }
+
+    return ret;
+}
 
 static void Loop( void )
 {
     fsm_t daemon; 
     daemon.state = &Daemon_Idle;    
-    
+    signal sig = signal_None;
+
     FSM_Init( &daemon );
 
-    /* Get Event */
+    while( 1 )
+    {
+        /* Get Event */
+        do
+        {
+            sig = GetEvent();
+        }
+        while( sig == signal_None );
 
-    /* Dispatch */
-
+        /* Dispatch */
+        FSM_Dispatch( &daemon, sig );
+    }
 }
 
 uint8_t main( int16_t argc, uint8_t **argv )

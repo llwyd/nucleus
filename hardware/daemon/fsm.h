@@ -14,6 +14,7 @@ typedef int signal;
 /* Default signals for state machine */
 enum DefaultSignals
 {
+    signal_None,
     signal_Enter,
     signal_Exit,
 
