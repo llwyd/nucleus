@@ -14,9 +14,10 @@ typedef int signal;
 /* Default signals for state machine */
 enum DefaultSignals
 {
-    signal_Init,
-    signal_Entry,
+    signal_Enter,
     signal_Exit,
+
+    signal_Count,
 };
 
 typedef enum
@@ -36,6 +37,8 @@ struct fsm_t
 {
     state_func state;
 } ;
+
+extern void FSM_Init( fsm_t * state );
 
 /* Event Dispatcher */
 extern void FSM_Dispatch( fsm_t * state, signal s );
