@@ -19,7 +19,6 @@
 #include <assert.h>
 
 #include "fsm.h"
-#include "version.h"
 
 enum Signals
 {
