@@ -26,6 +26,66 @@ enum Signals
     signal_Tick = signal_Count,
 };
 
+fsm_status_t Daemon_Connect( fsm_t * this, signal s );
+fsm_status_t Daemon_Subscribe( fsm_t * this, signal s );
+fsm_status_t Daemon_Idle( fsm_t * this, signal s );
+
+fsm_status_t Daemon_Connect( fsm_t * this, signal s )
+{
+    fsm_status_t ret = fsm_Ignored;
+    switch( s )
+    {
+        case signal_Enter:
+            printf("[Connect] Enter Signal\n");
+            ret = fsm_Transition;
+            this->state = &Daemon_Subscribe;
+            break;
+        case signal_Exit:
+            printf("[Connect] Exit Signal\n");
+            ret = fsm_Handled;
+            break;
+        case signal_None:
+            assert(false);
+            break;
+        case signal_Tick:
+        default:
+            printf("[Connect] Default Signal\n");
+            ret = fsm_Ignored;
+            break;
+    }
+
+    return ret;
+    
+}
+
+fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
+{
+    fsm_status_t ret = fsm_Ignored;
+    switch( s )
+    {
+        case signal_Enter:
+            printf("[Subscribe] Enter Signal\n");
+            ret = fsm_Transition;
+            this->state = &Daemon_Idle;
+            break;
+        case signal_Exit:
+            printf("[Subscribe] Exit Signal\n");
+            ret = fsm_Handled;
+            break;
+        case signal_None:
+            assert(false);
+            break;
+        case signal_Tick:
+        default:
+            printf("[Subscribe] Default Signal\n");
+            ret = fsm_Ignored;
+            break;
+    }
+
+    return ret;
+    
+}
+
 fsm_status_t Daemon_Idle( fsm_t * this, signal s )
 {
     fsm_status_t ret = fsm_Ignored;
@@ -79,7 +139,7 @@ signal GetEvent( void )
 static void Loop( void )
 {
     fsm_t daemon; 
-    daemon.state = &Daemon_Idle;    
+    daemon.state = &Daemon_Connect; 
     signal sig = signal_None;
 
     FSM_Init( &daemon );

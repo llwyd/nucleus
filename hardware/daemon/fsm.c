@@ -8,13 +8,13 @@ extern void FSM_Init( fsm_t * state )
 extern void FSM_Dispatch( fsm_t * state, signal s )
 {
     state_func previous = state->state;
-
     fsm_status_t status = state->state( state, s );
 
-    if ( status == fsm_Transition )
+    while ( status == fsm_Transition )
     {
         previous( state, signal_Exit );
-        state->state( state, signal_Enter );
+        previous = state->state;
+        status = state->state( state, signal_Enter );
     }
 }
 
