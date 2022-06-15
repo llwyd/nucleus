@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "fsm.h"
+#include "mqtt.h"
 #include "sensor.h"
 
 enum Signals
@@ -160,6 +161,7 @@ static void Loop( void )
 
 uint8_t main( int16_t argc, uint8_t **argv )
 {
+    MQTT_Init();
     Loop();
     return 0U;
 }
