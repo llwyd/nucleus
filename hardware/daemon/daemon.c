@@ -159,10 +159,43 @@ static void Loop( void )
     }
 }
 
-uint8_t main( int16_t argc, uint8_t **argv )
+bool Init( int argc, char ** argv )
 {
+    bool success = false;
+    int input_flags;
+    char * broker_ip;
+
+    while( ( input_flags = getopt( argc, argv, "b:" ) ) != -1U )
+    {
+        switch( input_flags )
+        {
+            case 'b':
+                broker_ip = optarg;
+                success = true;
+                printf("MQTT Broker IP: %s\n", broker_ip);
+                break;
+            default:
+                break;
+        }
+    }
+    
     MQTT_Init();
-    Loop();
+    
+    return success;
+}
+
+uint8_t main( int argc, char ** argv )
+{
+    bool success = Init( argc, argv );
+
+    if( success )
+    {
+        Loop();
+    }
+    else
+    {
+        printf("[CRITICAL ERROR!] FAILED TO INITIALISE\n");
+    }
     return 0U;
 }
 

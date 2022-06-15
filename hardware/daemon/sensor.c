@@ -27,7 +27,7 @@ static void CalculateTemperature( uint8_t * data )
         temperature = ( (float)upper_byte * 16.f ) + ( (float)lower_byte / 16.f );
     }
 
-    printf("Temperature = %.2f\n", temperature );
+    printf("\tTemperature = %.2f\n", temperature );
 }
 
 void Sensor_Init( void )
