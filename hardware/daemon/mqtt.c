@@ -60,6 +60,9 @@ bool Ack_Publish( uint8_t * buff, uint8_t len, uint16_t id );
 bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id );
 bool Ack_Disconnect( uint8_t * buff, uint8_t len, uint16_t id );
 
+static void IncrementSendMessageID();
+static void IncrementRecvMessageID();
+    
 typedef struct mqtt_pairs_t
 {
     mqtt_msg_type_t msg_type;
@@ -91,8 +94,8 @@ bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id )
     if( *buff == 0x00 )
     {
         printf("[MQTT] CONNACK:OK\n");
-        send_msg_id = 0x0;
-        recv_msg_id = 0x0;
+        send_msg_id = 0x1;
+        recv_msg_id = 0x1;
         ret = true;
     }
     else
@@ -116,7 +119,7 @@ bool Ack_Publish( uint8_t * buff, uint8_t len, uint16_t id )
     
     if( msg_id == recv_msg_id )
     {
-        recv_msg_id++;
+        IncrementRecvMessageID();
         ret = true;
         printf("[MQTT] PUBACK: OK");
     }
@@ -136,6 +139,26 @@ bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id )
 bool Ack_Disconnect( uint8_t * buff, uint8_t len, uint16_t id )
 {
 };
+
+static void IncrementSendMessageID()
+{
+    send_msg_id++;
+
+    if( send_msg_id == 0U )
+    {
+        send_msg_id = 0x1;
+    }
+}
+
+static void IncrementRecvMessageID()
+{
+    recv_msg_id++;
+
+    if( recv_msg_id == 0U )
+    {
+        recv_msg_id = 0x1;
+    }
+}
 
 static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id )
 {
@@ -183,8 +206,8 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             uint8_t text_buff[64];
             memset( text_buff, 0x00, 64);
             
-            //strcat(text_buff, parent_topic);
-            //strcat(text_buff, "/");
+            strcat(text_buff, parent_topic);
+            strcat(text_buff, "/");
             strcat(text_buff, client_name);
             strcat(text_buff,"/");
             strcat(text_buff, pub_data->name);
@@ -221,7 +244,7 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             /* header and size byte */
             full_packet_size = total_packet_size + 2;
 
-            send_msg_id++;
+            IncrementSendMessageID();
         }
             break;
         default:
