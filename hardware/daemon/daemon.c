@@ -25,8 +25,11 @@
 enum Signals
 {
     signal_Tick = signal_Count,
-    signal_MQTT_Recv,
+    signal_MQTT_RECV,
 };
+
+static int mqtt_sock;
+static struct pollfd mqtt_poll;
 
 fsm_status_t Daemon_Connect( fsm_t * this, signal s );
 fsm_status_t Daemon_Subscribe( fsm_t * this, signal s );
@@ -51,6 +54,10 @@ fsm_status_t Daemon_Connect( fsm_t * this, signal s )
                 ret = fsm_Handled;
             }
 
+            break;
+        case signal_MQTT_RECV:
+            /* Decode CONNACK (hopefully) */
+            ret = fsm_Handled;
             break;
         case signal_Exit:
             printf("[Connect] Exit Signal\n");
@@ -128,6 +135,15 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
 
 void RefreshEvents( void )
 {
+    /* Check for MQTT/Comms events */
+    int rv = poll( &mqtt_poll, 1, 1 );
+
+    if( rv & POLLIN )
+    {
+        FSM_AddEvent( signal_MQTT_RECV );
+    }
+
+    /* Check whether Tick has Elapsed */
     static time_t current_time;
     static time_t last_tick;
     const double period = 1;
@@ -188,7 +204,10 @@ bool Init( int argc, char ** argv )
         }
     } 
    
-    MQTT_Init( broker_ip );
+    MQTT_Init( broker_ip, &mqtt_sock );
+    
+    mqtt_poll.fd = mqtt_sock;
+    mqtt_poll.events = POLLIN;
 
     return success;
 }

@@ -361,11 +361,6 @@ mqtt_state_t MQTT_Idle( void )
     {
         /*Perform task */
         Task_RunSingle();
-    }
-    
-    return ret;
-}
-
 uint16_t MQTT_Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id )
 {
     uint16_t full_packet_size = 0;

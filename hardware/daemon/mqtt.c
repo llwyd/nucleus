@@ -8,8 +8,7 @@
 
 #define MQTT_TIMEOUT ( 0xb4 )
 
-static int sock;
-static struct pollfd mqtt_poll;
+static int * sock;
 
 static uint8_t send_buffer[ BUFFER_SIZE ];
 static uint8_t recv_buffer[ BUFFER_SIZE ];
@@ -71,7 +70,7 @@ static bool Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     uint16_t packet_size = 0U;
 
     /* Send */
-    int snd = send(sock, send_buffer, packet_size, 0);
+    int snd = send( *sock, send_buffer, packet_size, 0);
     if( snd < 0 )
     {
         printf("Error Sending Data\n");
@@ -108,8 +107,8 @@ extern bool MQTT_Connect( void )
     else
     {   
         /* 2. Create Socket */
-        sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
-        if( sock < 0 )
+        *sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+        if( *sock < 0 )
         {
             printf("Error creating socket\n");
             ret = false;
@@ -117,7 +116,7 @@ extern bool MQTT_Connect( void )
         else
         {
             /* 3. Attempt Connection */
-            int c = connect( sock, servinfo->ai_addr, servinfo->ai_addrlen);
+            int c = connect( *sock, servinfo->ai_addr, servinfo->ai_addrlen);
             if( c < 0 )
             {
                 printf("Connection Failed\n");
@@ -134,12 +133,14 @@ extern bool MQTT_Connect( void )
     return ret;
 }
 
-extern void MQTT_Init( char * ip )
+extern void MQTT_Init( char * ip, int *mqtt_sock )
 {
     assert( ip != NULL );
+    assert( mqtt_sock != NULL );
     printf("[MQTT]: Initialising\n");
     
     broker_ip = ip;
     broker_port = MQTT_PORT;
+    sock = mqtt_sock;
 }
 
