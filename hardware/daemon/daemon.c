@@ -32,6 +32,7 @@ static int mqtt_sock;
 static struct pollfd mqtt_poll;
 static char * broker_ip;
 static char * client_name;
+static int success_subs;
 
 fsm_status_t Daemon_Connect( fsm_t * this, signal s );
 fsm_status_t Daemon_Subscribe( fsm_t * this, signal s );
@@ -103,6 +104,20 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
             printf("[Subscribe] Exit Signal\n");
             ret = fsm_Handled;
             break;
+        case signal_MQTT_RECV:
+            printf("[Idle] MQTT_RECV Signal\n");
+            
+            if( MQTT_Receive() )
+            {
+                ret = fsm_Handled;
+            }
+            else
+            {
+                ret = fsm_Transition;
+                this->state = &Daemon_Connect;
+            }
+
+            break;
         case signal_None:
             assert(false);
             break;
@@ -131,8 +146,34 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
             ret = fsm_Handled;
             break;
         case signal_Tick:
-            printf("[Idle] Tick Signal\n");
-            Sensor_Read();
+            {
+                printf("[Idle] Tick Signal\n");
+                Sensor_Read();
+                float temperature = Sensor_GetTemperature();
+                if( MQTT_EncodeAndPublish("room_temp", mqtt_type_float, &temperature ) )
+                {
+                    ret = fsm_Handled;
+                }
+                else
+                {
+                    ret = fsm_Transition;
+                    this->state = &Daemon_Connect;
+                }
+            }
+            break;
+        case signal_MQTT_RECV:
+            printf("[Idle] MQTT_RECV Signal\n");
+            
+            if( MQTT_Receive() )
+            {
+                ret = fsm_Handled;
+            }
+            else
+            {
+                ret = fsm_Transition;
+                this->state = &Daemon_Connect;
+            }
+
             break;
         case signal_None:
             assert(false);

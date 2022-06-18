@@ -28,6 +28,8 @@ static void CalculateTemperature( uint8_t * data )
     }
 
     printf("\tTemperature = %.2f\n", temperature );
+
+    current_temp = temperature;
 }
 
 void Sensor_Init( void )

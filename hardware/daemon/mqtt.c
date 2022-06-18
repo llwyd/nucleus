@@ -21,7 +21,14 @@ static uint8_t num_sub = 0;
 static uint8_t * broker_ip;
 static uint8_t * broker_port;
 
-#define MQTT_CONNACK_CODE ( 0x20 )
+static uint16_t send_msg_id = 0x0000;
+static uint16_t recv_msg_id = 0x0000;
+
+#define MQTT_CONNACK_CODE   ( 0x20 )
+#define MQTT_SUBACK_CODE    ( 0x90 )
+#define MQTT_PUBACK_CODE    ( 0x40 )
+#define MQTT_PINGRESP_CODE  ( 0xD0 )
+#define MQTT_DISCONNECT_CODE  ( 0x00 )
 
 typedef enum mqtt_msg_type_t
 {
@@ -31,6 +38,20 @@ typedef enum mqtt_msg_type_t
     mqtt_msg_Ping,
     mqtt_msg_Disconnect,
 } mqtt_msg_type_t;
+
+typedef union
+{
+    float f;
+    uint16_t i;
+    char * s;
+    bool b;
+} mqtt_data_t;
+
+typedef struct mqtt_pub_t
+{
+    char * name;
+    char * data;
+} mqtt_pub_t;
 
 /* Functions for handling acks */
 bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id );
@@ -54,10 +75,10 @@ typedef struct mqtt_pairs_t
 static mqtt_pairs_t msg_code [ 5 ] =
 {
     { mqtt_msg_Connect,         0x10, MQTT_CONNACK_CODE, Ack_Connect, "CONNECT", "CONNACK" },
-    { mqtt_msg_Subscribe,       0x82, 0x90, Ack_Subscribe, "SUBSCRIBE", "SUBACK" },
-    { mqtt_msg_Publish,         0x32, 0x40, Ack_Publish, "PUBLISH", "PUBACK" },
-    { mqtt_msg_Ping,            0xc0, 0xd0, Ack_Ping, "PINGREQ", "PINGRESP" },
-    { mqtt_msg_Disconnect,      0x00, 0x00, Ack_Disconnect, "DISCONNECT", "DISCONNECT" },
+    { mqtt_msg_Subscribe,       0x82, MQTT_SUBACK_CODE, Ack_Subscribe, "SUBSCRIBE", "SUBACK" },
+    { mqtt_msg_Publish,         0x32, MQTT_PUBACK_CODE, Ack_Publish, "PUBLISH", "PUBACK" },
+    { mqtt_msg_Ping,            0xc0, MQTT_PINGRESP_CODE, Ack_Ping, "PINGREQ", "PINGRESP" },
+    { mqtt_msg_Disconnect,      0x00, MQTT_DISCONNECT_CODE, Ack_Disconnect, "DISCONNECT", "DISCONNECT" },
 };
 
 bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id )
@@ -70,6 +91,8 @@ bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id )
     if( *buff == 0x00 )
     {
         printf("[MQTT] CONNACK:OK\n");
+        send_msg_id = 0x0;
+        recv_msg_id = 0x0;
         ret = true;
     }
     else
@@ -87,6 +110,23 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len, uint16_t id )
 
 bool Ack_Publish( uint8_t * buff, uint8_t len, uint16_t id )
 {
+    bool ret = false;
+    uint16_t msg_id =  ( *buff++ << 8 ) | *buff++;
+    printf("[MQTT] PUBACK msg id: %d, recv id: %d\n", msg_id, recv_msg_id );
+    
+    if( msg_id == recv_msg_id )
+    {
+        recv_msg_id++;
+        ret = true;
+        printf("[MQTT] PUBACK: OK");
+    }
+    else
+    {
+        ret = false;
+        printf("[MQTT] PUBACK: FAIL");
+    }
+
+    return ret;
 };
 
 bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id )
@@ -96,9 +136,6 @@ bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id )
 bool Ack_Disconnect( uint8_t * buff, uint8_t len, uint16_t id )
 {
 };
-
-static uint16_t send_msg_id = 0x0000;
-static uint16_t recv_msg_id = 0x0000;
 
 static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id )
 {
@@ -133,6 +170,47 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             uint16_t total_packet_size = packet_size + name_size;
             send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
             full_packet_size = total_packet_size + 2;
+        }
+            break;
+        case mqtt_msg_Publish:
+        {
+            mqtt_pub_t * pub_data = (mqtt_pub_t *) msg_data;
+            
+            memset(send_buffer, 0x00, 128);
+            
+            uint8_t text_buff[64];
+            memset( text_buff, 0x00, 64);
+            
+            strcat(text_buff, parent_topic);
+            strcat(text_buff,"/");
+            strcat(text_buff, pub_data->name);
+            uint16_t topic_size = strlen(text_buff);
+
+            uint8_t * msg_ptr = send_buffer;
+            *msg_ptr++ = msg_code[mqtt_msg_Publish].send_code;
+            msg_ptr++; /* This is where message length would go */ 
+            msg_ptr++; /* MSB topic length */
+            *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
+            memcpy(msg_ptr, text_buff, topic_size);
+            memset( text_buff, 0x00, 64);
+            msg_ptr+=topic_size;
+
+            /* Message ID */
+            *msg_ptr++ = (uint8_t)((*id >> 8U)&0xFF);
+            *msg_ptr++ = (uint8_t)(*id&0xFF);
+            
+            strcat( text_buff, pub_data->data );
+            
+            uint8_t data_len = strlen(text_buff);
+            memcpy(msg_ptr, text_buff, data_len);
+
+            /* Topic len + topic + data + msg id */
+            uint8_t total_packet_size = (uint8_t)topic_size + data_len + 2 + 2;
+            send_buffer[1] = total_packet_size;
+            /* header and size byte */
+            full_packet_size = total_packet_size + 2;
+
+            *id++;
         }
             break;
         default:
@@ -180,6 +258,9 @@ static bool Decode( uint8_t * buffer, uint16_t len )
         case MQTT_CONNACK_CODE:
             msg_type = mqtt_msg_Connect;
             break;
+        case MQTT_PUBACK_CODE:
+            msg_type = mqtt_msg_Publish;
+            break;
         default:
             printf("[MQTT] ERROR! Bad Receive Packet\n");
             assert( false );
@@ -192,9 +273,63 @@ static bool Decode( uint8_t * buffer, uint16_t len )
     return ret;
 }
 
+extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data )
+{
+    bool ret = false;
+    mqtt_pub_t mqtt_data;
+    char datastr[64];
+    memset( datastr, 0x00, 64 );
+
+    mqtt_data.name = name;
+    mqtt_data.data = datastr;
+    
+    switch( format )
+    {
+        case mqtt_type_float:
+            {
+                float d = *((float *)data);
+                snprintf(datastr, 64, "%.4f", d);
+            }
+            break;
+        case mqtt_type_int16:
+            {
+                int d = *((int *)data);
+                snprintf(datastr, 64, "%df", d);
+            }
+            break;
+        case mqtt_type_str:
+            {
+                char * d = ((char *)data);
+                strcat(datastr, d);
+            }
+            break;
+        case mqtt_type_bool:
+            {
+                bool d = *(( bool * )data);
+                if( d )
+                {
+                    strcat(datastr,"1");
+                }
+                else
+                {
+                    strcat(datastr,"0");
+                }
+            }
+            break;
+        default:
+            assert(false);
+            break;
+    }
+
+    printf("[MQTT] Publish Data Encoded (%s / %s)\n", mqtt_data.name, mqtt_data.data );
+
+    return Transmit( mqtt_msg_Publish, &mqtt_data );
+}
+
 extern bool MQTT_Receive( void )
 {
     bool ret = false;
+    memset(recv_buffer, 0x00, BUFFER_SIZE);
 
     int rcv = recv( *sock, recv_buffer, 256, 0U);
     if( rcv < 0 )
@@ -220,8 +355,9 @@ extern bool MQTT_Receive( void )
         }
         printf("\b \n");
 
-        memset(recv_buffer, 0x00, BUFFER_SIZE);
     }
+
+    return ret;
 }
 
 extern bool MQTT_Connect( void )
