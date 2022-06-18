@@ -126,13 +126,11 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
     return ret;
 }
 
-signal GetEvent( void )
+void RefreshEvents( void )
 {
     static time_t current_time;
     static time_t last_tick;
     const double period = 1;
-
-    signal ret = signal_None;
 
     time( &current_time );
 
@@ -140,11 +138,10 @@ signal GetEvent( void )
 
     if( delta > period )
     {   
-        ret = signal_Tick;
+        FSM_AddEvent( signal_Tick );
         last_tick = current_time;
     }
 
-    return ret;
 }
 
 static void Loop( void )
@@ -158,11 +155,13 @@ static void Loop( void )
     while( 1 )
     {
         /* Get Event */
-        do
+        
+        while( !FSM_EventsAvailable() )
         {
-            sig = GetEvent();
+            RefreshEvents();
         }
-        while( sig == signal_None );
+
+        sig = FSM_GetLatestEvent();
 
         /* Dispatch */
         FSM_Dispatch( &daemon, sig );

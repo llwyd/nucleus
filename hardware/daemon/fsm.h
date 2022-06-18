@@ -8,6 +8,8 @@
 #ifndef _FSM_H_
 #define _FSM_H_
 
+#include <stdbool.h>
+
 /* Signal to send events to a given state */
 typedef int signal;
 
@@ -43,5 +45,12 @@ extern void FSM_Init( fsm_t * state );
 
 /* Event Dispatcher */
 extern void FSM_Dispatch( fsm_t * state, signal s );
+
+/* Event queuing */
+extern void FSM_FlushEvents( void );
+extern void FSM_AddEvent( signal s);
+extern signal FSM_GetLatestEvent( void );
+extern bool FSM_EventsAvailable( void );
+
 
 #endif /* _FSM_H_ */
