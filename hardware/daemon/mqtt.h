@@ -13,6 +13,7 @@
 #include <time.h>
 #include <unistd.h>
 
-extern void MQTT_Init( void );
+extern void MQTT_Init( char * ip );
+extern bool MQTT_Connect( void );
 
 #endif /* _MQTT_H_ */
