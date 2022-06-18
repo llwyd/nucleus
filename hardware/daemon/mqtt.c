@@ -174,6 +174,8 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             break;
         case mqtt_msg_Publish:
         {
+            printf("[MQTT] Constructing Packet\n");
+
             mqtt_pub_t * pub_data = (mqtt_pub_t *) msg_data;
             
             memset(send_buffer, 0x00, 128);
@@ -181,10 +183,15 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             uint8_t text_buff[64];
             memset( text_buff, 0x00, 64);
             
-            strcat(text_buff, parent_topic);
+            //strcat(text_buff, parent_topic);
+            //strcat(text_buff, "/");
+            strcat(text_buff, client_name);
             strcat(text_buff,"/");
             strcat(text_buff, pub_data->name);
             uint16_t topic_size = strlen(text_buff);
+
+            printf("\t topic: %s\n", text_buff);
+            printf("\t  size: %d\n", topic_size);
 
             uint8_t * msg_ptr = send_buffer;
             *msg_ptr++ = msg_code[mqtt_msg_Publish].send_code;
@@ -196,12 +203,16 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             msg_ptr+=topic_size;
 
             /* Message ID */
-            *msg_ptr++ = (uint8_t)((*id >> 8U)&0xFF);
-            *msg_ptr++ = (uint8_t)(*id&0xFF);
+            *msg_ptr++ = (uint8_t)((send_msg_id >> 8U)&0xFF);
+            *msg_ptr++ = (uint8_t)(send_msg_id&0xFF);
             
             strcat( text_buff, pub_data->data );
-            
+
             uint8_t data_len = strlen(text_buff);
+            
+            printf("\t  data: %s\n", text_buff);
+            printf("\t  size: %d\n", data_len);
+
             memcpy(msg_ptr, text_buff, data_len);
 
             /* Topic len + topic + data + msg id */
@@ -210,7 +221,7 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             /* header and size byte */
             full_packet_size = total_packet_size + 2;
 
-            *id++;
+            send_msg_id++;
         }
             break;
         default:
