@@ -21,6 +21,8 @@ static uint8_t num_sub = 0;
 static uint8_t * broker_ip;
 static uint8_t * broker_port;
 
+#define MQTT_CONNACK_CODE ( 0x20 )
+
 typedef enum mqtt_msg_type_t
 {
     mqtt_msg_Connect,
@@ -48,16 +50,52 @@ typedef struct mqtt_pairs_t
 } mqtt_pairs_t;
 
 /* transmit and acknowledge code pairs */
-/*
-#static mqtt_pairs_t msg_code [ 5 ] =
+
+static mqtt_pairs_t msg_code [ 5 ] =
 {
-    { mqtt_msg_Connect,         0x10, 0x20, Ack_Connect, "CONNECT", "CONNACK" },
+    { mqtt_msg_Connect,         0x10, MQTT_CONNACK_CODE, Ack_Connect, "CONNECT", "CONNACK" },
     { mqtt_msg_Subscribe,       0x82, 0x90, Ack_Subscribe, "SUBSCRIBE", "SUBACK" },
     { mqtt_msg_Publish,         0x32, 0x40, Ack_Publish, "PUBLISH", "PUBACK" },
     { mqtt_msg_Ping,            0xc0, 0xd0, Ack_Ping, "PINGREQ", "PINGRESP" },
     { mqtt_msg_Disconnect,      0x00, 0x00, Ack_Disconnect, "DISCONNECT", "DISCONNECT" },
 };
-*/
+
+bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id )
+{
+    bool ret = false;
+    
+    /* First byte is reserved */
+    buff++;
+    
+    if( *buff == 0x00 )
+    {
+        printf("[MQTT] CONNACK:OK\n");
+        ret = true;
+    }
+    else
+    {
+        printf("[MQTT] CONNACK:FAIL\n");
+        ret = false;
+    }
+
+    return ret;
+};
+
+bool Ack_Subscribe( uint8_t * buff, uint8_t len, uint16_t id )
+{
+};
+
+bool Ack_Publish( uint8_t * buff, uint8_t len, uint16_t id )
+{
+};
+
+bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id )
+{
+};
+
+bool Ack_Disconnect( uint8_t * buff, uint8_t len, uint16_t id )
+{
+};
 
 static uint16_t send_msg_id = 0x0000;
 static uint16_t recv_msg_id = 0x0000;
@@ -118,13 +156,38 @@ static bool Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     int snd = send( *sock, send_buffer, packet_size, 0);
     if( snd < 0 )
     {
-        printf("Error Sending Data\n");
+        printf("[MQTT] Error Sending Data\n");
         ret = false;
     }
     else
     {
+        printf("[MQTT] Transmitting %s packet\n", msg_code[(int)msg_type].name);
         ret = true;
     }
+
+    return ret;
+}
+
+static bool Decode( uint8_t * buffer, uint16_t len )
+{
+    bool ret = false;
+    uint8_t return_code = buffer[0];
+    uint8_t msg_length = buffer[1];
+    mqtt_msg_type_t msg_type;
+
+    switch( return_code )
+    {
+        case MQTT_CONNACK_CODE:
+            msg_type = mqtt_msg_Connect;
+            break;
+        default:
+            printf("[MQTT] ERROR! Bad Receive Packet\n");
+            assert( false );
+            break;
+    }
+    
+    printf("[MQTT] %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
+    ret = msg_code[(int)msg_type].ack_fn( &buffer[2], msg_length, recv_msg_id );
 
     return ret;
 }
@@ -146,8 +209,11 @@ extern bool MQTT_Receive( void )
     }
     else
     {
-        // Decode( recv_buffer, rcv );
-        printf("[MQTT] Data Received\n\t");
+        printf("[MQTT] Data Received\n");
+
+        ret = Decode( recv_buffer, rcv );
+
+        printf("\t");
         for( int i = 0; i < rcv; i++ )
         {
             printf("0x%x,", recv_buffer[i]);
@@ -155,7 +221,6 @@ extern bool MQTT_Receive( void )
         printf("\b \n");
 
         memset(recv_buffer, 0x00, BUFFER_SIZE);
-        ret = true;
     }
 }
 
