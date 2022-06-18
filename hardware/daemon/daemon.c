@@ -30,6 +30,8 @@ enum Signals
 
 static int mqtt_sock;
 static struct pollfd mqtt_poll;
+static char * broker_ip;
+static char * client_name;
 
 fsm_status_t Daemon_Connect( fsm_t * this, signal s );
 fsm_status_t Daemon_Subscribe( fsm_t * this, signal s );
@@ -46,8 +48,9 @@ fsm_status_t Daemon_Connect( fsm_t * this, signal s )
             
             if( MQTT_Connect() )
             {
-                ret = fsm_Transition;
-                this->state = &Daemon_Subscribe;
+                mqtt_poll.fd = mqtt_sock;
+                mqtt_poll.events = POLLIN;
+                ret = fsm_Handled;
             }
             else
             {
@@ -56,8 +59,18 @@ fsm_status_t Daemon_Connect( fsm_t * this, signal s )
 
             break;
         case signal_MQTT_RECV:
-            /* Decode CONNACK (hopefully) */
-            ret = fsm_Handled;
+            printf("[Connect] MQTT_RECV Signal\n");
+            
+            if( MQTT_Receive() )
+            {
+                ret = fsm_Transition;
+                this->state = &Daemon_Subscribe;
+            }
+            else
+            {
+                ret = fsm_Handled;
+            }
+
             break;
         case signal_Exit:
             printf("[Connect] Exit Signal\n");
@@ -187,27 +200,34 @@ static void Loop( void )
 bool Init( int argc, char ** argv )
 {
     bool success = false;
+    bool ip_found = false;
+    bool name_found = false;
     int input_flags;
-    char * broker_ip;
 
-    while( ( input_flags = getopt( argc, argv, "b:" ) ) != -1U )
+    while( ( input_flags = getopt( argc, argv, "b:c:" ) ) != -1U )
     {
         switch( input_flags )
         {
             case 'b':
                 broker_ip = optarg;
-                success = true;
-                printf("MQTT Broker IP: %s\n", broker_ip);
+                ip_found = true;
+                break;
+            case 'c':
+                client_name = optarg;
+                name_found = true;
                 break;
             default:
                 break;
         }
     } 
    
-    MQTT_Init( broker_ip, &mqtt_sock );
+    success = ip_found & name_found;
+
+    if( success )
+    {
+        MQTT_Init( broker_ip, client_name, &mqtt_sock );
     
-    mqtt_poll.fd = mqtt_sock;
-    mqtt_poll.events = POLLIN;
+    }
 
     return success;
 }

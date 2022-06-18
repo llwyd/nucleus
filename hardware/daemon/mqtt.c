@@ -14,7 +14,7 @@ static uint8_t send_buffer[ BUFFER_SIZE ];
 static uint8_t recv_buffer[ BUFFER_SIZE ];
 
 static uint8_t * client_name;
-static uint8_t * parent_topic;
+static uint8_t * parent_topic = "home";
 
 static uint8_t num_sub = 0;
 
@@ -59,15 +59,60 @@ typedef struct mqtt_pairs_t
 };
 */
 
+static uint16_t send_msg_id = 0x0000;
+static uint16_t recv_msg_id = 0x0000;
+
+static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id )
+{
+    uint16_t full_packet_size = 0;
+
+    switch( msg_type )
+    {
+        case mqtt_msg_Connect:
+        {
+            /* Message Template for mqtt connect */
+            unsigned char mqtt_template_connect[] =
+            {
+                0x10,                                   /* connect */
+                0x00,                                   /* payload size */
+                0x00, 0x06,                             /* Protocol name size */
+                0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
+                0x03,                                   /* Version MQTT v3.1 */
+                0x02,                                   /* Fire and forget */
+                0x00, MQTT_TIMEOUT,                     /* Keep alive timeout */
+            };
+            
+            uint8_t * msg_ptr = send_buffer;
+            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
+            uint16_t name_size = strlen( client_name );
+
+            memcpy( msg_ptr, mqtt_template_connect, packet_size );
+            msg_ptr+= packet_size;
+            msg_ptr++;
+            *msg_ptr++ = (uint8_t)(name_size & 0xFF);
+            memcpy(msg_ptr, client_name, name_size);
+                
+            uint16_t total_packet_size = packet_size + name_size;
+            send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
+            full_packet_size = total_packet_size + 2;
+        }
+            break;
+        default:
+        {
+
+        }
+            break;
+    }
+    return full_packet_size;
+}
+
 static bool Transmit( mqtt_msg_type_t msg_type, void * msg_data )
 {
     memset(send_buffer, 0x00, BUFFER_SIZE);
    
     bool ret = false;
-    static uint16_t msg_id = 0x0000;
     /* Construct Data Packet */ 
-//    uint16_t packet_size = MQTT_Format( msg_type, msg_data, &msg_id );
-    uint16_t packet_size = 0U;
+    uint16_t packet_size = Format( msg_type, msg_data, &send_msg_id );
 
     /* Send */
     int snd = send( *sock, send_buffer, packet_size, 0);
@@ -82,6 +127,36 @@ static bool Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     }
 
     return ret;
+}
+
+extern bool MQTT_Receive( void )
+{
+    bool ret = false;
+
+    int rcv = recv( *sock, recv_buffer, 256, 0U);
+    if( rcv < 0 )
+    {
+        printf("[MQTT] Error Sending Data\n");
+        ret = false;
+    }
+    else if( rcv == 0 )
+    {
+        printf("[MQTT] Connection Closed\n");
+        ret = false;
+    }
+    else
+    {
+        // Decode( recv_buffer, rcv );
+        printf("[MQTT] Data Received\n\t");
+        for( int i = 0; i < rcv; i++ )
+        {
+            printf("0x%x,", recv_buffer[i]);
+        }
+        printf("\b \n");
+
+        memset(recv_buffer, 0x00, BUFFER_SIZE);
+        ret = true;
+    }
 }
 
 extern bool MQTT_Connect( void )
@@ -125,22 +200,27 @@ extern bool MQTT_Connect( void )
             else
             {
                 /* 4. Send Connect MQTT Packet */ 
-  //              ret = Transmit( mqtt_msg_Connect, NULL );
-                  ret = true;
+                ret = Transmit( mqtt_msg_Connect, NULL );
             }
         }
     } 
     return ret;
 }
 
-extern void MQTT_Init( char * ip, int *mqtt_sock )
+extern void MQTT_Init( char * ip, char * name, int *mqtt_sock )
 {
     assert( ip != NULL );
     assert( mqtt_sock != NULL );
-    printf("[MQTT]: Initialising\n");
+    assert( name != NULL );
+
+    printf("[MQTT] Initialising\n");
     
     broker_ip = ip;
     broker_port = MQTT_PORT;
+    client_name = name;
     sock = mqtt_sock;
+
+    printf("[MQTT] Broker ip: %s, port: %s\n", broker_ip, broker_port);
+    printf("[MQTT] Client name: %s\n", client_name );
 }
 
