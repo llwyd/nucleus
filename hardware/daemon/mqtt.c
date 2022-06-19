@@ -436,34 +436,41 @@ extern bool MQTT_Receive( void )
 
     unsigned char raw_peek[2] = {0x00, 0x00};    
     int peek = recv( *sock, raw_peek, 2U, MSG_PEEK );
-    unsigned char bytes_to_read = raw_peek[1] + 2U;
 
-    int rcv = recv( *sock, recv_buffer, bytes_to_read, 0U);
-    if( rcv < 0 )
+    if( peek <= 0 )
     {
-        printf("[MQTT] Error Sending Data\n");
-        ret = false;
-    }
-    else if( rcv == 0 )
-    {
-        printf("[MQTT] Connection Closed\n");
+        printf("[MQTT] Error Peeking Data\n");
         ret = false;
     }
     else
     {
-        printf("[MQTT] Data Received\n");
+        unsigned char bytes_to_read = raw_peek[1] + 2U;
 
-        ret = Decode( recv_buffer, rcv );
-
-        printf("\t");
-        for( int i = 0; i < rcv; i++ )
+        int rcv = recv( *sock, recv_buffer, bytes_to_read, 0U);
+        if( rcv < 0 )
         {
-            printf("0x%x,", recv_buffer[i]);
+            printf("[MQTT] Error Sending Data\n");
+            ret = false;
         }
-        printf("\b \n");
-
+        else if( rcv == 0 )
+        {
+            printf("[MQTT] Connection Closed\n");
+            ret = false;
+        }
+        else
+        {
+            printf("[MQTT] Data Received\n");
+    
+            ret = Decode( recv_buffer, rcv );
+    
+            printf("\t");
+            for( int i = 0; i < rcv; i++ )
+            {
+                printf("0x%x,", recv_buffer[i]);
+            }
+            printf("\b \n");
+        }
     }
-
     return ret;
 }
 
