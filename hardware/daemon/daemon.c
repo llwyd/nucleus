@@ -150,7 +150,8 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
                 printf("[Idle] Tick Signal\n");
                 Sensor_Read();
                 float temperature = Sensor_GetTemperature();
-                if( MQTT_EncodeAndPublish("room_temp", mqtt_type_float, &temperature ) )
+                float test = 6.66f;
+                if( MQTT_EncodeAndPublish("room_temp", mqtt_type_float, &temperature ) && MQTT_EncodeAndPublish("test_float", mqtt_type_float, &test ) )
                 {
                     ret = fsm_Handled;
                 }

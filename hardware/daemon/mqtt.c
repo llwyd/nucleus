@@ -5,24 +5,9 @@
 
 #define MQTT_PORT ( "1883" )
 #define BUFFER_SIZE (128)
+#define ID_BUFFER_SIZE (32)
 
 #define MQTT_TIMEOUT ( 0xb4 )
-
-static int * sock;
-
-static uint8_t send_buffer[ BUFFER_SIZE ];
-static uint8_t recv_buffer[ BUFFER_SIZE ];
-
-static uint8_t * client_name;
-static uint8_t * parent_topic = "home";
-
-static uint8_t num_sub = 0;
-
-static uint8_t * broker_ip;
-static uint8_t * broker_port;
-
-static uint16_t send_msg_id = 0x0000;
-static uint16_t recv_msg_id = 0x0000;
 
 #define MQTT_CONNACK_CODE   ( 0x20 )
 #define MQTT_SUBACK_CODE    ( 0x90 )
@@ -53,22 +38,30 @@ typedef struct mqtt_pub_t
     char * data;
 } mqtt_pub_t;
 
-/* Functions for handling acks */
-bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id );
-bool Ack_Subscribe( uint8_t * buff, uint8_t len, uint16_t id );
-bool Ack_Publish( uint8_t * buff, uint8_t len, uint16_t id );
-bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id );
-bool Ack_Disconnect( uint8_t * buff, uint8_t len, uint16_t id );
+typedef struct msg_id_t
+{
+    unsigned char read_index;
+    unsigned char write_index;
+    unsigned char fill;
+    uint16_t id[ID_BUFFER_SIZE];
+} msg_id_t;
 
-static void IncrementSendMessageID();
-static void IncrementRecvMessageID();
+/* Functions for handling acks */
+bool Ack_Connect( uint8_t * buff, uint8_t len );
+bool Ack_Subscribe( uint8_t * buff, uint8_t len );
+bool Ack_Publish( uint8_t * buff, uint8_t len );
+bool Ack_Ping( uint8_t * buff, uint8_t len );
+bool Ack_Disconnect( uint8_t * buff, uint8_t len );
+
+static void IncrementSendMessageID(void);
+static bool CheckMsgIDBuffer( uint16_t val);
     
 typedef struct mqtt_pairs_t
 {
     mqtt_msg_type_t msg_type;
     uint8_t send_code;
     uint8_t recv_code;
-    bool (*ack_fn)(uint8_t * buff, uint8_t len, uint16_t id);
+    bool (*ack_fn)(uint8_t * buff, uint8_t len);
     const uint8_t * name;
     const uint8_t * ack_name;
 } mqtt_pairs_t;
@@ -84,7 +77,24 @@ static mqtt_pairs_t msg_code [ 5 ] =
     { mqtt_msg_Disconnect,      0x00, MQTT_DISCONNECT_CODE, Ack_Disconnect, "DISCONNECT", "DISCONNECT" },
 };
 
-bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id )
+static int * sock;
+
+static uint8_t send_buffer[ BUFFER_SIZE ];
+static uint8_t recv_buffer[ BUFFER_SIZE ];
+
+static uint8_t * client_name;
+static uint8_t * parent_topic = "home";
+
+static uint8_t num_sub = 0;
+
+static uint8_t * broker_ip;
+static uint8_t * broker_port;
+
+static uint16_t send_msg_id = 0x0000;
+
+msg_id_t msg_id;
+
+bool Ack_Connect( uint8_t * buff, uint8_t len )
 {
     bool ret = false;
     
@@ -95,7 +105,6 @@ bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id )
     {
         printf("[MQTT] CONNACK:OK\n");
         send_msg_id = 0x1;
-        recv_msg_id = 0x1;
         ret = true;
     }
     else
@@ -107,42 +116,80 @@ bool Ack_Connect( uint8_t * buff, uint8_t len, uint16_t id )
     return ret;
 };
 
-bool Ack_Subscribe( uint8_t * buff, uint8_t len, uint16_t id )
+bool Ack_Subscribe( uint8_t * buff, uint8_t len )
 {
 };
 
-bool Ack_Publish( uint8_t * buff, uint8_t len, uint16_t id )
+bool Ack_Publish( uint8_t * buff, uint8_t len )
 {
     bool ret = false;
     uint16_t msg_id =  ( *buff++ << 8 ) | *buff++;
-    printf("[MQTT] PUBACK msg id: %d, recv id: %d\n", msg_id, recv_msg_id );
-    
-    if( msg_id == recv_msg_id )
+    printf("[MQTT] PUBACK msg id: %d\n", msg_id );
+
+
+    bool success = CheckMsgIDBuffer( msg_id );
+
+    if( true )
     {
-        IncrementRecvMessageID();
         ret = true;
-        printf("[MQTT] PUBACK: OK");
+        printf("[MQTT] PUBACK: OK\n");
     }
     else
     {
         ret = false;
-        printf("[MQTT] PUBACK: FAIL");
+        printf("[MQTT] PUBACK: FAIL\n");
+        assert(false);
     }
 
     return ret;
 };
 
-bool Ack_Ping( uint8_t * buff, uint8_t len, uint16_t id )
+bool Ack_Ping( uint8_t * buff, uint8_t len )
 {
 };
 
-bool Ack_Disconnect( uint8_t * buff, uint8_t len, uint16_t id )
+bool Ack_Disconnect( uint8_t * buff, uint8_t len )
 {
 };
 
-static void IncrementSendMessageID()
+
+static void AddMessageIDToQueue( uint16_t id )
 {
-    send_msg_id++;
+    if( msg_id.fill < ID_BUFFER_SIZE )
+    {
+        msg_id.id[ msg_id.write_index++ ] = id;
+        msg_id.fill++;
+        msg_id.write_index = ( msg_id.write_index & ( ID_BUFFER_SIZE - 1U ) );
+    }
+    else
+    {
+        printf("[MQTT] Error! Ack buffer full\n");
+        assert(false);
+    }
+}
+
+static bool MessagesAvailable( void )
+{
+    bool available = (msg_id.fill > 0U );
+    return available;
+}
+
+static uint16_t GetMessageIDFromQueue( void )
+{
+    uint16_t val = 0x0;
+    if( msg_id.fill > 0U )
+    {
+        val = msg_id.id[ msg_id.read_index++ ];
+        msg_id.fill--;
+        msg_id.read_index = ( msg_id.read_index & ( ID_BUFFER_SIZE - 1U ) );
+    }
+
+    return val;
+}
+
+static void IncrementSendMessageID(void )
+{
+    send_msg_id++; 
 
     if( send_msg_id == 0U )
     {
@@ -150,14 +197,35 @@ static void IncrementSendMessageID()
     }
 }
 
-static void IncrementRecvMessageID()
+static bool CheckMsgIDBuffer( uint16_t id )
 {
-    recv_msg_id++;
-
-    if( recv_msg_id == 0U )
+    bool found = false;
+    
+    if( MessagesAvailable() )
     {
-        recv_msg_id = 0x1;
+        unsigned char fill_copy = msg_id.fill;
+
+        for( int i = 0; i < fill_copy; i++ )
+        {
+            uint16_t val = GetMessageIDFromQueue();
+            if( val == id )
+            {
+                found = true;
+                break;
+            }
+            else
+            {
+                AddMessageIDToQueue( val );
+            }
+        }
     }
+    else
+    {
+        printf("[MQTT] Error! No messages in buffer\n");
+        assert(false);
+    }
+
+    return found;
 }
 
 static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id )
@@ -244,6 +312,7 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             /* header and size byte */
             full_packet_size = total_packet_size + 2;
 
+            AddMessageIDToQueue( send_msg_id );
             IncrementSendMessageID();
         }
             break;
@@ -302,7 +371,7 @@ static bool Decode( uint8_t * buffer, uint16_t len )
     }
     
     printf("[MQTT] %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
-    ret = msg_code[(int)msg_type].ack_fn( &buffer[2], msg_length, recv_msg_id );
+    ret = msg_code[(int)msg_type].ack_fn( &buffer[2], msg_length );
 
     return ret;
 }
@@ -365,7 +434,11 @@ extern bool MQTT_Receive( void )
     bool ret = false;
     memset(recv_buffer, 0x00, BUFFER_SIZE);
 
-    int rcv = recv( *sock, recv_buffer, 256, 0U);
+    unsigned char raw_peek[2] = {0x00, 0x00};    
+    int peek = recv( *sock, raw_peek, 2U, MSG_PEEK );
+    unsigned char bytes_to_read = raw_peek[1] + 2U;
+
+    int rcv = recv( *sock, recv_buffer, bytes_to_read, 0U);
     if( rcv < 0 )
     {
         printf("[MQTT] Error Sending Data\n");
@@ -454,6 +527,8 @@ extern void MQTT_Init( char * ip, char * name, int *mqtt_sock )
     broker_port = MQTT_PORT;
     client_name = name;
     sock = mqtt_sock;
+
+    memset( msg_id.id, 0x00, ID_BUFFER_SIZE * sizeof(uint16_t) );
 
     printf("[MQTT] Broker ip: %s, port: %s\n", broker_ip, broker_port);
     printf("[MQTT] Client name: %s\n", client_name );
