@@ -24,13 +24,6 @@ typedef enum mqtt_msg_type_t
     mqtt_msg_Disconnect,
 } mqtt_msg_type_t;
 
-typedef union
-{
-    float f;
-    uint16_t i;
-    char * s;
-    bool b;
-} mqtt_data_t;
 
 typedef struct mqtt_pub_t
 {
@@ -85,6 +78,7 @@ static uint8_t recv_buffer[ BUFFER_SIZE ];
 static uint8_t * client_name;
 static uint8_t * parent_topic = "home";
 
+static mqtt_subs_t * sub;
 static uint8_t num_sub = 0;
 
 static uint8_t * broker_ip;
@@ -522,7 +516,7 @@ extern bool MQTT_Connect( void )
     return ret;
 }
 
-extern void MQTT_Init( char * ip, char * name, int *mqtt_sock )
+extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * subscriptions, uint8_t number_subs )
 {
     assert( ip != NULL );
     assert( mqtt_sock != NULL );
@@ -535,9 +529,21 @@ extern void MQTT_Init( char * ip, char * name, int *mqtt_sock )
     client_name = name;
     sock = mqtt_sock;
 
+    sub = subscriptions;
+    num_sub = number_subs;
+
     memset( msg_id.id, 0x00, ID_BUFFER_SIZE * sizeof(uint16_t) );
 
     printf("[MQTT] Broker ip: %s, port: %s\n", broker_ip, broker_port);
     printf("[MQTT] Client name: %s\n", client_name );
+
+    if( num_sub > 0U )
+    {
+        printf("[MQTT] Subscription topics:\n");
+        for( uint8_t i = 0; i < num_sub; i++ )
+        {
+            printf("\t%s\n", sub[i].name);
+        }
+    }
 }
 

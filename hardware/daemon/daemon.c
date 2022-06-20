@@ -22,6 +22,8 @@
 #include "mqtt.h"
 #include "sensor.h"
 
+#define NUM_SUBS ( 1U )
+
 enum Signals
 {
     signal_Tick = signal_Count,
@@ -33,6 +35,13 @@ static struct pollfd mqtt_poll;
 static char * broker_ip;
 static char * client_name;
 static int success_subs;
+
+void Daemon_OnBoardLED( mqtt_data_t * data );
+
+static mqtt_subs_t subs[NUM_SUBS] = 
+{
+    {"debug_led", mqtt_type_bool, Daemon_OnBoardLED},
+};
 
 fsm_status_t Daemon_Connect( fsm_t * this, signal s );
 fsm_status_t Daemon_Subscribe( fsm_t * this, signal s );
@@ -239,6 +248,18 @@ static void Loop( void )
     }
 }
 
+void Daemon_OnBoardLED( mqtt_data_t * data )
+{
+    if( data->b )
+    {
+        printf("\tLED ON\n");
+    }
+    else
+    {
+        printf("\tLED OFF\n");
+    }
+}
+
 bool Init( int argc, char ** argv )
 {
     bool success = false;
@@ -267,8 +288,7 @@ bool Init( int argc, char ** argv )
 
     if( success )
     {
-        MQTT_Init( broker_ip, client_name, &mqtt_sock );
-    
+        MQTT_Init( broker_ip, client_name, &mqtt_sock, subs, NUM_SUBS );
     }
 
     return success;
