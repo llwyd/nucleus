@@ -112,6 +112,25 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
 
 bool Ack_Subscribe( uint8_t * buff, uint8_t len )
 {
+    bool ret = false;
+    uint16_t msg_id =  ( *buff++ << 8 ) | *buff++;
+    printf("[MQTT] SUBACK msg id: %d\n", msg_id );
+
+    bool success = CheckMsgIDBuffer( msg_id );
+
+    if( true )
+    {
+        ret = true;
+        printf("\tSUBACK: OK\n");
+    }
+    else
+    {
+        ret = false;
+        printf("\tSUBACK: FAIL\n");
+        assert(false);
+    }
+
+    return ret;
 };
 
 bool Ack_Publish( uint8_t * buff, uint8_t len )
@@ -120,18 +139,17 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
     uint16_t msg_id =  ( *buff++ << 8 ) | *buff++;
     printf("[MQTT] PUBACK msg id: %d\n", msg_id );
 
-
     bool success = CheckMsgIDBuffer( msg_id );
 
     if( true )
     {
         ret = true;
-        printf("[MQTT] PUBACK: OK\n");
+        printf("\tPUBACK: OK\n");
     }
     else
     {
         ret = false;
-        printf("[MQTT] PUBACK: FAIL\n");
+        printf("\tPUBACK: FAIL\n");
         assert(false);
     }
 
@@ -222,7 +240,7 @@ static bool CheckMsgIDBuffer( uint16_t id )
     return found;
 }
 
-static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id )
+static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
 {
     uint16_t full_packet_size = 0;
 
@@ -255,6 +273,50 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             uint16_t total_packet_size = packet_size + name_size;
             send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
             full_packet_size = total_packet_size + 2;
+        }
+            break;
+
+        case mqtt_msg_Subscribe:
+        {
+            mqtt_subs_t * sub_data = (mqtt_subs_t *) msg_data;
+            const unsigned char mqtt_template_subscribe[] =
+            {
+                0x82,                                                                   // message type, qos, no retain
+                0x00,                                                                   // length of message
+            };
+    
+            uint8_t full_topic[64];
+            memset( full_topic, 0x00, 64);
+            
+            strcat(full_topic, parent_topic);
+            strcat(full_topic,"/");
+            strcat(full_topic, client_name);
+            strcat(full_topic, "/");
+            strcat(full_topic, sub_data->name);
+
+            memset(send_buffer, 0x00, 128);
+
+            /* Construct Packet */
+            uint8_t * msg_ptr = send_buffer;
+            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_subscribe );
+            uint16_t topic_size = strlen(full_topic );
+
+            memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
+            msg_ptr+= packet_size;
+            
+            *msg_ptr++ = (uint8_t)((send_msg_id >> 8U)&0xFF);
+            *msg_ptr++ = (uint8_t)(send_msg_id&0xFF);
+            
+            msg_ptr++;
+            *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
+            memcpy(msg_ptr, full_topic, topic_size);
+     
+            uint16_t total_packet_size = packet_size + topic_size + 1 + 2;
+            send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
+            full_packet_size = total_packet_size + 2;
+            
+            AddMessageIDToQueue( send_msg_id );
+            IncrementSendMessageID();
         }
             break;
         case mqtt_msg_Publish:
@@ -312,7 +374,7 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data, uint16_t * id
             break;
         default:
         {
-
+            assert(false);
         }
             break;
     }
@@ -325,7 +387,7 @@ static bool Transmit( mqtt_msg_type_t msg_type, void * msg_data )
    
     bool ret = false;
     /* Construct Data Packet */ 
-    uint16_t packet_size = Format( msg_type, msg_data, &send_msg_id );
+    uint16_t packet_size = Format( msg_type, msg_data );
 
     /* Send */
     int snd = send( *sock, send_buffer, packet_size, 0);
@@ -357,6 +419,9 @@ static bool Decode( uint8_t * buffer, uint16_t len )
             break;
         case MQTT_PUBACK_CODE:
             msg_type = mqtt_msg_Publish;
+            break;
+        case MQTT_SUBACK_CODE:
+            msg_type = mqtt_msg_Subscribe;
             break;
         default:
             printf("[MQTT] ERROR! Bad Receive Packet\n");
@@ -466,6 +531,19 @@ extern bool MQTT_Receive( void )
         }
     }
     return ret;
+}
+
+extern bool MQTT_Subscribe( void )
+{
+    assert( num_sub > 0U );
+
+    bool success = true;
+    for( uint8_t i = 0; i < num_sub; i++ )
+    {
+        success &= Transmit( mqtt_msg_Subscribe, &sub[i] );
+    }
+
+    return success;
 }
 
 extern bool MQTT_Connect( void )
