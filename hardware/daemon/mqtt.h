@@ -41,5 +41,6 @@ extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data 
 extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * subscriptions, uint8_t number_subs );
 extern bool MQTT_Connect( void );
 extern bool MQTT_Subscribe( void );
+bool MQTT_AllSubscribed( void );
 
 #endif /* _MQTT_H_ */

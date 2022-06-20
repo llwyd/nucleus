@@ -104,17 +104,16 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
     fsm_status_t ret = fsm_Ignored;
     switch( s )
     {
-        case signal_Tick:
         case signal_Enter:
             printf("[Subscribe] Enter Signal\n");
             if( MQTT_Subscribe() )
             {
-                ret = fsm_Transition;
-                this->state = &Daemon_Idle;
+                ret = fsm_Handled;
             }
             else
             {
-                ret = fsm_Handled;
+                ret = fsm_Transition;
+                this->state = &Daemon_Connect;
             }
             break;
         case signal_Exit:
@@ -122,11 +121,19 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
             ret = fsm_Handled;
             break;
         case signal_MQTT_RECV:
-            printf("[Idle] MQTT_RECV Signal\n");
+            printf("[Subscribe] MQTT_RECV Signal\n");
             
             if( MQTT_Receive() )
             {
-                ret = fsm_Handled;
+                if( MQTT_AllSubscribed() )
+                {
+                    ret = fsm_Transition;
+                    this->state = &Daemon_Idle;
+                }
+                else
+                {
+                    ret = fsm_Handled;
+                }
             }
             else
             {
@@ -139,6 +146,7 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
             assert(false);
             break;
         default:
+        case signal_Tick:
             printf("[Subscribe] Default Signal\n");
             ret = fsm_Ignored;
             break;

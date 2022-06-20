@@ -80,6 +80,7 @@ static uint8_t * parent_topic = "home";
 
 static mqtt_subs_t * sub;
 static uint8_t num_sub = 0;
+static uint8_t successful_subs = 0;
 
 static uint8_t * broker_ip;
 static uint8_t * broker_port;
@@ -99,6 +100,7 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
     {
         printf("[MQTT] CONNACK:OK\n");
         send_msg_id = 0x1;
+        successful_subs = 0x0;
         ret = true;
     }
     else
@@ -121,6 +123,7 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
     if( true )
     {
         ret = true;
+        successful_subs++;
         printf("\tSUBACK: OK\n");
     }
     else
@@ -164,6 +167,10 @@ bool Ack_Disconnect( uint8_t * buff, uint8_t len )
 {
 };
 
+bool MQTT_AllSubscribed( void )
+{
+    return ( num_sub == successful_subs );
+}
 
 static void AddMessageIDToQueue( uint16_t id )
 {
