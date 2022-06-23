@@ -138,7 +138,7 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
     
     if( *buff == 0x00 )
     {
-        printf("[MQTT] CONNACK:OK\n");
+        printf("\tCONNACK:OK\n");
 
         /* Need message queue flush here */
         send_msg_id = 0x1;
@@ -149,7 +149,7 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
     }
     else
     {
-        printf("[MQTT] CONNACK:FAIL\n");
+        printf("\tCONNACK:FAIL\n");
         ret = false;
     }
 
@@ -165,7 +165,7 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
     assert( msg_len == len );
     
     uint16_t msg_id =  ( *buff++ << 8 ) | *buff++;
-    printf("[MQTT] SUBACK msg id: %d\n", msg_id );
+    printf("\tSUBACK msg id: %d\n", msg_id );
 
     bool success = CheckMsgIDBuffer( msg_id );
 
@@ -198,7 +198,7 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
 
     if( return_code == MQTT_PUBACK_CODE )
     {
-        printf("[MQTT] PUBACK msg id: %d\n", msg_id );
+        printf("\tPUBACK msg id: %d\n", msg_id );
         bool success = CheckMsgIDBuffer( msg_id );
 
         if( true )
@@ -229,7 +229,7 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
         memcpy(topic, msg, topic_len);
         msg += topic_len;
         msg_len -= topic_len;
-        printf("[MQTT] PUBLISH msg id: %d\n", msg_id );
+        printf("\tPUBLISH msg id: %d\n", msg_id );
         printf("\t topic: %s\n", topic );
         
         for( uint8_t i = 0; i < num_sub ; i++ )
@@ -435,7 +435,7 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
             break;
         case mqtt_msg_Publish:
         {
-            printf("[MQTT] Constructing Packet\n");
+            printf("\tConstructing Packet\n");
 
             mqtt_pub_t * pub_data = (mqtt_pub_t *) msg_data;
             
@@ -598,7 +598,7 @@ extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data 
             break;
     }
 
-    printf("[MQTT] Publish Data Encoded (%s / %s)\n", mqtt_data.name, mqtt_data.data );
+    printf("\tPublish Data Encoded (%s / %s)\n", mqtt_data.name, mqtt_data.data );
 
     return Transmit( mqtt_msg_Publish, &mqtt_data );
 }
@@ -636,13 +636,16 @@ extern bool MQTT_Receive( void )
             printf("[MQTT] Data Received\n");
     
             ret = Decode( recv_buffer, rcv );
-    
+            
+            /* Below is useful for debugging */
+            /*    
             printf("\t");
             for( int i = 0; i < rcv; i++ )
             {
                 printf("0x%x,", recv_buffer[i]);
             }
             printf("\b \n");
+            */
         }
     }
     return ret;
