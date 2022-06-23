@@ -28,6 +28,7 @@ enum Signals
 {
     signal_Tick = signal_Count,
     signal_MQTT_RECV,
+    signal_Heartbeat,
 };
 
 static int mqtt_sock;
@@ -37,6 +38,7 @@ static char * client_name;
 static int success_subs;
 
 void Daemon_OnBoardLED( mqtt_data_t * data );
+void Heartbeat( void );
 
 static mqtt_subs_t subs[NUM_SUBS] = 
 {
@@ -84,6 +86,11 @@ fsm_status_t Daemon_Connect( fsm_t * this, signal s )
             break;
         case signal_Exit:
             printf("[Connect] Exit Signal\n");
+            ret = fsm_Handled;
+            break;
+        case signal_Heartbeat:
+            printf("[Connect] Heartbeat Signal\n");
+            Heartbeat();
             ret = fsm_Handled;
             break;
         case signal_None:
@@ -142,6 +149,11 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
             }
 
             break;
+        case signal_Heartbeat:
+            printf("[Subscribe] Heartbeat Signal\n");
+            Heartbeat();
+            ret = fsm_Handled;
+            break;
         case signal_None:
             assert(false);
             break;
@@ -174,8 +186,7 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
                 printf("[Idle] Tick Signal\n");
                 Sensor_Read();
                 float temperature = Sensor_GetTemperature();
-                float test = 6.66f;
-                if( MQTT_EncodeAndPublish("room_temp", mqtt_type_float, &temperature ) && MQTT_EncodeAndPublish("test_float", mqtt_type_float, &test ) )
+                if( MQTT_EncodeAndPublish("temp_live", mqtt_type_float, &temperature ) )
                 {
                     ret = fsm_Handled;
                 }
@@ -200,6 +211,11 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
             }
 
             break;
+        case signal_Heartbeat:
+            printf("[Idle] Heartbeat Signal\n");
+            Heartbeat();
+            ret = fsm_Handled;
+            break;
         case signal_None:
             assert(false);
             break;
@@ -214,6 +230,19 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
 
 void RefreshEvents( void )
 {
+
+    /* 500ms onboard blink */
+    static struct timespec current_nano_tick;
+    static struct timespec last_nano_tick;
+
+    timespec_get( &current_nano_tick, TIME_UTC );
+    if( ( current_nano_tick.tv_nsec - last_nano_tick.tv_nsec ) > 500000000UL )
+    {
+        last_nano_tick = current_nano_tick;
+        FSM_AddEvent( signal_Heartbeat );
+    }
+
+
     /* Check for MQTT/Comms events */
     int rv = poll( &mqtt_poll, 1, 1 );
 
@@ -273,6 +302,23 @@ void Daemon_OnBoardLED( mqtt_data_t * data )
     {
         printf("\tLED OFF\n");
     }
+}
+
+void Heartbeat( void )
+{
+    int led_fd = open("/sys/class/leds/led0/brightness", O_WRONLY );
+    static bool led_on;
+
+    if( led_on )
+    {
+        write( led_fd, "1", 1 );
+    }
+    else
+    {
+        write( led_fd, "0", 1 );
+    }
+    close( led_fd );
+    led_on ^= true;
 }
 
 bool Init( int argc, char ** argv )
