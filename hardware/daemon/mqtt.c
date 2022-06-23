@@ -50,7 +50,8 @@ bool Ack_Disconnect( uint8_t * buff, uint8_t len );
 
 static void IncrementSendMessageID(void);
 static bool CheckMsgIDBuffer( uint16_t val);
-    
+static void FlushMsgIDBuffer( void );
+
 typedef struct mqtt_pairs_t
 {
     mqtt_msg_type_t msg_type;
@@ -138,8 +139,12 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
     if( *buff == 0x00 )
     {
         printf("[MQTT] CONNACK:OK\n");
+
+        /* Need message queue flush here */
         send_msg_id = 0x1;
         successful_subs = 0x0;
+
+        FlushMsgIDBuffer();
         ret = true;
     }
     else
@@ -164,7 +169,7 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
 
     bool success = CheckMsgIDBuffer( msg_id );
 
-    if( true )
+    if( success )
     {
         ret = true;
         successful_subs++;
@@ -263,6 +268,15 @@ bool Ack_Disconnect( uint8_t * buff, uint8_t len )
 bool MQTT_AllSubscribed( void )
 {
     return ( num_sub == successful_subs );
+}
+
+static void FlushMsgIDBuffer( void )
+{
+    if( msg_id.fill > 0U )
+    {
+        msg_id.read_index = msg_id.write_index;
+        msg_id.fill = 0U;
+    }
 }
 
 static void AddMessageIDToQueue( uint16_t id )
