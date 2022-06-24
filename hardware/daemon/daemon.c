@@ -29,6 +29,7 @@ enum Signals
     signal_Tick = signal_Count,
     signal_MQTT_RECV,
     signal_Heartbeat,
+    signal_UpdateHomepage,
 };
 
 static int mqtt_sock;
@@ -197,6 +198,21 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
                 }
             }
             break;
+        case signal_UpdateHomepage:
+            {
+                printf("[Idle] Update Homepage Signal\n");
+                float temperature = Sensor_GetTemperature();
+                if( MQTT_EncodeAndPublish("node_temp", mqtt_type_float, &temperature ) )
+                {
+                    ret = fsm_Handled;
+                }
+                else
+                {
+                    ret = fsm_Transition;
+                    this->state = &Daemon_Connect;
+                }
+            }
+            break;
         case signal_MQTT_RECV:
             printf("[Idle] MQTT_RECV Signal\n");
             
@@ -253,17 +269,27 @@ void RefreshEvents( void )
 
     /* Check whether Tick has Elapsed */
     static time_t current_time;
+
     static time_t last_tick;
+    static time_t last_homepage_tick;
+    
     const double period = 1;
+    const double homepage_period = 60;
 
     time( &current_time );
 
     double delta = difftime( current_time, last_tick );
-
     if( delta > period )
     {   
         FSM_AddEvent( signal_Tick );
         last_tick = current_time;
+    }
+
+    delta = difftime( current_time, last_homepage_tick );
+    if( delta > homepage_period )
+    {
+        FSM_AddEvent( signal_UpdateHomepage );
+        last_homepage_tick = current_time;
     }
 
 }
