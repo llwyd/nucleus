@@ -10,6 +10,8 @@
 
 #include <stdbool.h>
 
+#define BUFFER_SIZE ( 32U )
+
 /* Signal to send events to a given state */
 typedef int signal;
 
@@ -22,6 +24,15 @@ enum DefaultSignals
 
     signal_Count,
 };
+
+/* Circular buffer for FSM events */
+typedef struct
+{
+    unsigned char read_index;
+    unsigned char write_index;
+    unsigned char fill;
+    signal event[ BUFFER_SIZE ];
+} fsm_events_t;
 
 typedef enum
 {
@@ -41,16 +52,16 @@ struct fsm_t
     state_func state;
 } ;
 
-extern void FSM_Init( fsm_t * state );
+extern void FSM_Init( fsm_t * state, fsm_events_t * fsm_event );
 
 /* Event Dispatcher */
 extern void FSM_Dispatch( fsm_t * state, signal s );
 
 /* Event queuing */
-extern void FSM_FlushEvents( void );
-extern void FSM_AddEvent( signal s);
-extern signal FSM_GetLatestEvent( void );
-extern bool FSM_EventsAvailable( void );
+extern void FSM_FlushEvents( fsm_events_t * fsm_event );
+extern void FSM_AddEvent( fsm_events_t * fsm_event, signal s);
+extern signal FSM_GetLatestEvent( fsm_events_t * fsm_event );
+extern bool FSM_EventsAvailable( fsm_events_t * fsm_event );
 
 
 #endif /* _FSM_H_ */

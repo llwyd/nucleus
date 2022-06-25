@@ -244,7 +244,7 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
     return ret;
 }
 
-void RefreshEvents( void )
+void RefreshEvents( fsm_events_t * events )
 {
 
     /* 500ms onboard blink */
@@ -255,7 +255,7 @@ void RefreshEvents( void )
     if( ( current_nano_tick.tv_nsec - last_nano_tick.tv_nsec ) > 500000000UL )
     {
         last_nano_tick = current_nano_tick;
-        FSM_AddEvent( signal_Heartbeat );
+        FSM_AddEvent( events, signal_Heartbeat );
     }
 
 
@@ -264,7 +264,7 @@ void RefreshEvents( void )
 
     if( rv & POLLIN )
     {
-        FSM_AddEvent( signal_MQTT_RECV );
+        FSM_AddEvent( events, signal_MQTT_RECV );
     }
 
     /* Check whether Tick has Elapsed */
@@ -281,14 +281,14 @@ void RefreshEvents( void )
     double delta = difftime( current_time, last_tick );
     if( delta > period )
     {   
-        FSM_AddEvent( signal_Tick );
+        FSM_AddEvent( events, signal_Tick );
         last_tick = current_time;
     }
 
     delta = difftime( current_time, last_homepage_tick );
     if( delta > homepage_period )
     {
-        FSM_AddEvent( signal_UpdateHomepage );
+        FSM_AddEvent( events, signal_UpdateHomepage );
         last_homepage_tick = current_time;
     }
 
@@ -299,19 +299,20 @@ static void Loop( void )
     fsm_t daemon; 
     daemon.state = &Daemon_Connect; 
     signal sig = signal_None;
+    fsm_events_t events;
 
-    FSM_Init( &daemon );
+    FSM_Init( &daemon, &events );
 
     while( 1 )
     {
         /* Get Event */
         
-        while( !FSM_EventsAvailable() )
+        while( !FSM_EventsAvailable( &events ) )
         {
-            RefreshEvents();
+            RefreshEvents( &events );
         }
 
-        sig = FSM_GetLatestEvent();
+        sig = FSM_GetLatestEvent( &events );
 
         /* Dispatch */
         FSM_Dispatch( &daemon, sig );
