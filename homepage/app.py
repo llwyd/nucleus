@@ -18,7 +18,7 @@ import os
 def mqtt_subscribe_all():
     # Subscribe to defaults
     # Note, shouldn't have to do it this way
-    mqtt.subscribe('home/livingroom/#')
+    mqtt.subscribe('home/utility_room/#')
     mqtt.subscribe('home/lounge_area/#')
     mqtt.subscribe('home/bedroom_area/#')
 
@@ -155,7 +155,7 @@ def static_temp_graph(value):
     for d in todays_data:
         d_time = dt.datetime.strptime(d.datestamp + " " + d.timestamp,'%Y-%m-%d %H:%M')
         if(d_time >= yesterdays_time):
-            if(d.deviceID=='livingroom'):
+            if(d.deviceID=='utility_room'):
                 data['y'].append(d.temperature)
                 data['x'].append(d_time)
             elif(d.deviceID=='outside'):
@@ -169,7 +169,7 @@ def static_temp_graph(value):
                 data['d'].append(d_time)
     figure={
         'data': [
-            {'x': data['x'], 'y': data['y'], 'type': 'line', 'name': 'Inside'},
+            {'x': data['x'], 'y': data['y'], 'type': 'line', 'name': 'Utility Room'},
             {'x': data['t'], 'y': data['z'], 'type': 'line', 'name': 'Outside'},
             {'x': data['s'], 'y': data['p'], 'type': 'line', 'name': 'Lounge'},
             {'x': data['d'], 'y': data['c'], 'type': 'line', 'name': 'Bedroom'}
@@ -235,6 +235,7 @@ def handle_connect(client,userdata,flags,rc):
     mqtt.subscribe('home/lounge_area/out_temp')
     mqtt.subscribe('home/lounge_area/out_desc')
     mqtt.subscribe('home/bedroom_area/node_temp')
+    mqtt.subscribe('home/utility_room/node_temp')
 
 def database_update(name, temperature):
     datestamp = dt.datetime.now().strftime('%Y-%m-%d')
@@ -243,21 +244,13 @@ def database_update(name, temperature):
     db.session.add(reading)
     db.session.commit()
 
-@mqtt.on_topic('home/livingroom/#')
-def handle_livingroom_data(client,userdata,message):
+@mqtt.on_topic('home/utility_room/#')
+def handle_utility_room_data(client,userdata,message):
     full_topic = message.topic
     topic = full_topic.replace('/',' ').split()[-1]
     data = message.payload.decode()
-    if topic == 'inside_temp_live':
-        cache.set("inside_temp",str(data))
-    elif topic == 'inside_temp':
-        database_update("livingroom", data)
-    elif topic == 'outside_temp_live':    
-        cache.set("outside_temp",str(data)) 
-    elif topic == 'daemon_version':    
-        cache.set("daemon_version",str(data),timeout=7200) 
-    elif topic == 'location':    
-        cache.set("daemon_location",str(data),timeout=7200) 
+    if topic == 'node_temp':
+        database_update("utility_room", data)
 
 @mqtt.on_topic('home/lounge_area/#')
 def handle_lounge_area_data(client,userdata,message):
