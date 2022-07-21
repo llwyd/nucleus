@@ -77,7 +77,7 @@ fsm_status_t Daemon_Connect( fsm_t * this, signal s )
             if( MQTT_Receive() )
             {
                 ret = fsm_Transition;
-                this->state = &Daemon_Subscribe;
+                this->state = Daemon_Subscribe;
             }
             else
             {
@@ -121,7 +121,7 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
             else
             {
                 ret = fsm_Transition;
-                this->state = &Daemon_Connect;
+                this->state = Daemon_Connect;
             }
             break;
         case signal_Exit:
@@ -136,7 +136,7 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
                 if( MQTT_AllSubscribed() )
                 {
                     ret = fsm_Transition;
-                    this->state = &Daemon_Idle;
+                    this->state = Daemon_Idle;
                 }
                 else
                 {
@@ -146,7 +146,7 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
             else
             {
                 ret = fsm_Transition;
-                this->state = &Daemon_Connect;
+                this->state = Daemon_Connect;
             }
 
             break;
@@ -194,7 +194,7 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
                 else
                 {
                     ret = fsm_Transition;
-                    this->state = &Daemon_Connect;
+                    this->state = Daemon_Connect;
                 }
             }
             break;
@@ -209,7 +209,7 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
                 else
                 {
                     ret = fsm_Transition;
-                    this->state = &Daemon_Connect;
+                    this->state = Daemon_Connect;
                 }
             }
             break;
@@ -223,7 +223,7 @@ fsm_status_t Daemon_Idle( fsm_t * this, signal s )
             else
             {
                 ret = fsm_Transition;
-                this->state = &Daemon_Connect;
+                this->state = Daemon_Connect;
             }
 
             break;
@@ -297,7 +297,7 @@ void RefreshEvents( fsm_events_t * events )
 static void Loop( void )
 {
     fsm_t daemon; 
-    daemon.state = &Daemon_Connect; 
+    daemon.state = Daemon_Connect; 
     signal sig = signal_None;
     fsm_events_t events;
 
