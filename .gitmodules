@@ -1,0 +1,3 @@
+[submodule "stateengine"]
+	path = stateengine
+	url = git@github.com:llwyd/stateengine.git
