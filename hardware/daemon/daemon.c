@@ -18,19 +18,19 @@
 #include <time.h>
 #include <assert.h>
 
-#include "fsm.h"
+#include "state.h"
 #include "mqtt.h"
 #include "sensor.h"
 
 #define NUM_SUBS ( 1U )
 
-enum Signals
-{
-    signal_Tick = signal_Count,
-    signal_MQTT_RECV,
-    signal_Heartbeat,
-    signal_UpdateHomepage,
-};
+#define SIGNALS(SIG ) \
+    SIG( MQTT_RECV ) \
+    SIG( Heartbeat ) \
+    SIG( UpdateHomepage ) \
+
+GENERATE_SIGNALS( SIGNALS );
+GENERATE_SIGNAL_STRINGS( SIGNALS );
 
 static int mqtt_sock;
 static struct pollfd mqtt_poll;
@@ -46,60 +46,53 @@ static mqtt_subs_t subs[NUM_SUBS] =
     {"debug_led", mqtt_type_bool, Daemon_OnBoardLED},
 };
 
-fsm_status_t Daemon_Connect( fsm_t * this, signal s );
-fsm_status_t Daemon_Subscribe( fsm_t * this, signal s );
-fsm_status_t Daemon_Idle( fsm_t * this, signal s );
+state_ret_t State_Connect( state_t * this, event_t s );
+state_ret_t State_Subscribe( state_t * this, event_t s );
+state_ret_t State_Idle( state_t * this, event_t s );
 
-fsm_status_t Daemon_Connect( fsm_t * this, signal s )
+state_ret_t State_Connect( state_t * this, event_t s )
 {
-    fsm_status_t ret = fsm_Ignored;
+    STATE_DEBUG( s );
+    state_ret_t ret;
     switch( s )
     {
-        case signal_Enter:
-        case signal_Tick:
-            printf("[Connect] Enter Signal\n");
+        case EVENT( Enter ):
+        case EVENT( Tick ):
             
             if( MQTT_Connect() )
             {
                 mqtt_poll.fd = mqtt_sock;
                 mqtt_poll.events = POLLIN;
-                ret = fsm_Handled;
             }
             else
             {
-                ret = fsm_Handled;
             }
-
+            HANDLED();
             break;
-        case signal_MQTT_RECV:
-            printf("[Connect] MQTT_RECV Signal\n");
+        case EVENT( MQTT_RECV ):
             
             if( MQTT_Receive() )
             {
-                ret = fsm_Transition;
-                this->state = Daemon_Subscribe;
+                TRANSITION( Subscribe );
             }
             else
             {
-                ret = fsm_Handled;
+                HANDLED();
             }
 
             break;
-        case signal_Exit:
-            printf("[Connect] Exit Signal\n");
-            ret = fsm_Handled;
+        case EVENT( Exit ):
+            HANDLED();
             break;
-        case signal_Heartbeat:
-            printf("[Connect] Heartbeat Signal\n");
+        case EVENT( Heartbeat ):
             Heartbeat();
-            ret = fsm_Handled;
+            HANDLED();
             break;
-        case signal_None:
+        case EVENT( None ):
             assert(false);
             break;
         default:
-            printf("[Connect] Default Signal\n");
-            ret = fsm_Ignored;
+            HANDLED();
             break;
     }
 
@@ -107,61 +100,53 @@ fsm_status_t Daemon_Connect( fsm_t * this, signal s )
     
 }
 
-fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
+state_ret_t State_Subscribe( state_t * this, event_t s )
 {
-    fsm_status_t ret = fsm_Ignored;
+    STATE_DEBUG( s );
+    state_ret_t ret;
     switch( s )
     {
-        case signal_Enter:
-            printf("[Subscribe] Enter Signal\n");
+        case EVENT( Enter ):
             if( MQTT_Subscribe() )
             {
-                ret = fsm_Handled;
+                HANDLED();
             }
             else
             {
-                ret = fsm_Transition;
-                this->state = Daemon_Connect;
+                TRANSITION( Connect );
             }
             break;
-        case signal_Exit:
-            printf("[Subscribe] Exit Signal\n");
-            ret = fsm_Handled;
+        case EVENT( Exit ):
+            HANDLED();
             break;
-        case signal_MQTT_RECV:
-            printf("[Subscribe] MQTT_RECV Signal\n");
-            
+        case EVENT( MQTT_RECV ):
             if( MQTT_Receive() )
             {
                 if( MQTT_AllSubscribed() )
                 {
-                    ret = fsm_Transition;
-                    this->state = Daemon_Idle;
+                    TRANSITION( Idle );
                 }
                 else
                 {
-                    ret = fsm_Handled;
+                    HANDLED();
                 }
             }
             else
             {
-                ret = fsm_Transition;
-                this->state = Daemon_Connect;
+                TRANSITION( Connect );
             }
 
             break;
-        case signal_Heartbeat:
-            printf("[Subscribe] Heartbeat Signal\n");
+        case EVENT( Heartbeat ):
             Heartbeat();
-            ret = fsm_Handled;
+            HANDLED();
             break;
-        case signal_None:
+        case EVENT( None ):
             assert(false);
             break;
         default:
-        case signal_Tick:
-            printf("[Subscribe] Default Signal\n");
-            ret = fsm_Ignored;
+        case EVENT( Tick ):
+            HANDLED();
             break;
     }
 
@@ -169,82 +154,71 @@ fsm_status_t Daemon_Subscribe( fsm_t * this, signal s )
     
 }
 
-fsm_status_t Daemon_Idle( fsm_t * this, signal s )
+state_ret_t State_Idle( state_t * this, event_t s )
 {
-    fsm_status_t ret = fsm_Ignored;
+    STATE_DEBUG( s );
+    state_ret_t ret;
     switch( s )
     {
-        case signal_Enter:
-            printf("[Idle] Enter Signal\n");
-            ret = fsm_Handled;
+        case EVENT( Enter ):
+        case EVENT( Exit ):
+            HANDLED();
             break;
-        case signal_Exit:
-            printf("[Idle] Exit Signal\n");
-            ret = fsm_Handled;
-            break;
-        case signal_Tick:
+        case EVENT( Tick ):
             {
-                printf("[Idle] Tick Signal\n");
                 Sensor_Read();
                 float temperature = Sensor_GetTemperature();
                 if( MQTT_EncodeAndPublish("temp_live", mqtt_type_float, &temperature ) )
                 {
-                    ret = fsm_Handled;
+                    HANDLED();
                 }
                 else
                 {
-                    ret = fsm_Transition;
-                    this->state = Daemon_Connect;
+                    TRANSITION( Connect );
                 }
             }
             break;
-        case signal_UpdateHomepage:
+        case EVENT( UpdateHomepage ):
             {
-                printf("[Idle] Update Homepage Signal\n");
                 float temperature = Sensor_GetTemperature();
                 if( MQTT_EncodeAndPublish("node_temp", mqtt_type_float, &temperature ) )
                 {
-                    ret = fsm_Handled;
+                    HANDLED();
                 }
                 else
                 {
-                    ret = fsm_Transition;
-                    this->state = Daemon_Connect;
+                    TRANSITION( Connect );
                 }
             }
             break;
-        case signal_MQTT_RECV:
-            printf("[Idle] MQTT_RECV Signal\n");
+        case EVENT( MQTT_RECV ):
             
             if( MQTT_Receive() )
             {
-                ret = fsm_Handled;
+                HANDLED();
             }
             else
             {
-                ret = fsm_Transition;
-                this->state = Daemon_Connect;
+                TRANSITION( Connect );
             }
 
             break;
-        case signal_Heartbeat:
-            printf("[Idle] Heartbeat Signal\n");
+        case EVENT( Heartbeat ):
             Heartbeat();
-            ret = fsm_Handled;
+            HANDLED();
             break;
-        case signal_None:
+        case EVENT( None ):
             assert(false);
             break;
         default:
-            printf("[Idle] Default Signal\n");
-            ret = fsm_Ignored;
+            HANDLED();
             break;
     }
 
     return ret;
 }
 
-void RefreshEvents( fsm_events_t * events )
+void RefreshEvents( state_fifo_t * events )
 {
 
     /* 500ms onboard blink */
@@ -255,7 +229,7 @@ void RefreshEvents( fsm_events_t * events )
     if( ( current_nano_tick.tv_nsec - last_nano_tick.tv_nsec ) > 500000000UL )
     {
         last_nano_tick = current_nano_tick;
-        FSM_AddEvent( events, signal_Heartbeat );
+        STATEMACHINE_AddEvent( events, EVENT( Heartbeat ) );
     }
 
 
@@ -264,7 +238,7 @@ void RefreshEvents( fsm_events_t * events )
 
     if( rv & POLLIN )
     {
-        FSM_AddEvent( events, signal_MQTT_RECV );
+        STATEMACHINE_AddEvent( events, EVENT( MQTT_RECV ) );
     }
 
     /* Check whether Tick has Elapsed */
@@ -281,14 +255,14 @@ void RefreshEvents( fsm_events_t * events )
     double delta = difftime( current_time, last_tick );
     if( delta > period )
     {   
-        FSM_AddEvent( events, signal_Tick );
+        STATEMACHINE_AddEvent( events, EVENT( Tick ) );
         last_tick = current_time;
     }
 
     delta = difftime( current_time, last_homepage_tick );
     if( delta > homepage_period )
     {
-        FSM_AddEvent( events, signal_UpdateHomepage );
+        STATEMACHINE_AddEvent( events, EVENT( UpdateHomepage ) );
         last_homepage_tick = current_time;
     }
 
@@ -296,26 +270,26 @@ void RefreshEvents( fsm_events_t * events )
 
 static void Loop( void )
 {
-    fsm_t daemon; 
-    daemon.state = Daemon_Connect; 
-    signal sig = signal_None;
-    fsm_events_t events;
+    state_t daemon; 
+    daemon.state = State_Connect; 
+    event_t sig = EVENT( None );
+    state_fifo_t events;
 
-    FSM_Init( &daemon, &events );
+    STATEMACHINE_AddEvent( &events, EVENT( Enter ) );
 
     while( 1 )
     {
         /* Get Event */
         
-        while( !FSM_EventsAvailable( &events ) )
+        while( !STATEMACHINE_EventsAvailable( &events ) )
         {
             RefreshEvents( &events );
         }
 
-        sig = FSM_GetLatestEvent( &events );
+        sig = STATEMACHINE_GetLatestEvent( &events );
 
         /* Dispatch */
-        FSM_Dispatch( &daemon, sig );
+        STATEMACHINE_FlatDispatch( &daemon, sig );
     }
 }
 
