@@ -275,6 +275,10 @@ static void Loop( void )
     event_t sig = EVENT( None );
     state_fifo_t events;
 
+    events.read_index = 0U;
+    events.write_index = 0U;
+    events.fill = 0U;
+
     STATEMACHINE_AddEvent( &events, EVENT( Enter ) );
 
     while( 1 )

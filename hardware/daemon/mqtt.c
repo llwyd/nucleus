@@ -289,7 +289,7 @@ static void AddMessageIDToQueue( uint16_t id )
     }
     else
     {
-        printf("[MQTT] Error! Ack buffer full\n");
+        printf("\tMQTT Error! Ack buffer full\n");
         assert(false);
     }
 }
@@ -347,7 +347,7 @@ static bool CheckMsgIDBuffer( uint16_t id )
     }
     else
     {
-        printf("[MQTT] Error! No messages in buffer\n");
+        printf("\tMQTT Error! No messages in buffer\n");
         assert(false);
     }
 
@@ -507,12 +507,12 @@ static bool Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     int snd = send( *sock, send_buffer, packet_size, 0);
     if( snd < 0 )
     {
-        printf("[MQTT] Error Sending Data\n");
+        printf("\t Error Sending Data\n");
         ret = false;
     }
     else
     {
-        printf("[MQTT] Transmitting %s packet\n", msg_code[(int)msg_type].name);
+        printf("\t MQTT Transmitting %s packet\n", msg_code[(int)msg_type].name);
         ret = true;
     }
 
@@ -539,12 +539,12 @@ static bool Decode( uint8_t * buffer, uint16_t len )
             msg_type = mqtt_msg_Subscribe;
             break;
         default:
-            printf("[MQTT] ERROR! Bad Receive Packet\n");
+            printf("\tMQTT ERROR! Bad Receive Packet\n");
             assert( false );
             break;
     }
     
-    printf("[MQTT] %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
+    printf("\tMQTT %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
     ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
 
     return ret;
@@ -613,7 +613,7 @@ extern bool MQTT_Receive( void )
 
     if( peek <= 0 )
     {
-        printf("[MQTT] Error Peeking Data\n");
+        printf("\tMQTT Error Peeking Data\n");
         ret = false;
     }
     else
@@ -623,17 +623,17 @@ extern bool MQTT_Receive( void )
         int rcv = recv( *sock, recv_buffer, bytes_to_read, 0U);
         if( rcv < 0 )
         {
-            printf("[MQTT] Error Sending Data\n");
+            printf("\tMQTT Error Sending Data\n");
             ret = false;
         }
         else if( rcv == 0 )
         {
-            printf("[MQTT] Connection Closed\n");
+            printf("\tMQTT Connection Closed\n");
             ret = false;
         }
         else
         {
-            printf("[MQTT] Data Received\n");
+            printf("\tMQTT Data Received\n");
     
             ret = Decode( recv_buffer, rcv );
             
@@ -718,7 +718,7 @@ extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * sub
     assert( mqtt_sock != NULL );
     assert( name != NULL );
 
-    printf("[MQTT] Initialising\n");
+    printf("\tMQTT Initialising\n");
     
     broker_ip = ip;
     broker_port = MQTT_PORT;
@@ -730,15 +730,15 @@ extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * sub
 
     memset( msg_id.id, 0x00, ID_BUFFER_SIZE * sizeof(uint16_t) );
 
-    printf("[MQTT] Broker ip: %s, port: %s\n", broker_ip, broker_port);
-    printf("[MQTT] Client name: %s\n", client_name );
+    printf("\t MQTT Broker ip: %s, port: %s\n", broker_ip, broker_port);
+    printf("\t MQTT Client name: %s\n", client_name );
 
     if( num_sub > 0U )
     {
-        printf("[MQTT] Subscription topics:\n");
+        printf("\tMQTT Subscription topics:\n");
         for( uint8_t i = 0; i < num_sub; i++ )
         {
-            printf("\t%s\n", sub[i].name);
+            printf("\t\t%s\n", sub[i].name);
         }
     }
 }
