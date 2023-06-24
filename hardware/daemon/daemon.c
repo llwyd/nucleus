@@ -18,6 +18,7 @@
 #include <time.h>
 #include <assert.h>
 
+#include "fifo_base.h"
 #include "state.h"
 #include "mqtt.h"
 #include "sensor.h"
@@ -25,6 +26,7 @@
 #define NUM_SUBS ( 1U )
 
 #define SIGNALS(SIG ) \
+    SIG( Tick ) \
     SIG( MQTT_RECV ) \
     SIG( Heartbeat ) \
     SIG( UpdateHomepage ) \
@@ -46,9 +48,55 @@ static mqtt_subs_t subs[NUM_SUBS] =
     {"debug_led", mqtt_type_bool, Daemon_OnBoardLED},
 };
 
-state_ret_t State_Connect( state_t * this, event_t s );
-state_ret_t State_Subscribe( state_t * this, event_t s );
-state_ret_t State_Idle( state_t * this, event_t s );
+DEFINE_STATE(Connect);
+DEFINE_STATE(Subscribe);
+DEFINE_STATE(Idle);
+
+#define FIFO_LEN (32U)
+
+typedef struct
+{
+    fifo_base_t base;
+    event_t queue[FIFO_LEN];
+    event_t data;
+} event_fifo_t;
+
+static void Enqueue( fifo_base_t * const fifo );
+static void Dequeue( fifo_base_t * const fifo );
+static void Flush( fifo_base_t * const fifo );
+
+static void Init( event_fifo_t * fifo )
+{
+    static const fifo_vfunc_t vfunc =
+    {
+        .enq = Enqueue,
+        .deq = Dequeue,
+        .flush = Flush,
+    };
+    FIFO_Init( (fifo_base_t *)fifo, FIFO_LEN );
+    
+    fifo->base.vfunc = &vfunc;
+    fifo->data = 0x0;
+    memset(fifo->queue, 0x00, FIFO_LEN * sizeof(fifo->data));
+}
+
+void Enqueue( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    ENQUEUE_BOILERPLATE( event_fifo_t, base );
+}
+
+void Dequeue( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    DEQUEUE_BOILERPLATE( event_fifo_t, base );
+}
+
+void Flush( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    FLUSH_BOILERPLATE( event_fifo_t, base );
+}
 
 state_ret_t State_Connect( state_t * this, event_t s )
 {
@@ -67,32 +115,32 @@ state_ret_t State_Connect( state_t * this, event_t s )
             else
             {
             }
-            HANDLED();
+            ret = HANDLED();
             break;
         case EVENT( MQTT_RECV ):
             
             if( MQTT_Receive() )
             {
-                TRANSITION( Subscribe );
+                ret = TRANSITION(this, Subscribe );
             }
             else
             {
-                HANDLED();
+                ret = HANDLED();
             }
 
             break;
         case EVENT( Exit ):
-            HANDLED();
+            ret = HANDLED();
             break;
         case EVENT( Heartbeat ):
             Heartbeat();
-            HANDLED();
+            ret = HANDLED();
             break;
         case EVENT( None ):
             assert(false);
             break;
         default:
-            HANDLED();
+            ret = HANDLED();
             break;
     }
 
@@ -109,44 +157,44 @@ state_ret_t State_Subscribe( state_t * this, event_t s )
         case EVENT( Enter ):
             if( MQTT_Subscribe() )
             {
-                HANDLED();
+                ret = HANDLED();
             }
             else
             {
-                TRANSITION( Connect );
+                ret = TRANSITION(this, Connect );
             }
             break;
         case EVENT( Exit ):
-            HANDLED();
+            ret = HANDLED();
             break;
         case EVENT( MQTT_RECV ):
             if( MQTT_Receive() )
             {
                 if( MQTT_AllSubscribed() )
                 {
-                    TRANSITION( Idle );
+                    ret = TRANSITION(this, Idle );
                 }
                 else
                 {
-                    HANDLED();
+                    ret = HANDLED();
                 }
             }
             else
             {
-                TRANSITION( Connect );
+                ret = TRANSITION(this, Connect );
             }
 
             break;
         case EVENT( Heartbeat ):
             Heartbeat();
-            HANDLED();
+            ret = HANDLED();
             break;
         case EVENT( None ):
             assert(false);
             break;
         default:
         case EVENT( Tick ):
-            HANDLED();
+            ret = HANDLED();
             break;
     }
 
@@ -162,7 +210,7 @@ state_ret_t State_Idle( state_t * this, event_t s )
     {
         case EVENT( Enter ):
         case EVENT( Exit ):
-            HANDLED();
+            ret = HANDLED();
             break;
         case EVENT( Tick ):
             {
@@ -170,11 +218,11 @@ state_ret_t State_Idle( state_t * this, event_t s )
                 float temperature = Sensor_GetTemperature();
                 if( MQTT_EncodeAndPublish("temp_live", mqtt_type_float, &temperature ) )
                 {
-                    HANDLED();
+                    ret = HANDLED();
                 }
                 else
                 {
-                    TRANSITION( Connect );
+                    ret = TRANSITION(this, Connect );
                 }
             }
             break;
@@ -183,11 +231,11 @@ state_ret_t State_Idle( state_t * this, event_t s )
                 float temperature = Sensor_GetTemperature();
                 if( MQTT_EncodeAndPublish("node_temp", mqtt_type_float, &temperature ) )
                 {
-                    HANDLED();
+                    ret = HANDLED();
                 }
                 else
                 {
-                    TRANSITION( Connect );
+                    ret = TRANSITION(this, Connect );
                 }
             }
             break;
@@ -195,30 +243,30 @@ state_ret_t State_Idle( state_t * this, event_t s )
             
             if( MQTT_Receive() )
             {
-                HANDLED();
+                ret = HANDLED();
             }
             else
             {
-                TRANSITION( Connect );
+                ret = TRANSITION(this, Connect );
             }
 
             break;
         case EVENT( Heartbeat ):
             Heartbeat();
-            HANDLED();
+            ret = HANDLED();
             break;
         case EVENT( None ):
             assert(false);
             break;
         default:
-            HANDLED();
+            ret = HANDLED();
             break;
     }
 
     return ret;
 }
 
-void RefreshEvents( state_fifo_t * events )
+void RefreshEvents( event_fifo_t * events )
 {
 
     /* 500ms onboard blink */
@@ -229,7 +277,7 @@ void RefreshEvents( state_fifo_t * events )
     if( ( current_nano_tick.tv_nsec - last_nano_tick.tv_nsec ) > 500000000UL )
     {
         last_nano_tick = current_nano_tick;
-        STATEMACHINE_AddEvent( events, EVENT( Heartbeat ) );
+        FIFO_Enqueue( events, EVENT( Heartbeat ) );
     }
 
 
@@ -238,7 +286,7 @@ void RefreshEvents( state_fifo_t * events )
 
     if( rv & POLLIN )
     {
-        STATEMACHINE_AddEvent( events, EVENT( MQTT_RECV ) );
+        FIFO_Enqueue( events, EVENT( MQTT_RECV ) );
     }
 
     /* Check whether Tick has Elapsed */
@@ -255,14 +303,14 @@ void RefreshEvents( state_fifo_t * events )
     double delta = difftime( current_time, last_tick );
     if( delta > period )
     {   
-        STATEMACHINE_AddEvent( events, EVENT( Tick ) );
+        FIFO_Enqueue( events, EVENT( Tick ) );
         last_tick = current_time;
     }
 
     delta = difftime( current_time, last_homepage_tick );
     if( delta > homepage_period )
     {
-        STATEMACHINE_AddEvent( events, EVENT( UpdateHomepage ) );
+        FIFO_Enqueue( events, EVENT( UpdateHomepage ) );
         last_homepage_tick = current_time;
     }
 
@@ -273,24 +321,21 @@ static void Loop( void )
     state_t daemon; 
     daemon.state = State_Connect; 
     event_t sig = EVENT( None );
-    state_fifo_t events;
+    event_fifo_t events;
 
-    events.read_index = 0U;
-    events.write_index = 0U;
-    events.fill = 0U;
-
-    STATEMACHINE_AddEvent( &events, EVENT( Enter ) );
+    Init(&events);
+    FIFO_Enqueue( &events, EVENT( Enter ) );
 
     while( 1 )
     {
         /* Get Event */
         
-        while( !STATEMACHINE_EventsAvailable( &events ) )
+        while( FIFO_IsEmpty( (fifo_base_t *)&events ) )
         {
             RefreshEvents( &events );
         }
 
-        sig = STATEMACHINE_GetLatestEvent( &events );
+        sig = FIFO_Dequeue( &events );
 
         /* Dispatch */
         STATEMACHINE_FlatDispatch( &daemon, sig );
@@ -326,7 +371,7 @@ void Heartbeat( void )
     led_on ^= true;
 }
 
-bool Init( int argc, char ** argv )
+bool InitDaemon( int argc, char ** argv )
 {
     bool success = false;
     bool ip_found = false;
@@ -362,7 +407,7 @@ bool Init( int argc, char ** argv )
 
 uint8_t main( int argc, char ** argv )
 {
-    bool success = Init( argc, argv );
+    bool success = InitDaemon( argc, argv );
 
     if( success )
     {
