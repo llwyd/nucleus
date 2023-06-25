@@ -24,7 +24,7 @@ add_executable( daemon.out
 target_compile_options( daemon.out
                         PUBLIC
                         -Wfatal-errors
-                        #-Wall
+                        -Wall
                         #-Wextra
                         #-Werror
                         #    -Wpedantic

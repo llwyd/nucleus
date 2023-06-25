@@ -1,6 +1,6 @@
 #include "sensor.h"
 
-static const uint8_t * device = "/dev/i2c-1";
+static const char * device = "/dev/i2c-1";
 static const uint8_t address = 0x18;
 static float current_temp = 0.0f;
 
@@ -42,7 +42,6 @@ void Sensor_Read( void )
     uint32_t file = open( device, O_RDWR );
     uint8_t data[2] = { 0x00 };
     uint8_t reg = 0x05;
-    uint8_t alt_address = address | 0x1;
 
     if( file < 0 )
     {
