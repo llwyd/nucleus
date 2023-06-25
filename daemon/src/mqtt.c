@@ -58,8 +58,8 @@ typedef struct mqtt_pairs_t
     uint8_t send_code;
     uint8_t recv_code;
     bool (*ack_fn)(uint8_t * buff, uint8_t len);
-    const uint8_t * name;
-    const uint8_t * ack_name;
+    char * name;
+    char * ack_name;
 } mqtt_pairs_t;
 
 /* transmit and acknowledge code pairs */
@@ -78,8 +78,8 @@ static int * sock;
 static uint8_t send_buffer[ BUFFER_SIZE ];
 static uint8_t recv_buffer[ BUFFER_SIZE ];
 
-static uint8_t * client_name;
-static uint8_t * parent_topic = "home";
+static char * client_name;
+static char * parent_topic = "home";
 
 static mqtt_subs_t * sub;
 static uint8_t num_sub = 0;
@@ -92,7 +92,7 @@ static uint16_t send_msg_id = 0x0000;
 
 msg_id_t msg_id;
 
-mqtt_data_t Extract( uint8_t * data, mqtt_type_t type )
+mqtt_data_t Extract( char * data, mqtt_type_t type )
 {
     mqtt_data_t d;
     
@@ -131,6 +131,8 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
     uint8_t message_code = *buff++;
     uint8_t msg_len = *buff++;
 
+    (void)message_code;
+    (void)msg_len;
     assert( msg_len == len );
 
     /* Reserved byte */
@@ -161,6 +163,8 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
     bool ret = false;
     uint8_t message_code = *buff++;
     uint8_t msg_len = *buff++;
+    (void)message_code;
+    (void)msg_len;
 
     assert( msg_len == len );
     
