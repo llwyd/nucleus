@@ -3,22 +3,27 @@
 temp
 uuid
 uptime
-hardware/bin/*
-hardware/daemon/experiments/*
-hardware/daemon/daemon
-hardware/daemon/sensorDaemon
-hardware/daemon/homeAssistant
-hardware/temperature/apikey.h
-hardware/daemon/apikey.h
-hardware/apikeys/apikey.h
-hardware/.vscode
+daemon/bin/*
+daemon/daemon/experiments/*
+daemon/daemon/daemon
+daemon/daemon/sensorDaemon
+daemon/daemon/homeAssistant
+daemon/temperature/apikey.h
+daemon/daemon/apikey.h
+daemon/apikeys/apikey.h
+daemon/.vscode
 
-hardware/common/mqtt.o
+daemon/bin/
+daemon/CMakeCache.txt
+daemon/CMakeFiles/
+daemon/Makefile
+
+daemon/common/mqtt.o
 
 *.swp
 
-hardware/mqtt/localdata.h
-hardware/mqtt/m
+daemon/mqtt/localdata.h
+daemon/mqtt/m
 
 network
 network.c
