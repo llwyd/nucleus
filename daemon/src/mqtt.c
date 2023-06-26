@@ -85,8 +85,8 @@ static mqtt_subs_t * sub;
 static uint8_t num_sub = 0;
 static uint8_t successful_subs = 0;
 
-static uint8_t * broker_ip;
-static uint8_t * broker_port;
+static char * broker_ip;
+static char * broker_port;
 
 static uint16_t send_msg_id = 0x0000;
 
@@ -168,7 +168,9 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
 
     assert( msg_len == len );
     
-    uint16_t msg_id =  ( *buff++ << 8 ) | *buff++;
+    uint16_t msg_id =  ( *buff++ << 8 );
+    msg_id |= *buff++;
+
     printf("\tSUBACK msg id: %d\n", msg_id );
 
     bool success = CheckMsgIDBuffer( msg_id );
@@ -205,7 +207,7 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
         printf("\tPUBACK msg id: %d\n", msg_id );
         bool success = CheckMsgIDBuffer( msg_id );
 
-        if( true )
+        if( success )
         {
             ret = true;
             printf("\tPUBACK: OK\n");
@@ -219,9 +221,9 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
     }
     else
     {
-        uint8_t topic[64];
-        uint8_t full_topic[64];
-        uint8_t data[32];
+        char topic[64];
+        char full_topic[64];
+        char data[32];
 
         memset( topic, 0x00, 64);
         memset( data, 0x00, 32);
@@ -263,10 +265,12 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
 
 bool Ack_Ping( uint8_t * buff, uint8_t len )
 {
+    return true;
 };
 
 bool Ack_Disconnect( uint8_t * buff, uint8_t len )
 {
+    return true;
 };
 
 bool MQTT_AllSubscribed( void )
@@ -403,7 +407,7 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
                 0x00,                                                                   // length of message
             };
     
-            uint8_t full_topic[64];
+            char full_topic[64];
             memset( full_topic, 0x00, 64);
             
             strcat(full_topic, parent_topic);
@@ -445,7 +449,7 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
             
             memset(send_buffer, 0x00, 128);
             
-            uint8_t text_buff[64];
+            char text_buff[64];
             memset( text_buff, 0x00, 64);
             
             strcat(text_buff, parent_topic);
@@ -556,7 +560,6 @@ static bool Decode( uint8_t * buffer, uint16_t len )
 
 extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data )
 {
-    bool ret = false;
     mqtt_pub_t mqtt_data;
     char datastr[64];
     memset( datastr, 0x00, 64 );
@@ -673,8 +676,8 @@ extern bool MQTT_Connect( void )
     bool ret = false;
     
     int status;
-    struct addrinfo hints, l_hints;
-    struct addrinfo *servinfo, *l_servinfo;
+    struct addrinfo hints;
+    struct addrinfo *servinfo;
 
     memset( &hints, 0U, sizeof( hints ) );
     hints.ai_family = AF_UNSPEC;

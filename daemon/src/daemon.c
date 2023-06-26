@@ -38,7 +38,6 @@ static int mqtt_sock;
 static struct pollfd mqtt_poll;
 static char * broker_ip;
 static char * client_name;
-static int success_subs;
 
 void Daemon_OnBoardLED( mqtt_data_t * data );
 void Heartbeat( void );
@@ -405,7 +404,7 @@ bool InitDaemon( int argc, char ** argv )
     return success;
 }
 
-uint8_t main( int argc, char ** argv )
+int main( int argc, char ** argv )
 {
     bool success = InitDaemon( argc, argv );
 
