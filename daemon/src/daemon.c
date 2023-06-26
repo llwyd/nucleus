@@ -273,7 +273,7 @@ void RefreshEvents( event_fifo_t * events )
     static struct timespec last_nano_tick;
 
     timespec_get( &current_nano_tick, TIME_UTC );
-    if( ( current_nano_tick.tv_nsec - last_nano_tick.tv_nsec ) > 500000000UL )
+    if( ( current_nano_tick.tv_nsec - last_nano_tick.tv_nsec ) > 500000000L )
     {
         last_nano_tick = current_nano_tick;
         FIFO_Enqueue( events, EVENT( Heartbeat ) );
@@ -377,7 +377,7 @@ bool InitDaemon( int argc, char ** argv )
     bool name_found = false;
     int input_flags;
 
-    while( ( input_flags = getopt( argc, argv, "b:c:" ) ) != -1U )
+    while( ( input_flags = getopt( argc, argv, "b:c:" ) ) != -1 )
     {
         switch( input_flags )
         {

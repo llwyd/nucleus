@@ -265,11 +265,15 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
 
 bool Ack_Ping( uint8_t * buff, uint8_t len )
 {
+    (void)buff;
+    (void)len;
     return true;
 };
 
 bool Ack_Disconnect( uint8_t * buff, uint8_t len )
 {
+    (void)buff;
+    (void)len;
     return true;
 };
 
@@ -529,6 +533,7 @@ static bool Transmit( mqtt_msg_type_t msg_type, void * msg_data )
 
 static bool Decode( uint8_t * buffer, uint16_t len )
 {
+    (void)len;
     bool ret = false;
     uint8_t return_code = ( buffer[0] & 0xF0 );
     uint8_t msg_length = buffer[1];

@@ -25,7 +25,7 @@ target_compile_options( daemon.out
                         PUBLIC
                         -Wfatal-errors
                         -Wall
-                        #-Wextra
+                        -Wextra
                         -Werror
                         #    -Wpedantic
                         -Wpointer-arith
