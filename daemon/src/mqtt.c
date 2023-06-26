@@ -156,7 +156,7 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
     }
 
     return ret;
-};
+}
 
 bool Ack_Subscribe( uint8_t * buff, uint8_t len )
 {
@@ -189,7 +189,7 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
     }
 
     return ret;
-};
+}
 
 bool Ack_Publish( uint8_t * buff, uint8_t len )
 {
@@ -261,21 +261,21 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
 
     }
     return ret;
-};
+}
 
 bool Ack_Ping( uint8_t * buff, uint8_t len )
 {
     (void)buff;
     (void)len;
     return true;
-};
+}
 
 bool Ack_Disconnect( uint8_t * buff, uint8_t len )
 {
     (void)buff;
     (void)len;
     return true;
-};
+}
 
 bool MQTT_AllSubscribed( void )
 {

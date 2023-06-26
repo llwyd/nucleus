@@ -27,7 +27,7 @@ target_compile_options( daemon.out
                         -Wall
                         -Wextra
                         -Werror
-                        #    -Wpedantic
+                        -Wpedantic
                         -Wpointer-arith
                         -g)
 
