@@ -243,10 +243,10 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
             memset(full_topic, 0x00, 64);
             
             strcat(full_topic, parent_topic);
-            strcat(full_topic, "/");
-            strcat(full_topic, client_name );
             strcat(full_topic,"/");
             strcat(full_topic, sub[i].name);
+            strcat(full_topic, "/");
+            strcat(full_topic, client_name );
             
             if( strcmp( full_topic, topic) == 0)
             {
@@ -415,10 +415,10 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
             memset( full_topic, 0x00, 64);
             
             strcat(full_topic, parent_topic);
-            strcat(full_topic,"/");
-            strcat(full_topic, client_name);
             strcat(full_topic, "/");
             strcat(full_topic, sub_data->name);
+            strcat(full_topic,"/");
+            strcat(full_topic, client_name);
 
             memset(send_buffer, 0x00, 128);
 
@@ -457,10 +457,10 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
             memset( text_buff, 0x00, 64);
             
             strcat(text_buff, parent_topic);
-            strcat(text_buff, "/");
-            strcat(text_buff, client_name);
             strcat(text_buff,"/");
             strcat(text_buff, pub_data->name);
+            strcat(text_buff, "/");
+            strcat(text_buff, client_name);
             uint16_t topic_size = strlen(text_buff);
 
             printf("\t topic: %s\n", text_buff);
@@ -711,7 +711,7 @@ extern bool MQTT_Connect( void )
             int c = connect( *sock, servinfo->ai_addr, servinfo->ai_addrlen);
             if( c < 0 )
             {
-                printf("Connection Failed\n");
+                printf("\tConnection Failed\n");
                 ret = false;
             }
             else
@@ -742,8 +742,8 @@ extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * sub
 
     memset( msg_id.id, 0x00, ID_BUFFER_SIZE * sizeof(uint16_t) );
 
-    printf("\t MQTT Broker ip: %s, port: %s\n", broker_ip, broker_port);
-    printf("\t MQTT Client name: %s\n", client_name );
+    printf("\tMQTT Broker ip: %s, port: %s\n", broker_ip, broker_port);
+    printf("\tMQTT Client name: %s\n", client_name );
 
     if( num_sub > 0U )
     {

@@ -22,12 +22,13 @@
 #include "state.h"
 #include "mqtt.h"
 #include "sensor.h"
+#include "timestamp.h"
 
 #define NUM_SUBS ( 1U )
 
 #define SIGNALS(SIG ) \
     SIG( Tick ) \
-    SIG( MQTT_RECV ) \
+    SIG( MessageReceived ) \
     SIG( Heartbeat ) \
     SIG( UpdateHomepage ) \
 
@@ -99,6 +100,7 @@ void Flush( fifo_base_t * const base )
 
 state_ret_t State_Connect( state_t * this, event_t s )
 {
+    TimeStamp_Print();
     STATE_DEBUG( s );
     state_ret_t ret;
     switch( s )
@@ -116,7 +118,7 @@ state_ret_t State_Connect( state_t * this, event_t s )
             }
             ret = HANDLED();
             break;
-        case EVENT( MQTT_RECV ):
+        case EVENT( MessageReceived ):
             
             if( MQTT_Receive() )
             {
@@ -149,6 +151,7 @@ state_ret_t State_Connect( state_t * this, event_t s )
 
 state_ret_t State_Subscribe( state_t * this, event_t s )
 {
+    TimeStamp_Print();
     STATE_DEBUG( s );
     state_ret_t ret;
     switch( s )
@@ -166,7 +169,7 @@ state_ret_t State_Subscribe( state_t * this, event_t s )
         case EVENT( Exit ):
             ret = HANDLED();
             break;
-        case EVENT( MQTT_RECV ):
+        case EVENT( MessageReceived ):
             if( MQTT_Receive() )
             {
                 if( MQTT_AllSubscribed() )
@@ -203,6 +206,7 @@ state_ret_t State_Subscribe( state_t * this, event_t s )
 
 state_ret_t State_Idle( state_t * this, event_t s )
 {
+    TimeStamp_Print();
     STATE_DEBUG( s );
     state_ret_t ret;
     switch( s )
@@ -238,7 +242,7 @@ state_ret_t State_Idle( state_t * this, event_t s )
                 }
             }
             break;
-        case EVENT( MQTT_RECV ):
+        case EVENT( MessageReceived ):
             
             if( MQTT_Receive() )
             {
@@ -285,7 +289,7 @@ void RefreshEvents( event_fifo_t * events )
 
     if( rv & POLLIN )
     {
-        FIFO_Enqueue( events, EVENT( MQTT_RECV ) );
+        FIFO_Enqueue( events, EVENT( MessageReceived ) );
     }
 
     /* Check whether Tick has Elapsed */
@@ -406,6 +410,7 @@ bool InitDaemon( int argc, char ** argv )
 
 int main( int argc, char ** argv )
 {
+    (void)TimeStamp_Generate();
     bool success = InitDaemon( argc, argv );
 
     if( success )
