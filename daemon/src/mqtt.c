@@ -243,10 +243,10 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
             memset(full_topic, 0x00, 64);
             
             strcat(full_topic, parent_topic);
-            strcat(full_topic, "/");
-            strcat(full_topic, client_name );
             strcat(full_topic,"/");
             strcat(full_topic, sub[i].name);
+            strcat(full_topic, "/");
+            strcat(full_topic, client_name );
             
             if( strcmp( full_topic, topic) == 0)
             {
@@ -415,10 +415,10 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
             memset( full_topic, 0x00, 64);
             
             strcat(full_topic, parent_topic);
-            strcat(full_topic,"/");
-            strcat(full_topic, client_name);
             strcat(full_topic, "/");
             strcat(full_topic, sub_data->name);
+            strcat(full_topic,"/");
+            strcat(full_topic, client_name);
 
             memset(send_buffer, 0x00, 128);
 
@@ -457,10 +457,10 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
             memset( text_buff, 0x00, 64);
             
             strcat(text_buff, parent_topic);
-            strcat(text_buff, "/");
-            strcat(text_buff, client_name);
             strcat(text_buff,"/");
             strcat(text_buff, pub_data->name);
+            strcat(text_buff, "/");
+            strcat(text_buff, client_name);
             uint16_t topic_size = strlen(text_buff);
 
             printf("\t topic: %s\n", text_buff);
