@@ -16,6 +16,8 @@ add_executable( daemon.out
                 src/sensor.c
                 src/sensor.h
                 src/daemon.c
+                src/timestamp.h
+                src/timestamp.c
                 ../stateengine/src/fifo_base.h
                 ../stateengine/src/fifo_base.c
                 ../stateengine/src/state.h

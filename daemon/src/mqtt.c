@@ -711,7 +711,7 @@ extern bool MQTT_Connect( void )
             int c = connect( *sock, servinfo->ai_addr, servinfo->ai_addrlen);
             if( c < 0 )
             {
-                printf("Connection Failed\n");
+                printf("\tConnection Failed\n");
                 ret = false;
             }
             else
@@ -742,8 +742,8 @@ extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * sub
 
     memset( msg_id.id, 0x00, ID_BUFFER_SIZE * sizeof(uint16_t) );
 
-    printf("\t MQTT Broker ip: %s, port: %s\n", broker_ip, broker_port);
-    printf("\t MQTT Client name: %s\n", client_name );
+    printf("\tMQTT Broker ip: %s, port: %s\n", broker_ip, broker_port);
+    printf("\tMQTT Client name: %s\n", client_name );
 
     if( num_sub > 0U )
     {
