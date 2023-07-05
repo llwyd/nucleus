@@ -50,6 +50,15 @@ static mqtt_subs_t subs[NUM_SUBS] =
     {"debug_led", mqtt_type_bool, Daemon_OnBoardLED},
 };
 
+#define NUM_EVENTS (4)
+static event_callback_t event_callback[NUM_EVENTS] =
+{
+    {"Tick", Timer_Tick1s, EVENT(Tick)},
+    {"MQTT Message Received", MQTT_MessageReceived, EVENT(MessageReceived)},
+    {"Heartbeat Led", Timer_Tick500ms, EVENT(Heartbeat)},
+    {"Homepage Update", Timer_Tick60s, EVENT(UpdateHomepage)},
+};
+
 DEFINE_STATE(Connect);
 DEFINE_STATE(Subscribe);
 DEFINE_STATE(Idle);
@@ -114,6 +123,7 @@ state_ret_t State_Connect( state_t * this, event_t s )
             {
                 mqtt_poll.fd = mqtt_sock;
                 mqtt_poll.events = POLLIN;
+                MQTT_CreatePoll();
             }
             else
             {

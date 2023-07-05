@@ -74,6 +74,7 @@ static mqtt_pairs_t msg_code [ 5 ] =
 };
 
 static int * sock;
+static struct pollfd mqtt_poll;
 
 static uint8_t send_buffer[ BUFFER_SIZE ];
 static uint8_t recv_buffer[ BUFFER_SIZE ];
@@ -722,6 +723,26 @@ extern bool MQTT_Connect( void )
         }
     } 
     return ret;
+}
+
+extern bool MQTT_MessageReceived(void)
+{
+    bool msg_recvd = false;
+    
+    int rv = poll( &mqtt_poll, 1, 1 );
+
+    if( rv & POLLIN )
+    {
+        msg_recvd = true;
+    }
+
+    return msg_recvd;
+}
+
+extern void MQTT_CreatePoll(void)
+{
+    mqtt_poll.fd = *sock;
+    mqtt_poll.events = POLLIN;
 }
 
 extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * subscriptions, uint8_t number_subs )

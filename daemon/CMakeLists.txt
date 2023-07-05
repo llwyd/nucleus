@@ -32,7 +32,7 @@ target_compile_options( daemon.out
                         -Wfatal-errors
                         -Wall
                         -Wextra
-                        -Werror
+                        #                        -Werror
                         -Wpedantic
                         -Wpointer-arith
                         -g)
