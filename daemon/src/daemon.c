@@ -23,6 +23,7 @@
 #include "mqtt.h"
 #include "sensor.h"
 #include "timestamp.h"
+#include "events.h"
 
 #define NUM_SUBS ( 1U )
 
@@ -411,6 +412,7 @@ bool InitDaemon( int argc, char ** argv )
 int main( int argc, char ** argv )
 {
     (void)TimeStamp_Generate();
+    Events_Init();
     bool success = InitDaemon( argc, argv );
 
     if( success )

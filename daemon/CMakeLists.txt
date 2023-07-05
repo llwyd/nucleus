@@ -18,6 +18,8 @@ add_executable( daemon.out
                 src/daemon.c
                 src/timestamp.h
                 src/timestamp.c
+                src/events.h
+                src/events.c
                 ../stateengine/src/fifo_base.h
                 ../stateengine/src/fifo_base.c
                 ../stateengine/src/state.h
