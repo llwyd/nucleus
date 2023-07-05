@@ -24,6 +24,7 @@
 #include "sensor.h"
 #include "timestamp.h"
 #include "events.h"
+#include "timer.h"
 
 #define NUM_SUBS ( 1U )
 
@@ -412,6 +413,7 @@ bool InitDaemon( int argc, char ** argv )
 int main( int argc, char ** argv )
 {
     (void)TimeStamp_Generate();
+    Timer_Init();
     Events_Init();
     bool success = InitDaemon( argc, argv );
 
