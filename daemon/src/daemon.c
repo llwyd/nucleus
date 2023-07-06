@@ -231,7 +231,7 @@ state_ret_t State_Idle( state_t * this, event_t s )
             {
                 Sensor_Read();
                 float temperature = Sensor_GetTemperature();
-                if( MQTT_EncodeAndPublish("temp_live", mqtt_type_float, &temperature ) )
+                if( MQTT_EncodeAndPublish("temperature_live", mqtt_type_float, &temperature ) )
                 {
                     ret = HANDLED();
                 }
@@ -244,7 +244,7 @@ state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( UpdateHomepage ):
             {
                 float temperature = Sensor_GetTemperature();
-                if( MQTT_EncodeAndPublish("node_temp", mqtt_type_float, &temperature ) )
+                if( MQTT_EncodeAndPublish("temperature", mqtt_type_float, &temperature ) )
                 {
                     ret = HANDLED();
                 }
