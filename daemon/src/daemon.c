@@ -37,7 +37,6 @@
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
 
-static int mqtt_sock;
 static char * broker_ip;
 static char * client_name;
 
@@ -372,7 +371,7 @@ bool InitDaemon( int argc, char ** argv )
 
     if( success )
     {
-        MQTT_Init( broker_ip, client_name, &mqtt_sock, subs, NUM_SUBS );
+        MQTT_Init( broker_ip, client_name, subs, NUM_SUBS );
     }
 
     return success;
