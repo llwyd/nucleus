@@ -31,7 +31,7 @@ extern bool Timer_Tick500ms(void)
     static struct timespec last_tick;
 
     timespec_get( &current_tick, TIME_UTC );
-    if( ( current_tick.tv_nsec - last_tick.tv_nsec ) > 500000000L )
+    if( (unsigned long)( current_tick.tv_nsec - last_tick.tv_nsec ) > 500000000UL )
     {
         last_tick = current_tick;
         timerElapsed = true;
