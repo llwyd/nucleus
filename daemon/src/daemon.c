@@ -38,7 +38,6 @@ GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
 
 static int mqtt_sock;
-static struct pollfd mqtt_poll;
 static char * broker_ip;
 static char * client_name;
 
@@ -121,8 +120,6 @@ state_ret_t State_Connect( state_t * this, event_t s )
             
             if( MQTT_Connect() )
             {
-                mqtt_poll.fd = mqtt_sock;
-                mqtt_poll.events = POLLIN;
                 MQTT_CreatePoll();
             }
             else
