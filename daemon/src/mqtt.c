@@ -73,7 +73,8 @@ static mqtt_pairs_t msg_code [ 5 ] =
     { mqtt_msg_Disconnect,      0x00, MQTT_DISCONNECT_CODE, Ack_Disconnect, "DISCONNECT", "DISCONNECT" },
 };
 
-static int * sock;
+static int sock;
+static struct pollfd mqtt_poll;
 
 static uint8_t send_buffer[ BUFFER_SIZE ];
 static uint8_t recv_buffer[ BUFFER_SIZE ];
@@ -516,7 +517,7 @@ static bool Transmit( mqtt_msg_type_t msg_type, void * msg_data )
     uint16_t packet_size = Format( msg_type, msg_data );
 
     /* Send */
-    int snd = send( *sock, send_buffer, packet_size, 0);
+    int snd = send( sock, send_buffer, packet_size, 0);
     if( snd < 0 )
     {
         printf("\t Error Sending Data\n");
@@ -621,7 +622,7 @@ extern bool MQTT_Receive( void )
     memset(recv_buffer, 0x00, BUFFER_SIZE);
 
     unsigned char raw_peek[2] = {0x00, 0x00};    
-    int peek = recv( *sock, raw_peek, 2U, MSG_PEEK );
+    int peek = recv( sock, raw_peek, 2U, MSG_PEEK );
 
     if( peek <= 0 )
     {
@@ -632,7 +633,7 @@ extern bool MQTT_Receive( void )
     {
         unsigned char bytes_to_read = raw_peek[1] + 2U;
 
-        int rcv = recv( *sock, recv_buffer, bytes_to_read, 0U);
+        int rcv = recv( sock, recv_buffer, bytes_to_read, 0U);
         if( rcv < 0 )
         {
             printf("\tMQTT Error Sending Data\n");
@@ -699,8 +700,8 @@ extern bool MQTT_Connect( void )
     else
     {   
         /* 2. Create Socket */
-        *sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
-        if( *sock < 0 )
+        sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+        if( sock < 0 )
         {
             printf("Error creating socket\n");
             ret = false;
@@ -708,7 +709,7 @@ extern bool MQTT_Connect( void )
         else
         {
             /* 3. Attempt Connection */
-            int c = connect( *sock, servinfo->ai_addr, servinfo->ai_addrlen);
+            int c = connect( sock, servinfo->ai_addr, servinfo->ai_addrlen);
             if( c < 0 )
             {
                 printf("\tConnection Failed\n");
@@ -724,10 +725,29 @@ extern bool MQTT_Connect( void )
     return ret;
 }
 
-extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * subscriptions, uint8_t number_subs )
+extern bool MQTT_MessageReceived(void)
+{
+    bool msg_recvd = false;
+    
+    int rv = poll( &mqtt_poll, 1, 1 );
+
+    if( rv & POLLIN )
+    {
+        msg_recvd = true;
+    }
+
+    return msg_recvd;
+}
+
+extern void MQTT_CreatePoll(void)
+{
+    mqtt_poll.fd = sock;
+    mqtt_poll.events = POLLIN;
+}
+
+extern void MQTT_Init( char * ip, char * name, mqtt_subs_t * subscriptions, uint8_t number_subs )
 {
     assert( ip != NULL );
-    assert( mqtt_sock != NULL );
     assert( name != NULL );
 
     printf("\tMQTT Initialising\n");
@@ -735,7 +755,6 @@ extern void MQTT_Init( char * ip, char * name, int *mqtt_sock, mqtt_subs_t * sub
     broker_ip = ip;
     broker_port = MQTT_PORT;
     client_name = name;
-    sock = mqtt_sock;
 
     sub = subscriptions;
     num_sub = number_subs;
