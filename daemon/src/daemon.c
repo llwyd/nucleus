@@ -283,52 +283,13 @@ state_ret_t State_Idle( state_t * this, event_t s )
 
 void RefreshEvents( event_fifo_t * events )
 {
-
-    /* 500ms onboard blink */
-    static struct timespec current_nano_tick;
-    static struct timespec last_nano_tick;
-
-    timespec_get( &current_nano_tick, TIME_UTC );
-    if( ( current_nano_tick.tv_nsec - last_nano_tick.tv_nsec ) > 500000000L )
+    for( int idx = 0; idx < NUM_EVENTS; idx++ )
     {
-        last_nano_tick = current_nano_tick;
-        FIFO_Enqueue( events, EVENT( Heartbeat ) );
+        if( event_callback[idx].event_fn() )
+        {
+            FIFO_Enqueue( events, event_callback[idx].event );
+        }
     }
-
-
-    /* Check for MQTT/Comms events */
-    int rv = poll( &mqtt_poll, 1, 1 );
-
-    if( rv & POLLIN )
-    {
-        FIFO_Enqueue( events, EVENT( MessageReceived ) );
-    }
-
-    /* Check whether Tick has Elapsed */
-    static time_t current_time;
-
-    static time_t last_tick;
-    static time_t last_homepage_tick;
-    
-    const double period = 1;
-    const double homepage_period = 60;
-
-    time( &current_time );
-
-    double delta = difftime( current_time, last_tick );
-    if( delta > period )
-    {   
-        FIFO_Enqueue( events, EVENT( Tick ) );
-        last_tick = current_time;
-    }
-
-    delta = difftime( current_time, last_homepage_tick );
-    if( delta > homepage_period )
-    {
-        FIFO_Enqueue( events, EVENT( UpdateHomepage ) );
-        last_homepage_tick = current_time;
-    }
-
 }
 
 static void Loop( void )

@@ -11,7 +11,7 @@ typedef struct
 {
     char * name;
     bool (*event_fn)(void);
-    event_t eventToEmit;
+    event_t event;
 }
 event_callback_t;
 
