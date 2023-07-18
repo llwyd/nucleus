@@ -13,6 +13,7 @@ int main()
     while( true )
     {
         printf("Hello, World!\n");
+        sleep_ms(1000U);
     }
     return 0;
 }
