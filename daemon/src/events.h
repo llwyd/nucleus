@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <state.h>
+#include <string.h>
+#include <fifo_base.h>
+
+#define FIFO_LEN (32U)
 
 typedef struct
 {
@@ -15,6 +19,13 @@ typedef struct
 }
 event_callback_t;
 
-extern void Events_Init(void);
+typedef struct
+{
+    fifo_base_t base;
+    event_t queue[FIFO_LEN];
+    event_t data;
+} event_fifo_t;
+
+extern void Events_Init(event_fifo_t * fifo);
 
 #endif /* EVENTS_H_ */
