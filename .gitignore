@@ -20,7 +20,7 @@ daemon/Makefile
 
 daemon/common/mqtt.o
 
-*.cmake
+#*.cmake
 *.swp
 
 daemon/mqtt/localdata.h
