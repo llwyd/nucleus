@@ -37,8 +37,13 @@
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
 
+DEFINE_STATE(Connect);
+DEFINE_STATE(Subscribe);
+DEFINE_STATE(Idle);
+
 static char * broker_ip;
 static char * client_name;
+static event_fifo_t events;
 
 void Daemon_OnBoardLED( mqtt_data_t * data );
 void Heartbeat( void );
@@ -56,56 +61,6 @@ static event_callback_t event_callback[NUM_EVENTS] =
     {"Heartbeat Led", Timer_Tick500ms, EVENT(Heartbeat)},
     {"Homepage Update", Timer_Tick60s, EVENT(UpdateHomepage)},
 };
-
-DEFINE_STATE(Connect);
-DEFINE_STATE(Subscribe);
-DEFINE_STATE(Idle);
-
-#define FIFO_LEN (32U)
-
-typedef struct
-{
-    fifo_base_t base;
-    event_t queue[FIFO_LEN];
-    event_t data;
-} event_fifo_t;
-
-static void Enqueue( fifo_base_t * const fifo );
-static void Dequeue( fifo_base_t * const fifo );
-static void Flush( fifo_base_t * const fifo );
-
-static void Init( event_fifo_t * fifo )
-{
-    static const fifo_vfunc_t vfunc =
-    {
-        .enq = Enqueue,
-        .deq = Dequeue,
-        .flush = Flush,
-    };
-    FIFO_Init( (fifo_base_t *)fifo, FIFO_LEN );
-    
-    fifo->base.vfunc = &vfunc;
-    fifo->data = 0x0;
-    memset(fifo->queue, 0x00, FIFO_LEN * sizeof(fifo->data));
-}
-
-void Enqueue( fifo_base_t * const base )
-{
-    assert(base != NULL );
-    ENQUEUE_BOILERPLATE( event_fifo_t, base );
-}
-
-void Dequeue( fifo_base_t * const base )
-{
-    assert(base != NULL );
-    DEQUEUE_BOILERPLATE( event_fifo_t, base );
-}
-
-void Flush( fifo_base_t * const base )
-{
-    assert(base != NULL );
-    FLUSH_BOILERPLATE( event_fifo_t, base );
-}
 
 state_ret_t State_Connect( state_t * this, event_t s )
 {
@@ -293,15 +248,12 @@ static void Loop( void )
     state_t daemon; 
     daemon.state = State_Connect; 
     event_t sig = EVENT( None );
-    event_fifo_t events;
 
-    Init(&events);
     FIFO_Enqueue( &events, EVENT( Enter ) );
 
     while( 1 )
     {
-        /* Get Event */
-        
+        /* Get Event */    
         while( FIFO_IsEmpty( (fifo_base_t *)&events ) )
         {
             RefreshEvents( &events );
@@ -343,7 +295,7 @@ void Heartbeat( void )
     led_on ^= true;
 }
 
-bool InitDaemon( int argc, char ** argv )
+bool Init( int argc, char ** argv )
 {
     bool success = false;
     bool ip_found = false;
@@ -381,8 +333,8 @@ int main( int argc, char ** argv )
 {
     (void)TimeStamp_Generate();
     Timer_Init();
-    Events_Init();
-    bool success = InitDaemon( argc, argv );
+    Events_Init(&events);
+    bool success = Init( argc, argv );
 
     if( success )
     {
