@@ -28,6 +28,15 @@ static bool tick(struct repeating_timer *t)
     return true;
 }
 
+static void Blink(void)
+{
+    static bool state = true;
+
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN,(uint8_t)state);
+
+    state^=true;
+}
+
 static state_ret_t State_Idle( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
@@ -39,6 +48,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Exit ):
         case EVENT( Tick ):
         {
+            Blink();
             ret = HANDLED();
             break;
         }
@@ -52,6 +62,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 int main()
 {
     stdio_init_all();
+    cyw43_arch_init();
+
     struct repeating_timer timer;
     
     Events_Init(&events);
@@ -61,7 +73,7 @@ int main()
     
     FIFO_Enqueue( &events, EVENT(Enter) );
 
-    add_repeating_timer_ms(1000U, tick, NULL, &timer);
+    add_repeating_timer_ms(500U, tick, NULL, &timer);
 
     while( true )
     {
