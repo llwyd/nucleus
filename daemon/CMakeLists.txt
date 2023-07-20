@@ -8,6 +8,7 @@ set (CMAKE_BUILD_TYPE Debug )
 
 include_directories( daemon.out PRIVATE src )
 include_directories( daemon.out PRIVATE common )
+include_directories( daemon.out PRIVATE ../common )
 include_directories( daemon.out PRIVATE ../stateengine/src )
 
 add_executable( daemon.out
@@ -18,8 +19,8 @@ add_executable( daemon.out
                 src/daemon.c
                 src/timestamp.h
                 src/timestamp.c
-                src/events.h
-                src/events.c
+                ../common/events.h
+                ../common/events.c
                 src/timer.h
                 src/timer.c
                 ../stateengine/src/fifo_base.h

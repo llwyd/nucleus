@@ -5,6 +5,7 @@
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 
+#include "environment.h"
 #include "events.h"
 #include "fifo_base.h"
 #include "state.h"
@@ -66,6 +67,7 @@ int main()
 
     struct repeating_timer timer;
     
+    Enviro_Init(); 
     Events_Init(&events);
     
     state_t state_machine; 

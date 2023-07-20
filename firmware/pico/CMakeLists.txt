@@ -12,12 +12,16 @@ pico_sdk_init()
 
 add_executable(node
     src/node_pico.c
+    src/environment.c
+    src/environment.h
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
     ../../stateengine/src/fifo_base.c
     ../../common/events.h
     ../../common/events.c
+    ../../common/bme280.c
+    ../../common/bme280.h
 )
 
 pico_enable_stdio_usb(node 1)
