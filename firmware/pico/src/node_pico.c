@@ -4,6 +4,7 @@
 
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
+#include "pico/critical_section.h"
 
 #include "environment.h"
 #include "events.h"
@@ -18,14 +19,18 @@ GENERATE_SIGNAL_STRINGS( SIGNALS );
 
 DEFINE_STATE( Idle );
 
-event_fifo_t events;
+static event_fifo_t events;
+static critical_section_t crit;
 
 static bool tick(struct repeating_timer *t)
 {
+    critical_section_enter_blocking(&crit);
     if( !FIFO_IsFull(&events.base) )
     {
         FIFO_Enqueue(&events, EVENT(Tick));
     }
+    
+    critical_section_exit(&crit);
     return true;
 }
 
@@ -64,7 +69,7 @@ int main()
 {
     stdio_init_all();
     cyw43_arch_init();
-
+    critical_section_init(&crit);
     struct repeating_timer timer;
     
     Enviro_Init(); 
