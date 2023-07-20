@@ -35,3 +35,10 @@ homepage/__pycache__/*
 firmware/node/user_config.h
 firmware/node/node
 
+*.elf
+*.hex
+
+common/bme280.c
+common/bme280.h
+common/bme280_defs.h
+
