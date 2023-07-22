@@ -1,6 +1,12 @@
 #include "environment.h"
 #include "bme280.h"
 
+#include "pico/stdlib.h"
+#include "pico/binary_info.h"
+#include "hardware/i2c.h"
+
+#define I2C_BAUDRATE ( 400000U )
+
 static struct   bme280_dev dev;
 static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
 static struct   bme280_data bme280_rawData;
@@ -10,11 +16,21 @@ static void BME280_Configure( void );
 
 static void ConfigureI2C(void)
 {
+    printf("Initializing I2C\n");
+    i2c_init(i2c_default, I2C_BAUDRATE );
+    
+    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
+    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
 
+    bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
 }
 
 static void BME280_Configure( void )
 {
+    printf("Initializing BME280\n");
+
     uint8_t settings_sel;
     int8_t rslt = BME280_OK;
 
@@ -68,6 +84,8 @@ static void BME280_Setup( void )
 
 extern void Enviro_Init(void)
 {
+    ConfigureI2C();
+    BME280_Setup();
     printf("Initialised Enviro Sensor\n");
 }
 

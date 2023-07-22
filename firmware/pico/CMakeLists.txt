@@ -34,4 +34,7 @@ include_directories( node PRIVATE common )
 include_directories( node PRIVATE ../../stateengine )
 include_directories( node PRIVATE ../../common )
 include_directories( node PRIVATE ../../stateengine/src )
-target_link_libraries(node pico_cyw43_arch_lwip_threadsafe_background pico_stdlib)
+target_link_libraries(node 
+    pico_cyw43_arch_lwip_threadsafe_background 
+    pico_stdlib 
+    hardware_i2c)
