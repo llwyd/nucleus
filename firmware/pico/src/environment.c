@@ -5,7 +5,8 @@
 #include "pico/binary_info.h"
 #include "hardware/i2c.h"
 
-#define I2C_BAUDRATE ( 400000U )
+#define I2C_BAUDRATE ( 100000U )
+#define I2C_TIMEOUT ( 100000000U )
 
 static struct   bme280_dev dev;
 static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
@@ -59,17 +60,87 @@ static void BME280_Configure( void )
     }
 }
 
+void BME280_Delay(uint32_t period, void *intf_ptr)
+{
+    sleep_us((uint64_t)period);
+}
+
+int8_t BME280_I2CRead(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
+{
+    uint8_t address = *(uint8_t *)intf_ptr;
+    uint8_t addr_w = ( address << 1) & 0xFE;
+    uint8_t addr_r = ( address << 1) & 0x1;
+    
+    int8_t rslt = 0U;
+
+    int ret0 = i2c_write_timeout_us( i2c_default,
+                                    address,
+                                    &reg_addr,
+                                    1U,
+                                    true,
+                                    I2C_TIMEOUT );
+    if( ret0 < 0 )
+    {
+        printf("I2C Read fail\n");
+        rslt = -1;
+    }
+
+    int ret1 = i2c_read_timeout_us(      i2c_default,
+                                    address,
+                                    reg_data,
+                                    len,
+                                    false,
+                                    I2C_TIMEOUT );
+
+    if( ret1 < 0 )
+    {
+        printf("I2C Read fail\n");
+        rslt = -1;
+    }
+
+    return rslt;
+}
+
+int8_t BME280_I2CWrite(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)
+{
+    uint8_t address = *(uint8_t *)intf_ptr;
+    uint8_t addr_w = ( address << 1) & 0xFE;
+    uint8_t addr_r = ( address << 1) & 0x1;
+    int8_t rslt = 0U;
+
+    int ret = i2c_write_timeout_us( i2c_default,
+                                    address,
+                                    &reg_addr,
+                                    1U,
+                                    true,
+                                    I2C_TIMEOUT );
+    
+    ret = i2c_write_timeout_us( i2c_default,
+                                    address,
+                                    reg_data,
+                                    len,
+                                    false,
+                                    I2C_TIMEOUT );
+
+    if( ret < 0 )
+    {
+        printf("I2C Write fail\n");
+        rslt = -1;
+    }
+
+    return rslt;
+}
+
 static void BME280_Setup( void )
 {
     int8_t rslt = BME280_OK;
 
-    /*
     dev.intf_ptr    = &bme280_addr;
     dev.intf        = BME280_I2C_INTF;
     dev.read        = BME280_I2CRead;
     dev.write       = BME280_I2CWrite;
     dev.delay_us    = BME280_Delay;
-    */
+    
     rslt = bme280_init(&dev);
     if( rslt != BME280_OK )
     {
