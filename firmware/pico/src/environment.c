@@ -6,7 +6,7 @@
 #include "hardware/i2c.h"
 
 #define I2C_BAUDRATE ( 100000U )
-#define I2C_TIMEOUT ( 100000000U )
+#define I2C_TIMEOUT  ( 500000U )
 
 static struct   bme280_dev dev;
 static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
@@ -15,17 +15,20 @@ static struct   bme280_data bme280_rawData;
 static void BME280_Setup( void );
 static void BME280_Configure( void );
 
+#define SDA_PIN (16U)
+#define SCL_PIN (17U)
+
 static void ConfigureI2C(void)
 {
     printf("Initializing I2C\n");
     i2c_init(i2c_default, I2C_BAUDRATE );
     
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(SDA_PIN);
+    gpio_pull_up(SCL_PIN);
 
-    bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
+    bi_decl(bi_2pins_with_func(SDA_PIN, SCL_PIN, GPIO_FUNC_I2C));
 }
 
 static void BME280_Configure( void )
@@ -162,6 +165,13 @@ extern void Enviro_Init(void)
 
 extern void Enviro_Read(void)
 {
+    bme280_get_sensor_data(BME280_ALL, &bme280_rawData, &dev);
+}
 
+extern void Enviro_Print(void)
+{
+    printf("\tTemperature: %.2f\n", bme280_rawData.temperature);
+    printf("\tHumidity: %.2f\n", bme280_rawData.humidity);
+    printf("\tPressure: %.2f\n", bme280_rawData.pressure);
 }
 

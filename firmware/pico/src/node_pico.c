@@ -55,6 +55,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Tick ):
         {
             Blink();
+            Enviro_Read();
+            Enviro_Print();
             ret = HANDLED();
             break;
         }

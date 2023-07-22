@@ -8,8 +8,8 @@
 
 #include "pico/stdlib.h"
 
-
 extern void Enviro_Init(void);
 extern void Enviro_Read(void);
+extern void Enviro_Print(void);
 
 #endif /* ENVIRONMENT_H_ */
