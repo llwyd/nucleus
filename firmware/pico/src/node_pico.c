@@ -13,6 +13,7 @@
 
 #define SIGNALS(SIG ) \
     SIG( Tick ) \
+    SIG( ReadSensor ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
@@ -22,12 +23,24 @@ DEFINE_STATE( Idle );
 static event_fifo_t events;
 static critical_section_t crit;
 
-static bool tick(struct repeating_timer *t)
+static bool Tick(struct repeating_timer *t)
 {
     critical_section_enter_blocking(&crit);
     if( !FIFO_IsFull(&events.base) )
     {
         FIFO_Enqueue(&events, EVENT(Tick));
+    }
+    
+    critical_section_exit(&crit);
+    return true;
+}
+
+static bool ReadTimer(struct repeating_timer *t)
+{
+    critical_section_enter_blocking(&crit);
+    if( !FIFO_IsFull(&events.base) )
+    {
+        FIFO_Enqueue(&events, EVENT(ReadSensor));
     }
     
     critical_section_exit(&crit);
@@ -52,11 +65,16 @@ static state_ret_t State_Idle( state_t * this, event_t s )
     {
         case EVENT( Enter ):
         case EVENT( Exit ):
+        case EVENT( ReadSensor ):
+        {
+            Enviro_Read();
+            Enviro_Print();
+            ret = HANDLED();
+            break;
+        }
         case EVENT( Tick ):
         {
             Blink();
-            Enviro_Read();
-            Enviro_Print();
             ret = HANDLED();
             break;
         }
@@ -73,7 +91,9 @@ int main()
     cyw43_arch_init();
     critical_section_init(&crit);
     struct repeating_timer timer;
-    
+    struct repeating_timer read_timer;
+
+    printf("--------------------------\n");    
     Enviro_Init(); 
     Events_Init(&events);
     
@@ -82,7 +102,8 @@ int main()
     
     FIFO_Enqueue( &events, EVENT(Enter) );
 
-    add_repeating_timer_ms(500U, tick, NULL, &timer);
+    add_repeating_timer_ms(500U, Tick, NULL, &timer);
+    add_repeating_timer_ms(1000U, ReadTimer, NULL, &read_timer);
 
     while( true )
     {
