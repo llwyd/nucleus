@@ -10,10 +10,14 @@
 #include "events.h"
 #include "fifo_base.h"
 #include "state.h"
+#include "wifi.h"
 
 #define SIGNALS(SIG ) \
     SIG( Tick ) \
     SIG( ReadSensor ) \
+    SIG( WifiCheckStatus ) \
+    SIG( WifiConnected ) \
+    SIG( WifiDisconnected ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );

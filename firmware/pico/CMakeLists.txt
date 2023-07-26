@@ -14,6 +14,8 @@ add_executable(node
     src/node_pico.c
     src/environment.c
     src/environment.h
+    src/wifi.c
+    src/wifi.h
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
