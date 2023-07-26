@@ -4,7 +4,7 @@
 extern bool WIFI_Init(void)
 {
     bool success = false;
-    printf("Initialising WIFI driver...");
+    printf("Initialising WIFI driver\n");
     if(cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
     {
         printf("Failed\n");
@@ -19,7 +19,6 @@ extern bool WIFI_Init(void)
         goto cleanup;
     }
 */
-    printf("Success\n");
     success = true;
 cleanup:
     return success;

@@ -22,7 +22,7 @@ static void BME280_Configure( void );
 
 static void ConfigureI2C(void)
 {
-    printf("Initializing I2C\n");
+    printf("Initialising I2C Bus\n");
     i2c_init(i2c_default, I2C_BAUDRATE );
     
     gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
@@ -35,7 +35,7 @@ static void ConfigureI2C(void)
 
 static void BME280_Configure( void )
 {
-    printf("Initializing BME280\n");
+    printf("Configuring BME280\n");
 
     int8_t rslt = BME280_OK;
 
@@ -60,11 +60,11 @@ static void BME280_Configure( void )
 
     if( rslt != BME280_OK )
     {
-        printf("BME280 Configure FAIL\n");
+        printf("BME280 Set Mode FAIL\n");
     }
     else 
     {
-        printf("BME280 Configure OK\n");
+        printf("BME280 Set Mode OK\n");
     }
 }
 
@@ -78,7 +78,7 @@ int8_t BME280_I2CRead(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *i
     uint8_t address = *(uint8_t *)intf_ptr;
     int8_t rslt = 0U;
 
-    printf("Expecting to read %d bytes, ", len);
+    //printf("Expecting to read %d bytes, ", len);
     int ret0 = i2c_write_blocking( i2c_default,
                                     address,
                                     &reg_addr,
@@ -100,7 +100,7 @@ int8_t BME280_I2CRead(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *i
     }
     else
     {
-        printf("%d bytes read\n", ret1);
+        //printf("%d bytes read\n", ret1);
     }
     
 
@@ -116,7 +116,7 @@ int8_t BME280_I2CWrite(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
 
     buffer[0] = reg_addr;
     memcpy(&buffer[1], reg_data, len );
-    printf("Expecting to write %d bytes, ", len + 1U);
+    //printf("Expecting to write %d bytes, ", len + 1U);
      
     int ret = i2c_write_blocking( i2c_default,
                                     address,
@@ -131,7 +131,7 @@ int8_t BME280_I2CWrite(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
     }
     else
     {
-        printf("%d bytes written\n", ret);
+        //printf("%d bytes written\n", ret);
     }
     
     return rslt;
@@ -162,8 +162,8 @@ static void BME280_Setup( void )
 extern void Enviro_Init(void)
 {
     ConfigureI2C();
+    printf("Initialising Enviro Sensor\n");
     BME280_Setup();
-    printf("Initialised Enviro Sensor\n");
 }
 
 extern void Enviro_Read(void)
