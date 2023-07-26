@@ -41,4 +41,4 @@ firmware/node/node
 common/bme280.c
 common/bme280.h
 common/bme280_defs.h
-
+common/secret_keys.h
