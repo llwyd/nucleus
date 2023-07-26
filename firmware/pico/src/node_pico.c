@@ -24,6 +24,16 @@ GENERATE_SIGNAL_STRINGS( SIGNALS );
 
 DEFINE_STATE( Idle );
 
+/* Inherit from state_t */
+typedef struct
+{
+    state_t state;
+    struct repeating_timer * timer;
+    struct repeating_timer * read_timer;
+    struct repeating_timer * wifi_timer;
+}
+node_state_t;
+
 static event_fifo_t events;
 static critical_section_t crit;
 
@@ -54,7 +64,6 @@ static bool ReadTimer(struct repeating_timer *t)
 static bool CheckWifi(struct repeating_timer *t)
 {
     int status = cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA );
-    printf("Checkint Wifi\n");
     if( status == CYW43_LINK_JOIN )
     {
         critical_section_enter_blocking(&crit);
@@ -79,9 +88,7 @@ static bool CheckWifi(struct repeating_timer *t)
 static void Blink(void)
 {
     static bool state = true;
-
     //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN,(uint8_t)state);
-
     state^=true;
 }
 
@@ -89,11 +96,18 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
     state_ret_t ret = NO_PARENT(this);
+    node_state_t * node_state = (node_state_t *)this;
 
     switch(s)
     {
         case EVENT( Enter ):
-        case EVENT( Exit ):
+        {
+            WIFI_TryConnect();
+            add_repeating_timer_ms(500U, Tick, NULL, node_state->timer);
+            add_repeating_timer_ms(1000U, ReadTimer, NULL, node_state->read_timer);
+            add_repeating_timer_ms(5000U, CheckWifi, NULL, node_state->wifi_timer);
+            break;
+        }
         case EVENT( ReadSensor ):
         {
             Enviro_Read();
@@ -110,6 +124,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( WifiConnected ):
         {
             printf("Wifi Connected!\n");
+            cancel_repeating_timer(node_state->wifi_timer);
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1); 
             ret = HANDLED();
             break;
@@ -117,10 +132,13 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( WifiDisconnected ):
         {
             printf("Wifi Not connected!\n");
-            WIFI_RetryConnect();
+            WIFI_TryConnect();
+            cancel_repeating_timer(node_state->wifi_timer);
+            add_repeating_timer_ms(5000U, CheckWifi, NULL, node_state->wifi_timer);
             ret = HANDLED();
             break;
         }
+        case EVENT( Exit ):
         default:
         {
             break;
@@ -130,28 +148,26 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
 int main()
 {
-    stdio_init_all();
-    critical_section_init(&crit);
     struct repeating_timer timer;
     struct repeating_timer read_timer;
     struct repeating_timer wifi_timer;
+    
+    stdio_init_all();
+    critical_section_init(&crit);
 
     printf("--------------------------\n");    
     Enviro_Init(); 
     Events_Init(&events);
 
-    state_t state_machine; 
-    state_machine.state = State_Idle; 
+    node_state_t state_machine; 
+    state_machine.state.state = State_Idle; 
+    state_machine.timer = &timer;
+    state_machine.read_timer = &read_timer;
+    state_machine.wifi_timer = &wifi_timer;
     
     FIFO_Enqueue( &events, EVENT(Enter) );
 
-    add_repeating_timer_ms(500U, Tick, NULL, &timer);
-    add_repeating_timer_ms(1000U, ReadTimer, NULL, &read_timer);
-
-    if(WIFI_Init())
-    {
-        add_repeating_timer_ms(5000U, CheckWifi, NULL, &wifi_timer);
-    }
+    (void)WIFI_Init();
 
     while( true )
     {
@@ -160,7 +176,7 @@ int main()
             tight_loop_contents();
         }
         event_t e = FIFO_Dequeue( &events );
-        STATEMACHINE_Dispatch(&state_machine, e);
+        STATEMACHINE_Dispatch(&state_machine.state, e);
     }
     return 0;
 }

@@ -10,6 +10,6 @@
 #include "pico/critical_section.h"
 
 extern bool WIFI_Init(void);
-extern void WIFI_RetryConnect(void);
+extern void WIFI_TryConnect(void);
 
 #endif /* WIFI_H_ */
