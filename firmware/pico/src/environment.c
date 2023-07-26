@@ -131,7 +131,7 @@ int8_t BME280_I2CWrite(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
     }
     else
     {
-        printf("%d bytes written\n", ret0);
+        printf("%d bytes written\n", ret);
     }
     
     return rslt;
