@@ -6,7 +6,7 @@
 #include "hardware/i2c.h"
 #include <string.h>
 
-#define I2C_BAUDRATE ( 100000U )
+#define I2C_BAUDRATE ( 400000U )
 #define I2C_TIMEOUT  ( 500000U )
 
 static struct   bme280_dev dev;
