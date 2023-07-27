@@ -16,6 +16,8 @@ add_executable(node
     src/environment.h
     src/wifi.c
     src/wifi.h
+    src/emitter.c
+    src/emitter.h
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
