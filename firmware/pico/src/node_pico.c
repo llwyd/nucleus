@@ -73,6 +73,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                 WIFI_TryConnect();
                 Emitter_Destroy(node_state->wifi_timer);
                 Emitter_Create(EVENT(WifiCheckStatus), node_state->wifi_timer, 5000);
+                ret = HANDLED();
             }
             break;
         }
