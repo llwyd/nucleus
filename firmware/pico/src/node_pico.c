@@ -49,6 +49,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             Emitter_Create(EVENT(Tick), node_state->timer, 500);
             Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
             Emitter_Create(EVENT(WifiCheckStatus), node_state->wifi_timer, 5000);
+            ret = HANDLED();
             break;
         }
         case EVENT( ReadSensor ):
@@ -65,7 +66,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                 printf("\tWifi Connected! :)\n");
                 Emitter_Destroy(node_state->wifi_timer);
                 WIFI_SetLed();
-                ret = HANDLED();
             }
             else
             {
@@ -73,8 +73,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                 WIFI_TryConnect();
                 Emitter_Destroy(node_state->wifi_timer);
                 Emitter_Create(EVENT(WifiCheckStatus), node_state->wifi_timer, 5000);
-                ret = HANDLED();
             }
+            ret = HANDLED();
             break;
         }
         default:
