@@ -171,11 +171,11 @@ extern void Enviro_Read(void)
     int8_t rslt = bme280_get_sensor_data(BME280_ALL, &bme280_rawData, &dev);
     if( rslt != BME280_OK )
     {
-        printf("BME280 Sensor Read FAIL\n");
+        printf("\tBME280 Sensor Read FAIL\n");
     }
     else 
     {
-        printf("BME280 Sensor Read OK\n");
+        printf("\tBME280 Sensor Read OK\n");
     }
 }
 

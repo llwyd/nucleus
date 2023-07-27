@@ -10,7 +10,7 @@ extern bool WIFI_Init(void)
         printf("Failed\n");
         goto cleanup;
     }
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0); 
+    WIFI_ClearLed();
     cyw43_arch_enable_sta_mode();
     
     success = true;
@@ -20,7 +20,7 @@ cleanup:
 
 extern void WIFI_TryConnect(void)
 {
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0); 
+    WIFI_ClearLed();
     if(cyw43_arch_wifi_connect_async(WIFI_SSID, WIFI_PASS, CYW43_AUTH_WPA2_MIXED_PSK))
     {
         printf("Failed to retry\n");
@@ -38,5 +38,15 @@ extern bool WIFI_CheckStatus(void)
     }
 
     return ret;
+}
+
+extern void WIFI_SetLed(void)
+{
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1); 
+}
+
+extern void WIFI_ClearLed(void)
+{
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0); 
 }
 

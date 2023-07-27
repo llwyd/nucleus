@@ -64,7 +64,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             {
                 printf("\tWifi Connected! :)\n");
                 Emitter_Destroy(node_state->wifi_timer);
-                cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1); 
+                WIFI_SetLed();
                 ret = HANDLED();
             }
             else
