@@ -18,6 +18,8 @@ add_executable(node
     src/wifi.h
     src/emitter.c
     src/emitter.h
+    src/comms.h
+    src/comms.c
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h

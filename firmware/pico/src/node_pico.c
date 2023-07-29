@@ -35,10 +35,11 @@ DEFINE_STATE(WifiNotConnected);
 
 /* Third level */
 
+DEFINE_STATE(MQTTNotConnected);
+
 /*
-DEFINE_STATE(NotConnected);
-DEFINE_STATE(Subscribing);
-DEFINE_STATE(ConnectedAndSubscribed);
+DEFINE_STATE(MQTTSubscribing);
+DEFINE_STATE(Idle);
 */
 
 /* Inherit from state_t */
@@ -129,7 +130,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
             {
                 printf("\tWifi Connected! :)\n");
                 Emitter_Destroy(node_state->wifi_timer);
-                ret = TRANSITION(this, WifiConnected);
+                ret = TRANSITION(this, MQTTNotConnected);
             }
             else
             {
@@ -152,6 +153,32 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
         }
     }
 
+    return ret;
+}
+
+static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, WifiConnected);
+    node_state_t * node_state = (node_state_t *)this;
+    switch(s)
+    {
+        case EVENT( Enter ):
+        {
+            Comms_Init();
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
     return ret;
 }
 
