@@ -23,6 +23,7 @@ daemon/common/mqtt.o
 #*.cmake
 *.swp
 
+daemon/cmake_install.cmake
 daemon/mqtt/localdata.h
 daemon/mqtt/m
 
