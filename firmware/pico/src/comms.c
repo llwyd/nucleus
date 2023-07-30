@@ -1,6 +1,7 @@
 #include "comms.h"
 
 #define MQTT_PORT ( 1883 )
+#define MQTT_TIMEOUT ( 0xb4 )
 
 #define BUFFER_SIZE (256)
 #define POLL_PERIOD (2)
@@ -11,6 +12,7 @@ static uint8_t recv_buffer[ BUFFER_SIZE ];
 static ip_addr_t remote_addr;
 static struct tcp_pcb * tcp_pcb;
 static bool connected = false;
+static char * client_name = "pico";
 
 /* LWIP callback functions */
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
@@ -28,6 +30,8 @@ static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
 static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
     printf("\tTCP Recv\n");
+    printf("\tReceived %d bytes\n", p->tot_len);
+
     return ERR_OK;
 }
 
@@ -57,6 +61,49 @@ static err_t Poll(void *arg, struct tcp_pcb *tpcb)
     printf("\tTCP Poll\n");
 
     return ERR_OK;
+}
+
+extern void Comms_MQTTConnect(void)
+{
+    uint16_t full_packet_size = 0;
+    /* Message Template for mqtt connect */
+    uint8_t mqtt_template_connect[] =
+    {
+                0x10,                                   /* connect */
+                0x00,                                   /* payload size */
+                0x00, 0x06,                             /* Protocol name size */
+                0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
+                0x03,                                   /* Version MQTT v3.1 */
+                0x02,                                   /* Fire and forget */
+                0x00, MQTT_TIMEOUT,                     /* Keep alive timeout */
+    };
+    uint8_t * msg_ptr = send_buffer;
+    uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
+    uint16_t name_size = strlen( client_name );
+
+    memcpy( msg_ptr, mqtt_template_connect, packet_size );
+    msg_ptr+= packet_size;
+    msg_ptr++;
+    *msg_ptr++ = (uint8_t)(name_size & 0xFF);
+    memcpy(msg_ptr, client_name, name_size);
+                
+    uint16_t total_packet_size = packet_size + name_size;
+    send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
+    full_packet_size = total_packet_size + 2;
+
+    err_t err = tcp_write(tcp_pcb, send_buffer, full_packet_size, TCP_WRITE_FLAG_COPY);
+
+    if( err != ERR_OK )
+    {
+        printf("\nFailed to write\n");
+    }
+    else
+    {
+        for( uint32_t idx = 0; idx < full_packet_size; idx++)
+        {
+            printf("0x%x", send_buffer[idx]);
+        }
+    }
 }
 
 extern bool Comms_Init(void)

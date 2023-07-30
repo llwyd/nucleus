@@ -232,8 +232,13 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
     switch(s)
     {
         case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
         case EVENT( Enter ):
         {
+            Comms_MQTTConnect();
             ret = HANDLED();
             break;
         }

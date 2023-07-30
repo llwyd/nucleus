@@ -13,5 +13,6 @@
 
 extern bool Comms_Init(void);
 extern bool Comms_CheckStatus(void);
+extern void Comms_MQTTConnect(void);
 
 #endif /* COMMS_H_ */
