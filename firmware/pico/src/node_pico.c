@@ -70,6 +70,13 @@ static state_ret_t State_Root( state_t * this, event_t s )
             ret = HANDLED();
             break;
         }
+        case EVENT( Enter ):
+        {
+            //Emitter_Create(EVENT(Tick), node_state->timer, 500);
+            //Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
+            ret = HANDLED();
+            break;
+        }
         case EVENT( Exit ):
         {
             /* Should never try and leave here! */
@@ -123,8 +130,6 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
         {
             WIFI_ClearLed();
             WIFI_TryConnect();
-            //Emitter_Create(EVENT(Tick), node_state->timer, 500);
-            //Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
             Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 2000);
             ret = HANDLED();
             break;
@@ -197,7 +202,8 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
             Emitter_Destroy(node_state->retry_timer);
             if( Comms_CheckStatus() )
             {
-                printf("\t TCP Connected Successfully");
+                printf("\t TCP Connected Successfully\n");
+                ret = TRANSITION(this, MQTTNotConnected);
             }
             else
             {
@@ -218,6 +224,27 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
     return ret;
 }
 
+static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, WifiConnected);
+    node_state_t * node_state = (node_state_t *)this;
+    switch(s)
+    {
+        case EVENT( Exit ):
+        case EVENT( Enter ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    
+    return ret;
+}
 static state_ret_t State_Idle( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
@@ -284,12 +311,11 @@ int main()
     (void)WIFI_Init();
 
     node_state_t state_machine; 
-    state_machine.state.state = State_WifiNotConnected; 
     state_machine.timer = &timer;
     state_machine.read_timer = &read_timer;
-    state_machine.retry_timer = &retry_timer;
-    
-    FIFO_Enqueue( &events, EVENT(Enter) );
+    state_machine.retry_timer = &retry_timer;    
+
+    STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
 
     while( true )
     {
