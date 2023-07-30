@@ -22,6 +22,7 @@
     SIG( WifiConnected ) \
     SIG( WifiDisconnected ) \
     SIG( TCPRetryConnect ) \
+    SIG( TCPCheckStatus ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
@@ -37,6 +38,7 @@ DEFINE_STATE(WifiNotConnected);
 
 /* Third level */
 
+DEFINE_STATE(TCPNotConnected);
 DEFINE_STATE(MQTTNotConnected);
 
 /*
@@ -70,6 +72,7 @@ static state_ret_t State_Root( state_t * this, event_t s )
         }
         case EVENT( Exit ):
         {
+            /* Should never try and leave here! */
             assert(false);
             break;
         }
@@ -120,8 +123,8 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
         {
             WIFI_ClearLed();
             WIFI_TryConnect();
-            Emitter_Create(EVENT(Tick), node_state->timer, 500);
-            Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
+            //Emitter_Create(EVENT(Tick), node_state->timer, 500);
+            //Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
             Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 2000);
             ret = HANDLED();
             break;
@@ -132,7 +135,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
             {
                 printf("\tWifi Connected! :)\n");
                 Emitter_Destroy(node_state->retry_timer);
-                ret = TRANSITION(this, MQTTNotConnected);
+                ret = TRANSITION(this, TCPNotConnected);
             }
             else
             {
@@ -158,7 +161,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
     return ret;
 }
 
-static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
+static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
     state_ret_t ret = PARENT(this, WifiConnected);
@@ -166,21 +169,40 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
     switch(s)
     {
         case EVENT( TCPRetryConnect ):
-        {                
-            Emitter_Destroy(node_state->retry_timer);
-            /* Note the intentional lack of break here */
-        }
         case EVENT( Enter ):
         {
+            ret = HANDLED();
+            Emitter_Destroy(node_state->retry_timer);
             if(Comms_Init())
             {
-
+                Emitter_Create(EVENT(TCPCheckStatus), node_state->retry_timer, 2000);
             }
             else
             {
-                Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, 30000);
+                if(WIFI_CheckStatus())
+                {
+                    Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, 10000);
+                }
+                else
+                {
+                    /* Possible WIFI may have failed at this point, re-connect */
+                    printf("Wifi failed, reconnect\n");
+                    ret = TRANSITION(this, WifiNotConnected);
+                }
             }
-            ret = HANDLED();
+            break;
+        }
+        case EVENT( TCPCheckStatus ):
+        {
+            Emitter_Destroy(node_state->retry_timer);
+            if( Comms_CheckStatus() )
+            {
+                printf("\t TCP Connected Successfully");
+            }
+            else
+            {
+                Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, 10000);
+            }
             break;
         }
         case EVENT( Exit ):

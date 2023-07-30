@@ -12,5 +12,6 @@
 #include "lwip/tcp.h"
 
 extern bool Comms_Init(void);
+extern bool Comms_CheckStatus(void);
 
 #endif /* COMMS_H_ */

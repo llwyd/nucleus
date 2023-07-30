@@ -10,6 +10,7 @@ static uint8_t recv_buffer[ BUFFER_SIZE ];
 
 static ip_addr_t remote_addr;
 static struct tcp_pcb * tcp_pcb;
+static bool connected = false;
 
 /* LWIP callback functions */
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
@@ -33,11 +34,13 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 static void Error(void *arg, err_t err)
 {
     printf("\tTCP Error\n");
+    connected = false;
 }
 
 static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
     printf("\tTCP Connected...");
+    connected = true;
     if( err == ERR_OK )
     {
         printf("OK\n");
@@ -59,6 +62,7 @@ static err_t Poll(void *arg, struct tcp_pcb *tpcb)
 extern bool Comms_Init(void)
 {
     bool ret = false;
+    connected = false;
     /* Init */
     ip4addr_aton(MQTT_BROKER_IP, &remote_addr);
     
@@ -104,3 +108,9 @@ extern bool Comms_Init(void)
 
     return ret;
 }
+
+extern bool Comms_CheckStatus(void)
+{
+    return connected;
+}
+
