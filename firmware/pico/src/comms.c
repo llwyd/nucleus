@@ -37,7 +37,15 @@ static void Error(void *arg, err_t err)
 
 static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
-    printf("\tTCP Connected\n");
+    printf("\tTCP Connected...");
+    if( err == ERR_OK )
+    {
+        printf("OK\n");
+    }
+    else
+    {
+        printf("FAIL\n");
+    }
     return ERR_OK;
 }
 
@@ -48,8 +56,9 @@ static err_t Poll(void *arg, struct tcp_pcb *tpcb)
     return ERR_OK;
 }
 
-extern void Comms_Init(void)
+extern bool Comms_Init(void)
 {
+    bool ret = false;
     /* Init */
     ip4addr_aton(MQTT_BROKER_IP, &remote_addr);
     
@@ -76,5 +85,22 @@ extern void Comms_Init(void)
     err_t err = tcp_connect(tcp_pcb, &remote_addr, MQTT_PORT, Connected);
     cyw43_arch_lwip_end();
 
-    assert(err==ERR_OK);
+    if(err==ERR_OK)
+    {
+        printf("\tTCP Initialising success, awaiting connection\n");
+        ret = true;
+    }
+    else
+    {
+        printf("\tTCP Initialising failure, Retrying\n");
+        err_t close_err = tcp_close(tcp_pcb);
+        if( close_err != ERR_OK )
+        {
+            tcp_abort(tcp_pcb);
+        }
+        tcp_pcb = NULL;
+        ret = false;
+    }
+
+    return ret;
 }

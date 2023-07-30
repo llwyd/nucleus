@@ -13,6 +13,7 @@
 #include "state.h"
 #include "wifi.h"
 #include "emitter.h"
+#include "comms.h"
 
 #define SIGNALS(SIG ) \
     SIG( Tick ) \
@@ -20,6 +21,7 @@
     SIG( WifiCheckStatus ) \
     SIG( WifiConnected ) \
     SIG( WifiDisconnected ) \
+    SIG( TCPRetryConnect ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
@@ -48,7 +50,7 @@ typedef struct
     state_t state;
     struct repeating_timer * timer;
     struct repeating_timer * read_timer;
-    struct repeating_timer * wifi_timer;
+    struct repeating_timer * retry_timer;
 }
 node_state_t;
 
@@ -120,7 +122,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
             WIFI_TryConnect();
             Emitter_Create(EVENT(Tick), node_state->timer, 500);
             Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
-            Emitter_Create(EVENT(WifiCheckStatus), node_state->wifi_timer, 5000);
+            Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 2000);
             ret = HANDLED();
             break;
         }
@@ -129,15 +131,15 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
             if( WIFI_CheckStatus() )
             {
                 printf("\tWifi Connected! :)\n");
-                Emitter_Destroy(node_state->wifi_timer);
+                Emitter_Destroy(node_state->retry_timer);
                 ret = TRANSITION(this, MQTTNotConnected);
             }
             else
             {
                 printf("\tWifi Disconnected! :(\n");
                 WIFI_TryConnect();
-                Emitter_Destroy(node_state->wifi_timer);
-                Emitter_Create(EVENT(WifiCheckStatus), node_state->wifi_timer, 5000);
+                Emitter_Destroy(node_state->retry_timer);
+                Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 1000);
                 ret = HANDLED();
             }
             break;
@@ -163,9 +165,21 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
+        case EVENT( TCPRetryConnect ):
+        {                
+            Emitter_Destroy(node_state->retry_timer);
+            /* Note the intentional lack of break here */
+        }
         case EVENT( Enter ):
         {
-            Comms_Init();
+            if(Comms_Init())
+            {
+
+            }
+            else
+            {
+                Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, 30000);
+            }
             ret = HANDLED();
             break;
         }
@@ -195,7 +209,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             WIFI_TryConnect();
             Emitter_Create(EVENT(Tick), node_state->timer, 500);
             Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
-            Emitter_Create(EVENT(WifiCheckStatus), node_state->wifi_timer, 5000);
+            Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 5000);
             ret = HANDLED();
             break;
         }
@@ -211,15 +225,15 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             if( WIFI_CheckStatus() )
             {
                 printf("\tWifi Connected! :)\n");
-                Emitter_Destroy(node_state->wifi_timer);
+                Emitter_Destroy(node_state->retry_timer);
                 WIFI_SetLed();
             }
             else
             {
                 printf("\tWifi Disconnected! :(\n");
                 WIFI_TryConnect();
-                Emitter_Destroy(node_state->wifi_timer);
-                Emitter_Create(EVENT(WifiCheckStatus), node_state->wifi_timer, 5000);
+                Emitter_Destroy(node_state->retry_timer);
+                Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 5000);
             }
             ret = HANDLED();
             break;
@@ -238,7 +252,7 @@ int main()
     
     struct repeating_timer timer;
     struct repeating_timer read_timer;
-    struct repeating_timer wifi_timer;
+    struct repeating_timer retry_timer;
     
     stdio_init_all();
     critical_section_init(&crit);
@@ -251,7 +265,7 @@ int main()
     state_machine.state.state = State_WifiNotConnected; 
     state_machine.timer = &timer;
     state_machine.read_timer = &read_timer;
-    state_machine.wifi_timer = &wifi_timer;
+    state_machine.retry_timer = &retry_timer;
     
     FIFO_Enqueue( &events, EVENT(Enter) );
 

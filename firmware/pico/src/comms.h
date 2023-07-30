@@ -11,6 +11,6 @@
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 
-extern void Comms_Init(void);
+extern bool Comms_Init(void);
 
 #endif /* COMMS_H_ */
