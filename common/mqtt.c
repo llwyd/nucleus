@@ -607,5 +607,36 @@ extern bool MQTT_Subscribe( void )
 extern bool MQTT_Connect( mqtt_t * mqtt )
 {
     assert(mqtt != NULL );
+    memset(send_buffer, 0x00, 128);
+    printf("\tAttempting MQTT Connection\n");
+    printf("\tClient name: %s\n", mqtt->client_name);
+
+    uint16_t full_packet_size = 0;
+    /* Message Template for mqtt connect */
+    uint8_t mqtt_template_connect[] =
+    {
+                0x10,                                   /* connect */
+                0x00,                                   /* payload size */
+                0x00, 0x06,                             /* Protocol name size */
+                0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
+                0x03,                                   /* Version MQTT v3.1 */
+                0x02,                                   /* Fire and forget */
+                0x00, MQTT_TIMEOUT,                     /* Keep alive timeout */
+    };
+    uint8_t * msg_ptr = send_buffer;
+    uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
+    uint16_t name_size = strlen( mqtt->client_name );
+
+    memcpy( msg_ptr, mqtt_template_connect, packet_size );
+    msg_ptr+= packet_size;
+    msg_ptr++;
+    *msg_ptr++ = (uint8_t)(name_size & 0xFF);
+    memcpy(msg_ptr, mqtt->client_name, name_size);
+                
+    uint16_t total_packet_size = packet_size + name_size;
+    send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
+    full_packet_size = total_packet_size + 2;
+
+    return mqtt->send( send_buffer, full_packet_size );
 }
 

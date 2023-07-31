@@ -16,6 +16,8 @@
 #include "comms.h"
 #include "mqtt.h"
 
+#define RETRY_PERIOD_MS (1000)
+
 #define SIGNALS(SIG ) \
     SIG( Tick ) \
     SIG( ReadSensor ) \
@@ -24,6 +26,7 @@
     SIG( WifiDisconnected ) \
     SIG( TCPRetryConnect ) \
     SIG( TCPCheckStatus ) \
+    SIG( MessageReceived ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
@@ -132,7 +135,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
         {
             WIFI_ClearLed();
             WIFI_TryConnect();
-            Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 2000);
+            Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
             ret = HANDLED();
             break;
         }
@@ -149,7 +152,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
                 printf("\tWifi Disconnected! :(\n");
                 WIFI_TryConnect();
                 Emitter_Destroy(node_state->retry_timer);
-                Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 1000);
+                Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
                 ret = HANDLED();
             }
             break;
@@ -182,18 +185,18 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
             Emitter_Destroy(node_state->retry_timer);
             if(Comms_Init())
             {
-                Emitter_Create(EVENT(TCPCheckStatus), node_state->retry_timer, 2000);
+                Emitter_Create(EVENT(TCPCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
             }
             else
             {
                 if(WIFI_CheckStatus())
                 {
-                    Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, 10000);
+                    Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, RETRY_PERIOD_MS);
                 }
                 else
                 {
                     /* Possible WIFI may have failed at this point, re-connect */
-                    printf("Wifi failed, reconnect\n");
+                    printf("\tWifi failed, reconnect\n");
                     ret = TRANSITION(this, WifiNotConnected);
                 }
             }
@@ -204,12 +207,12 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
             Emitter_Destroy(node_state->retry_timer);
             if( Comms_CheckStatus() )
             {
-                printf("\t TCP Connected Successfully\n");
+                printf("\tTCP Connected Successfully\n");
                 ret = TRANSITION(this, MQTTNotConnected);
             }
             else
             {
-                Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, 10000);
+                Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, RETRY_PERIOD_MS);
             }
             break;
         }
@@ -240,7 +243,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         }
         case EVENT( Enter ):
         {
-            Comms_MQTTConnect();
+            MQTT_Connect(node_state->mqtt);
             ret = HANDLED();
             break;
         }
