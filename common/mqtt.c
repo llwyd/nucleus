@@ -604,4 +604,8 @@ extern bool MQTT_Subscribe( void )
     return success;
 }
 
+extern bool MQTT_Connect( mqtt_t * mqtt )
+{
+    assert(mqtt != NULL );
+}
 

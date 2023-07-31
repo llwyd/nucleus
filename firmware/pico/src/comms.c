@@ -106,6 +106,16 @@ extern void Comms_MQTTConnect(void)
     }
 }
 
+extern bool Comms_Send( uint8_t * buffer, uint16_t len )
+{
+    return true;
+}
+
+extern bool Comms_Recv( uint8_t * buffer, uint16_t len )
+{
+    return true;
+}
+
 extern bool Comms_Init(void)
 {
     bool ret = false;

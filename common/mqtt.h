@@ -30,10 +30,18 @@ typedef struct mqtt_subs_t
     void (*sub_fn)( mqtt_data_t* );
 } mqtt_subs_t;
 
+typedef struct
+{
+    char * client_name;
+    bool (*send)(uint8_t * buffer, uint16_t len );
+    bool (*recv)(uint8_t * buffer, uint16_t len );
+}
+mqtt_t;
+
 extern bool MQTT_Receive( void );
 extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data );
 extern void MQTT_Init( char * ip, char * name, mqtt_subs_t * subscriptions, uint8_t number_subs );
-extern bool MQTT_Connect( void );
+extern bool MQTT_Connect( mqtt_t * mqtt );
 extern bool MQTT_Subscribe( void );
 extern bool MQTT_MessageReceived(void);
 extern void MQTT_CreatePoll(void);

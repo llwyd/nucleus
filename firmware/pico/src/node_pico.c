@@ -14,6 +14,7 @@
 #include "wifi.h"
 #include "emitter.h"
 #include "comms.h"
+#include "mqtt.h"
 
 #define SIGNALS(SIG ) \
     SIG( Tick ) \
@@ -53,6 +54,7 @@ typedef struct
     struct repeating_timer * timer;
     struct repeating_timer * read_timer;
     struct repeating_timer * retry_timer;
+    mqtt_t * mqtt;
 }
 node_state_t;
 
@@ -301,9 +303,16 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
 int main()
 {
+    char * client_name = "node_pico";
     event_fifo_t events;
     critical_section_t crit;
-    
+    mqtt_t mqtt =
+    {
+        .client_name = client_name,
+        .send = Comms_Send,
+        .recv = Comms_Recv,
+    };
+
     struct repeating_timer timer;
     struct repeating_timer read_timer;
     struct repeating_timer retry_timer;
@@ -318,7 +327,8 @@ int main()
     node_state_t state_machine; 
     state_machine.timer = &timer;
     state_machine.read_timer = &read_timer;
-    state_machine.retry_timer = &retry_timer;    
+    state_machine.retry_timer = &retry_timer;
+    state_machine.mqtt = &mqtt;
 
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
 

@@ -14,5 +14,7 @@
 extern bool Comms_Init(void);
 extern bool Comms_CheckStatus(void);
 extern void Comms_MQTTConnect(void);
+extern bool Comms_Send( uint8_t * buffer, uint16_t len );
+extern bool Comms_Recv( uint8_t * buffer, uint16_t len );
 
 #endif /* COMMS_H_ */
