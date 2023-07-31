@@ -28,6 +28,8 @@ add_executable(node
     ../../common/events.c
     ../../common/bme280.c
     ../../common/bme280.h
+    ../../common/mqtt.c
+    ../../common/mqtt.h
 )
 
 pico_enable_stdio_usb(node 1)
