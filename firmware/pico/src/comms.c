@@ -30,7 +30,17 @@ static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
 static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
     printf("\tTCP Recv\n");
-    printf("\tReceived %d bytes\n", p->tot_len);
+    printf("\tReceived %d bytes total\n", p->tot_len);
+
+    for(; p != NULL; p = p->next )
+    {
+        printf("\tCopying message len %d bytes\n\t", p->len);
+        for( uint32_t idx = 0; idx < p->len; idx++)
+        {
+            printf("0x%x,", ((uint8_t*)p->payload)[idx]);
+        }
+        printf("\b \n");
+    }
 
     return ERR_OK;
 }

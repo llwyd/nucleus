@@ -15,6 +15,7 @@
 #include "emitter.h"
 #include "comms.h"
 #include "mqtt.h"
+#include "msg_fifo.h"
 
 #define RETRY_PERIOD_MS (1000)
 
@@ -58,6 +59,7 @@ typedef struct
     struct repeating_timer * read_timer;
     struct repeating_timer * retry_timer;
     mqtt_t * mqtt;
+    msg_fifo_t * msg_fifo;
 }
 node_state_t;
 
@@ -309,6 +311,7 @@ int main()
     char * client_name = "node_pico";
     event_fifo_t events;
     critical_section_t crit;
+    msg_fifo_t msg_fifo;
     mqtt_t mqtt =
     {
         .client_name = client_name,
@@ -319,7 +322,8 @@ int main()
     struct repeating_timer timer;
     struct repeating_timer read_timer;
     struct repeating_timer retry_timer;
-    
+   
+    /* Initialise various sub modules */ 
     stdio_init_all();
     critical_section_init(&crit);
     Enviro_Init(); 
@@ -332,6 +336,7 @@ int main()
     state_machine.read_timer = &read_timer;
     state_machine.retry_timer = &retry_timer;
     state_machine.mqtt = &mqtt;
+    state_machine.msg_fifo = &msg_fifo;
 
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
 
