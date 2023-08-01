@@ -10,12 +10,12 @@
 #include <fifo_base.h>
 
 #define MSG_FIFO_LEN (32U)
-#define MSG_LEN (128U)
+#define MSG_SIZE (128U)
 
 typedef struct
 {
     fifo_base_t base;
-    char queue[MSG_FIFO_LEN][MSG_LEN];
+    char queue[MSG_FIFO_LEN][MSG_SIZE];
     char * data;
 } msg_fifo_t;
 
