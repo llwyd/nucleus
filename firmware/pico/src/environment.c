@@ -35,7 +35,7 @@ static void ConfigureI2C(void)
 
 static void BME280_Configure( void )
 {
-    printf("Configuring BME280\n");
+    printf("\tConfiguring BME280\n");
 
     int8_t rslt = BME280_OK;
 
@@ -48,11 +48,11 @@ static void BME280_Configure( void )
     rslt = bme280_set_sensor_settings(BME280_SEL_ALL_SETTINGS, &settings, &dev);
     if( rslt != BME280_OK )
     {
-        printf("BME280 Configure FAIL\n");
+        printf("\tBME280 Configure FAIL\n");
     }
     else 
     {
-        printf("BME280 Configure OK\n");
+        printf("\tBME280 Configure OK\n");
     }
     
     
@@ -60,11 +60,11 @@ static void BME280_Configure( void )
 
     if( rslt != BME280_OK )
     {
-        printf("BME280 Set Mode FAIL\n");
+        printf("\tBME280 Set Mode FAIL\n");
     }
     else 
     {
-        printf("BME280 Set Mode OK\n");
+        printf("\tBME280 Set Mode OK\n");
     }
 }
 
@@ -87,7 +87,7 @@ int8_t BME280_I2CRead(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *i
                                      );
     if( ret0 < 0 )
     {
-        printf("I2C Read fail\n");
+        printf("\tI2C Read fail\n");
         rslt = -1;
     }
    
@@ -95,7 +95,7 @@ int8_t BME280_I2CRead(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *i
     
     if( ret1 < 0 )
     {
-        printf("I2C Read fail\n");
+        printf("\tI2C Read fail\n");
         rslt = -1;
     }
     else
@@ -126,7 +126,7 @@ int8_t BME280_I2CWrite(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, 
                                      );
     if( ret < 0 )
     {
-        printf("I2C Read fail\n");
+        printf("\tI2C Read fail\n");
         rslt = -1;
     }
     else
@@ -150,11 +150,11 @@ static void BME280_Setup( void )
     rslt = bme280_init(&dev);
     if( rslt != BME280_OK )
     {
-        printf("BME280 Init FAIL\n");
+        printf("\tBME280 Init FAIL\n");
     }
     else
     {
-        printf("BME280 Init OK\n");
+        printf("\tBME280 Init OK\n");
         BME280_Configure();
     }
 }

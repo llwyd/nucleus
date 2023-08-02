@@ -5,6 +5,21 @@ static void Enqueue( fifo_base_t * const base );
 static void Dequeue( fifo_base_t * const base );
 static void Flush( fifo_base_t * const base );
 
+extern void Message_Init(msg_fifo_t * fifo)
+{
+    printf("Initialising Message FIFO\n");
+    
+    static const fifo_vfunc_t vfunc =
+    {
+        .enq = Enqueue,
+        .deq = Dequeue,
+        .flush = Flush,
+    };
+    FIFO_Init( (fifo_base_t *)fifo, MSG_FIFO_LEN );
+    
+    fifo->base.vfunc = &vfunc;
+    fifo->data = NULL;
+}
 
 static void Enqueue( fifo_base_t * const base )
 {

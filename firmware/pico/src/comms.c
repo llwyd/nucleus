@@ -43,9 +43,15 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
             printf("0x%x,", ((uint8_t*)p->payload)[idx]);
         }
         printf("\b \n");
+        if( !FIFO_IsFull( &msg_fifo->base ) )
+        {
+            FIFO_Enqueue( msg_fifo, p->payload);
+
+            /* Only emit event if the message was actually put in buffer */
+            Emitter_EmitEvent(EVENT(MessageReceived));
+        }
     }
     
-    Emitter_EmitEvent(EVENT(MessageReceived));
     return ERR_OK;
 }
 

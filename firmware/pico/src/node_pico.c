@@ -240,6 +240,13 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         }
         case EVENT( MessageReceived ):
         {
+            /* Presumably the buffer has a message... */
+            assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
+            char * msg = FIFO_Dequeue(node_state->msg_fifo);
+            for(size_t idx = 0; idx < 4; idx++)
+            {
+                printf("0x%x\n", msg[idx]);
+            }
             ret = HANDLED();
             break;
         }
@@ -322,6 +329,7 @@ int main()
     critical_section_init(&crit);
     Enviro_Init(); 
     Events_Init(&events);
+    Message_Init(&msg_fifo);
     Comms_Init(&msg_fifo);
     Emitter_Init(&events, &crit);
     (void)WIFI_Init();
