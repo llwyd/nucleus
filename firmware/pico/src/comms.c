@@ -15,6 +15,7 @@ static ip_addr_t remote_addr;
 static struct tcp_pcb * tcp_pcb;
 static bool connected = false;
 static char * client_name = "pico";
+static msg_fifo_t * msg_fifo;
 
 /* LWIP callback functions */
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
@@ -97,7 +98,7 @@ extern bool Comms_Recv( uint8_t * buffer, uint16_t len )
     return true;
 }
 
-extern bool Comms_Init(void)
+extern bool Comms_TCPInit(void)
 {
     bool ret = false;
     connected = false;
@@ -150,5 +151,11 @@ extern bool Comms_Init(void)
 extern bool Comms_CheckStatus(void)
 {
     return connected;
+}
+
+extern void Comms_Init(msg_fifo_t * fifo)
+{
+    printf("Initialising Comms\n");
+    msg_fifo = fifo;
 }
 

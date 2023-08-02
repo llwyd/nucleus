@@ -174,7 +174,7 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
         {
             ret = HANDLED();
             Emitter_Destroy(node_state->retry_timer);
-            if(Comms_Init())
+            if(Comms_TCPInit())
             {
                 Emitter_Create(EVENT(TCPCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
             }
@@ -322,6 +322,7 @@ int main()
     critical_section_init(&crit);
     Enviro_Init(); 
     Events_Init(&events);
+    Comms_Init(&msg_fifo);
     Emitter_Init(&events, &crit);
     (void)WIFI_Init();
 
