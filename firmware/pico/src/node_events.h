@@ -10,7 +10,7 @@
     SIG( WifiConnected ) \
     SIG( WifiDisconnected ) \
     SIG( TCPRetryConnect ) \
-    SIG( TCPCheckStatus ) \
+    SIG( TCPConnected ) \
     SIG( MessageReceived ) \
 
 GENERATE_SIGNALS( SIGNALS );

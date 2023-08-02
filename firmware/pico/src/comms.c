@@ -68,6 +68,7 @@ static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
     if( err == ERR_OK )
     {
         printf("OK\n");
+        Emitter_EmitEvent(EVENT(TCPConnected));
     }
     else
     {

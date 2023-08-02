@@ -18,7 +18,7 @@
 #include "msg_fifo.h"
 #include "node_events.h"
 
-#define RETRY_PERIOD_MS (1000)
+#define RETRY_PERIOD_MS (1500)
 
 
 DEFINE_STATE( Idle );
@@ -176,7 +176,7 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
             Emitter_Destroy(node_state->retry_timer);
             if(Comms_TCPInit())
             {
-                Emitter_Create(EVENT(TCPCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
+                Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, RETRY_PERIOD_MS);
             }
             else
             {
@@ -193,18 +193,10 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
             }
             break;
         }
-        case EVENT( TCPCheckStatus ):
+        case EVENT( TCPConnected ):
         {
             Emitter_Destroy(node_state->retry_timer);
-            if( Comms_CheckStatus() )
-            {
-                printf("\tTCP Connected Successfully\n");
-                ret = TRANSITION(this, MQTTNotConnected);
-            }
-            else
-            {
-                Emitter_Create(EVENT(TCPRetryConnect), node_state->retry_timer, RETRY_PERIOD_MS);
-            }
+            ret = TRANSITION(this, MQTTNotConnected);
             break;
         }
         case EVENT( Exit ):
