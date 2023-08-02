@@ -235,10 +235,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
             char * msg = FIFO_Dequeue(node_state->msg_fifo);
-            for(size_t idx = 0; idx < 4; idx++)
-            {
-                printf("0x%x\n", msg[idx]);
-            }
+            bool success = MQTT_HandleMessage(node_state->mqtt, msg);
             ret = HANDLED();
             break;
         }

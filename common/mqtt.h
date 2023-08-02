@@ -39,7 +39,7 @@ typedef struct
 mqtt_t;
 
 extern bool MQTT_Connect( mqtt_t * mqtt );
-extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer, uint16_t len);
+extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer);
 
 extern bool MQTT_Receive( void );
 extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data );

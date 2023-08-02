@@ -506,9 +506,8 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
     return full_packet_size;
 }
 
-extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
+extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer)
 {
-    (void)len;
     bool ret = false;
     uint8_t return_code = ( buffer[0] & 0xF0 );
     uint8_t msg_length = buffer[1];
@@ -533,8 +532,7 @@ extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
     }
     
     printf("\tMQTT %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
-    //ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
-    ret = true;
+    ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
     return ret;
 
 }
