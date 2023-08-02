@@ -238,6 +238,11 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
             ret = HANDLED();
             break;
         }
+        case EVENT( MessageReceived ):
+        {
+            ret = HANDLED();
+            break;
+        }
         default:
         {
             break;

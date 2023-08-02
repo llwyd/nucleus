@@ -1,4 +1,6 @@
 #include "comms.h"
+#include "node_events.h"
+#include "emitter.h"
 
 #define MQTT_PORT ( 1883 )
 #define MQTT_TIMEOUT ( 0xb4 )
@@ -41,7 +43,8 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
         }
         printf("\b \n");
     }
-
+    
+    Emitter_EmitEvent(EVENT(MessageReceived));
     return ERR_OK;
 }
 
