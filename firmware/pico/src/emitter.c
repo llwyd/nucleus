@@ -34,3 +34,17 @@ extern void Emitter_Destroy( struct repeating_timer * timer )
     cancel_repeating_timer(timer);
 }
 
+extern bool Emitter_EmitEvent(event_t e)
+{
+    bool success = false;
+    critical_section_enter_blocking(critical);
+    if( !FIFO_IsFull(&fifo->base) )
+    {
+        FIFO_Enqueue(fifo, e);
+        success = true;
+    }
+    critical_section_exit(critical);
+
+    return success;
+}
+
