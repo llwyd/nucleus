@@ -12,6 +12,7 @@ pico_sdk_init()
 
 add_executable(node
     src/node_pico.c
+    src/node_events.h
     src/environment.c
     src/environment.h
     src/wifi.c

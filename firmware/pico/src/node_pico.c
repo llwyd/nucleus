@@ -16,21 +16,10 @@
 #include "comms.h"
 #include "mqtt.h"
 #include "msg_fifo.h"
+#include "node_events.h"
 
 #define RETRY_PERIOD_MS (1000)
 
-#define SIGNALS(SIG ) \
-    SIG( Tick ) \
-    SIG( ReadSensor ) \
-    SIG( WifiCheckStatus ) \
-    SIG( WifiConnected ) \
-    SIG( WifiDisconnected ) \
-    SIG( TCPRetryConnect ) \
-    SIG( TCPCheckStatus ) \
-    SIG( MessageReceived ) \
-
-GENERATE_SIGNALS( SIGNALS );
-GENERATE_SIGNAL_STRINGS( SIGNALS );
 
 DEFINE_STATE( Idle );
 
