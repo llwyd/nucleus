@@ -34,9 +34,9 @@ DEFINE_STATE(WifiNotConnected);
 
 DEFINE_STATE(TCPNotConnected);
 DEFINE_STATE(MQTTNotConnected);
+DEFINE_STATE(MQTTSubscribing);
 
 /*
-DEFINE_STATE(MQTTSubscribing);
 DEFINE_STATE(Idle);
 */
 
@@ -224,8 +224,10 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
             ret = HANDLED();
             break;
         }
+        case EVENT( MQTTRetryConnect ):
         case EVENT( Enter ):
         {
+            Emitter_Destroy(node_state->retry_timer);
             MQTT_Connect(node_state->mqtt);
             ret = HANDLED();
             break;
@@ -235,7 +237,40 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
             char * msg = FIFO_Dequeue(node_state->msg_fifo);
-            bool success = MQTT_HandleMessage(node_state->mqtt, msg);
+            if(MQTT_HandleMessage(node_state->mqtt, msg))
+            {
+                ret = TRANSITION(this, MQTTSubscribing);
+            }
+            else
+            {
+                Emitter_Create(EVENT(MQTTRetryConnect), node_state->retry_timer, RETRY_PERIOD_MS);
+                ret = HANDLED();
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    
+    return ret;
+}
+
+static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, WifiConnected);
+    node_state_t * node_state = (node_state_t *)this;
+    switch(s)
+    {
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( Enter ):
+        {
             ret = HANDLED();
             break;
         }
@@ -342,5 +377,8 @@ int main()
         event_t e = FIFO_Dequeue( &events );
         STATEMACHINE_Dispatch(&state_machine.state, e);
     }
+
+    /* Shouldn't get here! */
+    assert(false);
     return 0;
 }

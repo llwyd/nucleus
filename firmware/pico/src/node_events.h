@@ -12,6 +12,7 @@
     SIG( TCPRetryConnect ) \
     SIG( TCPConnected ) \
     SIG( MessageReceived ) \
+    SIG( MQTTRetryConnect ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
