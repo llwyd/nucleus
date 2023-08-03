@@ -320,6 +320,7 @@ int main()
     Events_Init(&events);
     Message_Init(&msg_fifo);
     Comms_Init(&msg_fifo);
+    MQTT_Init(&mqtt);
     Emitter_Init(&events, &crit);
     (void)WIFI_Init();
 

@@ -1,11 +1,13 @@
 #include "mqtt.h"
 
 #include <time.h>
+#include "fifo_base.h"
 #include <assert.h>
 
 #define MQTT_PORT ( "1883" )
 #define BUFFER_SIZE (128)
 #define ID_BUFFER_SIZE (32)
+#define RESP_FIFO_LEN (32U)
 
 #define MQTT_TIMEOUT ( 0xb4 )
 
@@ -26,6 +28,20 @@ typedef enum mqtt_msg_type_t
     mqtt_msg_Disconnect,
 } mqtt_msg_type_t;
 
+typedef struct
+{
+    mqtt_msg_type_t msg_type;
+    uint16_t seq_num;
+}
+mqtt_resp_t;
+
+typedef struct
+{
+    fifo_base_t base;
+    mqtt_resp_t queue[RESP_FIFO_LEN];
+    mqtt_resp_t data;
+}
+resp_fifo_t;
 
 typedef struct mqtt_pub_t
 {
@@ -89,7 +105,15 @@ static char * broker_port;
 
 static uint16_t send_msg_id = 0x0000;
 
-msg_id_t msg_id;
+static msg_id_t msg_id;
+
+/* Functions used for resp_fifo */
+static resp_fifo_t resp_fifo;
+
+static void InitRespFifo(resp_fifo_t * fifo);
+static void RespEnqueue( fifo_base_t * const fifo );
+static void RespDequeue( fifo_base_t * const fifo );
+static void RespFlush( fifo_base_t * const fifo );
 
 mqtt_data_t Extract( char * data, mqtt_type_t type )
 {
@@ -506,37 +530,6 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
     return full_packet_size;
 }
 
-extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer)
-{
-    bool ret = false;
-    uint8_t return_code = ( buffer[0] & 0xF0 );
-    uint8_t msg_length = buffer[1];
-    mqtt_msg_type_t msg_type;
-
-    switch( return_code )
-    {
-        case MQTT_CONNACK_CODE:
-            msg_type = mqtt_msg_Connect;
-            break;
-        case MQTT_PUBLISH_CODE:
-        case MQTT_PUBACK_CODE:
-            msg_type = mqtt_msg_Publish;
-            break;
-        case MQTT_SUBACK_CODE:
-            msg_type = mqtt_msg_Subscribe;
-            break;
-        default:
-            printf("\tMQTT ERROR! Bad Receive Packet\n");
-            assert( false );
-            break;
-    }
-    
-    printf("\tMQTT %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
-    ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
-    return ret;
-
-}
-
 static bool Decode( uint8_t * buffer, uint16_t len )
 {
     (void)len;
@@ -634,9 +627,16 @@ extern bool MQTT_Subscribe( void )
     return success;
 }
 
+extern void MQTT_Init( mqtt_t * mqtt )
+{
+    printf("Initialising MQTT\n");
+    InitRespFifo(&resp_fifo);
+}
+
 extern bool MQTT_Connect( mqtt_t * mqtt )
 {
     assert(mqtt != NULL );
+    bool success = false;
     memset(send_buffer, 0x00, 128);
     printf("\tAttempting MQTT Connection\n");
     printf("\tClient name: %s\n", mqtt->client_name);
@@ -667,6 +667,122 @@ extern bool MQTT_Connect( mqtt_t * mqtt )
     send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
     full_packet_size = total_packet_size + 2;
 
-    return mqtt->send( send_buffer, full_packet_size );
+    if( !FIFO_IsFull(&resp_fifo.base))
+    {
+        if(mqtt->send( send_buffer, full_packet_size ))
+        {
+            mqtt_resp_t expected_resp =
+            {
+                .msg_type = mqtt_msg_Connect,
+                .seq_num = 0U,
+            };
+            FIFO_Enqueue( &resp_fifo, expected_resp);
+            success = true;
+        }
+    }
+    return success;
+}
+
+extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer)
+{
+    bool ret = false;
+    uint8_t return_code = ( buffer[0] & 0xF0 );
+    uint8_t msg_length = buffer[1];
+    mqtt_msg_type_t msg_type;
+    bool expected = false;
+
+    switch( return_code )
+    {
+        case MQTT_CONNACK_CODE:
+        {
+            msg_type = mqtt_msg_Connect;
+            assert(!FIFO_IsEmpty(&resp_fifo.base));
+            mqtt_resp_t resp = FIFO_Dequeue(&resp_fifo);
+            if(msg_type == resp.msg_type)
+            {
+                expected = true;
+            }
+            break;
+        }
+        case MQTT_PUBACK_CODE:
+        {
+            msg_type = mqtt_msg_Publish;
+            assert(!FIFO_IsEmpty(&resp_fifo.base));
+            mqtt_resp_t resp = FIFO_Dequeue(&resp_fifo);
+            if(msg_type == resp.msg_type)
+            {
+                expected = true;
+            }
+            break;
+        }
+        case MQTT_PUBLISH_CODE:
+        {
+            /* This is an unsolicited message, so would not expect a response */
+            expected = true;
+            msg_type = mqtt_msg_Publish;
+            break;
+        }
+        case MQTT_SUBACK_CODE:
+        {
+            msg_type = mqtt_msg_Subscribe;
+            assert(!FIFO_IsEmpty(&resp_fifo.base));
+            mqtt_resp_t resp = FIFO_Dequeue(&resp_fifo);
+            if(msg_type == resp.msg_type)
+            {
+                expected = true;
+            }
+            break;
+        }
+        default:
+        {
+            printf("\tMQTT ERROR! Bad Receive Packet\n");
+            assert( false );
+            break;
+        }
+    }
+    
+    printf("\tMQTT %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
+    
+    if(expected)
+    {
+        ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
+    }
+
+    return ret;
+
+}
+
+static void InitRespFifo(resp_fifo_t * fifo)
+{
+    printf("Initialising MQTT FIFO\n");
+    
+    static const fifo_vfunc_t vfunc =
+    {
+        .enq = RespEnqueue,
+        .deq = RespDequeue,
+        .flush = RespFlush,
+    };
+    FIFO_Init( (fifo_base_t *)fifo, RESP_FIFO_LEN );
+    
+    fifo->base.vfunc = &vfunc;
+    memset(fifo->queue, 0x00, RESP_FIFO_LEN * sizeof(fifo->data));
+}
+
+static void RespEnqueue( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    ENQUEUE_BOILERPLATE( resp_fifo_t, base );
+}
+
+static void RespDequeue( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    DEQUEUE_BOILERPLATE( resp_fifo_t, base );
+}
+
+static void RespFlush( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    FLUSH_BOILERPLATE( resp_fifo_t, base );
 }
 

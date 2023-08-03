@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
+#include "fifo_base.h"
 
 typedef enum mqtt_type_t
 {
@@ -38,12 +39,14 @@ typedef struct
 }
 mqtt_t;
 
+/* Rewrite */
+extern void MQTT_Init( mqtt_t * mqtt );
 extern bool MQTT_Connect( mqtt_t * mqtt );
 extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer);
 
+/* Legacy stuff */
 extern bool MQTT_Receive( void );
 extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data );
-extern void MQTT_Init( char * ip, char * name, mqtt_subs_t * subscriptions, uint8_t number_subs );
 extern bool MQTT_Subscribe( void );
 extern bool MQTT_MessageReceived(void);
 extern void MQTT_CreatePoll(void);
