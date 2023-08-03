@@ -35,8 +35,6 @@ static void ConfigureI2C(void)
 
 static void BME280_Configure( void )
 {
-    printf("\tConfiguring BME280\n");
-
     int8_t rslt = BME280_OK;
 
     settings.osr_h     = BME280_OVERSAMPLING_1X;
