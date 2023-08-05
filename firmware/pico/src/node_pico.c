@@ -270,6 +270,11 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
+        case EVENT( MessageReceived ):
+        {
+            ret = HANDLED();
+            break;
+        }
         case EVENT( Exit ):
         {
             ret = HANDLED();
@@ -277,6 +282,8 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
         }
         case EVENT( Enter ):
         {
+            Emitter_Destroy(node_state->retry_timer);
+            MQTT_Subscribe(node_state->mqtt);
             ret = HANDLED();
             break;
         }

@@ -614,6 +614,68 @@ extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data 
     return true;
 }
 
+
+static bool Subscribe( mqtt_t * mqtt, mqtt_subs_t * sub)
+{
+    printf("\tSubscribing to %s\n", sub->name);
+    bool success = false;
+    uint16_t full_packet_size = 0;
+    //mqtt_subs_t * sub_data = (mqtt_subs_t *) msg_data;
+    const unsigned char mqtt_template_subscribe[] =
+    {
+        0x82,   // message type, qos, no retain
+        0x00,   // length of message
+    };
+    
+    char full_topic[64];
+    memset( full_topic, 0x00, 64);
+            
+    strcat(full_topic, parent_topic);
+    strcat(full_topic, "/");
+    strcat(full_topic, sub->name);
+    strcat(full_topic,"/");
+    strcat(full_topic, client_name);
+
+    memset(send_buffer, 0x00, 128);
+
+    /* Construct Packet */
+    uint8_t * msg_ptr = send_buffer;
+    uint16_t packet_size = (uint16_t)sizeof( mqtt_template_subscribe );
+    uint16_t topic_size = strlen(full_topic );
+
+    memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
+    msg_ptr+= packet_size;
+            
+    *msg_ptr++ = (uint8_t)((send_msg_id >> 8U)&0xFF);
+    *msg_ptr++ = (uint8_t)(send_msg_id&0xFF);
+            
+    msg_ptr++;
+    *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
+    memcpy(msg_ptr, full_topic, topic_size); 
+            
+    uint16_t total_packet_size = packet_size + topic_size + 1 + 2;
+    send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
+    full_packet_size = total_packet_size + 2;
+            
+    
+    if( !FIFO_IsFull(&resp_fifo.base))
+    {
+        if(mqtt->send( send_buffer, full_packet_size ))
+        {
+            mqtt_resp_t expected_resp =
+            {
+                .msg_type = mqtt_msg_Connect,
+                .seq_num = 0U,
+            };
+            FIFO_Enqueue( &resp_fifo, expected_resp);
+            IncrementSendMessageID();
+            success = true;
+        }
+    }
+
+    return success;
+}
+
 extern bool MQTT_Subscribe( mqtt_t * mqtt )
 {
     assert( mqtt != NULL );
@@ -622,7 +684,7 @@ extern bool MQTT_Subscribe( mqtt_t * mqtt )
     bool success = true;
     for( uint8_t i = 0; i < mqtt->num_subs; i++ )
     {
-//        success &= Transmit( mqtt_msg_Subscribe, &sub[i] );
+        success &= Subscribe( mqtt, &mqtt->subs[i] );
     }
 
     return success;
