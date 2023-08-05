@@ -24,6 +24,7 @@
 DEFINE_STATE( Idle );
 
 /* Top level state */
+//DEFINE_STATE(Setup);
 DEFINE_STATE(Root);
 
 /* Second level */
@@ -31,14 +32,10 @@ DEFINE_STATE(WifiConnected);
 DEFINE_STATE(WifiNotConnected);
 
 /* Third level */
-
 DEFINE_STATE(TCPNotConnected);
 DEFINE_STATE(MQTTNotConnected);
 DEFINE_STATE(MQTTSubscribing);
-
-/*
 DEFINE_STATE(Idle);
-*/
 
 /* Inherit from state_t */
 typedef struct
@@ -51,6 +48,15 @@ typedef struct
     msg_fifo_t * msg_fifo;
 }
 node_state_t;
+
+static void SubscribeCallback(mqtt_data_t * data);
+
+static mqtt_subs_t subs[3] = 
+{
+    {"test_sub1", mqtt_type_bool, SubscribeCallback},
+    {"test_sub2", mqtt_type_bool, SubscribeCallback},
+    {"test_sub3", mqtt_type_bool, SubscribeCallback},
+};
 
 static state_ret_t State_Root( state_t * this, event_t s )
 {
@@ -290,37 +296,9 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
     switch(s)
     {
+        case EVENT( Exit ):
         case EVENT( Enter ):
         {
-            WIFI_TryConnect();
-            Emitter_Create(EVENT(Tick), node_state->timer, 500);
-            Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
-            Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 5000);
-            ret = HANDLED();
-            break;
-        }
-        case EVENT( ReadSensor ):
-        {
-            Enviro_Read();
-            Enviro_Print();
-            ret = HANDLED();
-            break;
-        }
-        case EVENT( WifiCheckStatus ):
-        {
-            if( WIFI_CheckStatus() )
-            {
-                printf("\tWifi Connected! :)\n");
-                Emitter_Destroy(node_state->retry_timer);
-                WIFI_SetLed();
-            }
-            else
-            {
-                printf("\tWifi Disconnected! :(\n");
-                WIFI_TryConnect();
-                Emitter_Destroy(node_state->retry_timer);
-                Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, 5000);
-            }
             ret = HANDLED();
             break;
         }
@@ -329,6 +307,12 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             break;
         }
     }
+}
+
+static void SubscribeCallback(mqtt_data_t * data)
+{
+    (void)data;
+    printf("\tSubscribe Callback Test, Data: %d\n", data->i);
 }
 
 int main()
@@ -342,6 +326,8 @@ int main()
         .client_name = client_name,
         .send = Comms_Send,
         .recv = Comms_Recv,
+        .subs = subs,
+        .num_subs = 3U,
     };
 
     struct repeating_timer timer;
@@ -353,6 +339,7 @@ int main()
     critical_section_init(&crit);
     Enviro_Init(); 
     Events_Init(&events);
+    
     Message_Init(&msg_fifo);
     Comms_Init(&msg_fifo);
     MQTT_Init(&mqtt);

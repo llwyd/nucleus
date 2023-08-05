@@ -614,12 +614,13 @@ extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data 
     return true;
 }
 
-extern bool MQTT_Subscribe( void )
+extern bool MQTT_Subscribe( mqtt_t * mqtt )
 {
-    assert( num_sub > 0U );
+    assert( mqtt != NULL );
+    assert( mqtt->num_subs > 0U );
 
     bool success = true;
-    for( uint8_t i = 0; i < num_sub; i++ )
+    for( uint8_t i = 0; i < mqtt->num_subs; i++ )
     {
 //        success &= Transmit( mqtt_msg_Subscribe, &sub[i] );
     }

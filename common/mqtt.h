@@ -36,18 +36,20 @@ typedef struct
     char * client_name;
     bool (*send)(uint8_t * buffer, uint16_t len );
     bool (*recv)(uint8_t * buffer, uint16_t len );
+    mqtt_subs_t * subs;
+    uint16_t num_subs;
 }
 mqtt_t;
 
 /* Rewrite */
 extern void MQTT_Init( mqtt_t * mqtt );
 extern bool MQTT_Connect( mqtt_t * mqtt );
+extern bool MQTT_Subscribe( mqtt_t * mqtt );
 extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer);
 
 /* Legacy stuff */
 extern bool MQTT_Receive( void );
 extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data );
-extern bool MQTT_Subscribe( void );
 extern bool MQTT_MessageReceived(void);
 extern void MQTT_CreatePoll(void);
 bool MQTT_AllSubscribed( void );
