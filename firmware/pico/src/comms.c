@@ -141,7 +141,7 @@ extern bool Comms_TCPInit(void)
     /* Define Callbacks */
     // tcp_arg
     tcp_sent(tcp_pcb, Sent);
-    tcp_poll(tcp_pcb, Poll, POLL_PERIOD);
+//    tcp_poll(tcp_pcb, Poll, POLL_PERIOD);
     tcp_recv(tcp_pcb, Recv);
     tcp_err(tcp_pcb, Error);
 

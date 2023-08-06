@@ -58,11 +58,11 @@ typedef struct msg_id_t
 } msg_id_t;
 
 /* Functions for handling acks */
-bool Ack_Connect( uint8_t * buff, uint8_t len );
-bool Ack_Subscribe( uint8_t * buff, uint8_t len );
-bool Ack_Publish( uint8_t * buff, uint8_t len );
-bool Ack_Ping( uint8_t * buff, uint8_t len );
-bool Ack_Disconnect( uint8_t * buff, uint8_t len );
+bool Ack_Connect(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
+bool Ack_Subscribe(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
+bool Ack_Publish(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
+bool Ack_Ping(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
+bool Ack_Disconnect(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
 
 static void IncrementSendMessageID(void);
 static bool CheckMsgIDBuffer( uint16_t val);
@@ -73,7 +73,7 @@ typedef struct mqtt_pairs_t
     mqtt_msg_type_t msg_type;
     uint8_t send_code;
     uint8_t recv_code;
-    bool (*ack_fn)(uint8_t * buff, uint8_t len);
+    bool (*ack_fn)(mqtt_t * mqtt, uint8_t * buff, uint8_t len);
     char * name;
     char * ack_name;
 } mqtt_pairs_t;
@@ -147,7 +147,7 @@ mqtt_data_t Extract( char * data, mqtt_type_t type )
     return d;
 }
 
-bool Ack_Connect( uint8_t * buff, uint8_t len )
+bool Ack_Connect(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
     bool ret = false;
 
@@ -181,7 +181,7 @@ bool Ack_Connect( uint8_t * buff, uint8_t len )
     return ret;
 }
 
-bool Ack_Subscribe( uint8_t * buff, uint8_t len )
+bool Ack_Subscribe(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
     bool ret = false;
     uint8_t message_code = *buff++;
@@ -214,7 +214,7 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
     return ret;
 }
 
-bool Ack_Publish( uint8_t * buff, uint8_t len )
+bool Ack_Publish(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
     uint8_t return_code = buff[0];
     uint8_t msg_len = buff[1];
@@ -259,24 +259,24 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
         msg += topic_len;
         msg_len -= topic_len;
         printf("\tPUBLISH msg id: %d\n", msg_id );
-        printf("\t topic: %s\n", topic );
+        printf("\ttopic: %s\n", topic );
         
-        for( uint8_t i = 0; i < num_sub ; i++ )
+        for( uint8_t i = 0; i < mqtt->num_subs ; i++ )
         {
             memset(full_topic, 0x00, 64);
             
             strcat(full_topic, parent_topic);
             strcat(full_topic,"/");
-            strcat(full_topic, sub[i].name);
+            strcat(full_topic, mqtt->subs[i].name);
             strcat(full_topic, "/");
-            strcat(full_topic, client_name );
+            strcat(full_topic, mqtt->client_name );
             
             if( strcmp( full_topic, topic) == 0)
             {
                 memcpy(data, msg, msg_len);
                 printf("\t  data:%s\n",data);
-                mqtt_data_t decode_data = Extract( data, sub[i].format);
-                sub[i].sub_fn( &decode_data );
+                mqtt_data_t decode_data = Extract( data, mqtt->subs[i].format);
+                mqtt->subs[i].sub_fn( &decode_data );
                 
                 ret = true;
             }
@@ -286,14 +286,14 @@ bool Ack_Publish( uint8_t * buff, uint8_t len )
     return ret;
 }
 
-bool Ack_Ping( uint8_t * buff, uint8_t len )
+bool Ack_Ping(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
     (void)buff;
     (void)len;
     return true;
 }
 
-bool Ack_Disconnect( uint8_t * buff, uint8_t len )
+bool Ack_Disconnect(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
     (void)buff;
     (void)len;
@@ -552,7 +552,7 @@ static bool Decode( uint8_t * buffer, uint16_t len )
     }
     
     printf("\tMQTT %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
-    ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
+//    ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
 
     return ret;
 }
@@ -803,7 +803,7 @@ extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer)
     
     if(expected)
     {
-        ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
+        ret = msg_code[(int)msg_type].ack_fn( mqtt, buffer, msg_length );
     }
 
     return ret;
