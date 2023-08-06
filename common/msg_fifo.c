@@ -29,8 +29,10 @@ static void Enqueue( fifo_base_t * const base )
     /* Clear what was in there */
     memset(fifo->queue[ fifo->base.write_index ], 0x00, MSG_SIZE);
 
+    int bytes_to_copy = fifo->data[1] + 2U;
+
     /* Copy the new string */
-    strncpy(fifo->queue[ fifo->base.write_index ], fifo->data, MSG_SIZE);
+    memcpy(fifo->queue[ fifo->base.write_index ], fifo->data, bytes_to_copy);
 
     fifo->base.write_index++;
     fifo->base.fill++;

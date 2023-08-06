@@ -46,12 +46,12 @@ extern void MQTT_Init( mqtt_t * mqtt );
 extern bool MQTT_Connect( mqtt_t * mqtt );
 extern bool MQTT_Subscribe( mqtt_t * mqtt );
 extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer);
+extern bool MQTT_AllSubscribed( mqtt_t * mqtt );
 
 /* Legacy stuff */
 extern bool MQTT_Receive( void );
 extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data );
 extern bool MQTT_MessageReceived(void);
 extern void MQTT_CreatePoll(void);
-bool MQTT_AllSubscribed( void );
 
 #endif /* _MQTT_H_ */

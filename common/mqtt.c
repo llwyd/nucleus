@@ -196,7 +196,7 @@ bool Ack_Subscribe( uint8_t * buff, uint8_t len )
 
     printf("\tSUBACK msg id: %d\n", msg_id );
 
-    bool success = CheckMsgIDBuffer( msg_id );
+    bool success = true;
 
     if( success )
     {
@@ -298,11 +298,6 @@ bool Ack_Disconnect( uint8_t * buff, uint8_t len )
     (void)buff;
     (void)len;
     return true;
-}
-
-bool MQTT_AllSubscribed( void )
-{
-    return ( num_sub == successful_subs );
 }
 
 static void FlushMsgIDBuffer( void )
@@ -664,8 +659,8 @@ static bool Subscribe( mqtt_t * mqtt, mqtt_subs_t * sub)
         {
             mqtt_resp_t expected_resp =
             {
-                .msg_type = mqtt_msg_Connect,
-                .seq_num = 0U,
+                .msg_type = mqtt_msg_Subscribe,
+                .seq_num = send_msg_id,
             };
             FIFO_Enqueue( &resp_fifo, expected_resp);
             IncrementSendMessageID();
@@ -813,6 +808,11 @@ extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer)
 
     return ret;
 
+}
+
+extern bool MQTT_AllSubscribed( mqtt_t * mqtt )
+{
+    return ( mqtt->num_subs == successful_subs );
 }
 
 static void InitRespFifo(resp_fifo_t * fifo)

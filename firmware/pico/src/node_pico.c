@@ -272,7 +272,25 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
     {
         case EVENT( MessageReceived ):
         {
-            ret = HANDLED();
+            assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
+            char * msg = FIFO_Dequeue(node_state->msg_fifo);
+            if(MQTT_HandleMessage(node_state->mqtt, msg))
+            {
+                if(MQTT_AllSubscribed(node_state->mqtt))
+                {
+                    ret = TRANSITION(this, Idle);
+                }
+                else
+                {
+                    ret = HANDLED();
+                }
+            }
+            else
+            {
+                /* This doesn't work, need to fix */
+                ret = TRANSITION(this, MQTTNotConnected);
+                assert(false);
+            }
             break;
         }
         case EVENT( Exit ):
@@ -298,7 +316,7 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
 static state_ret_t State_Idle( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = NO_PARENT(this);
+    state_ret_t ret = PARENT(this, Root);
     node_state_t * node_state = (node_state_t *)this;
 
     switch(s)
@@ -314,6 +332,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             break;
         }
     }
+
+    return ret;
 }
 
 static void SubscribeCallback(mqtt_data_t * data)
