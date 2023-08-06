@@ -629,7 +629,7 @@ static bool Subscribe( mqtt_t * mqtt, mqtt_subs_t * sub)
     strcat(full_topic, "/");
     strcat(full_topic, sub->name);
     strcat(full_topic,"/");
-    strcat(full_topic, client_name);
+    strcat(full_topic, mqtt->client_name);
 
     memset(send_buffer, 0x00, 128);
 
