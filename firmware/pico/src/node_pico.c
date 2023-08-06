@@ -73,7 +73,7 @@ static state_ret_t State_Setup( state_t * this, event_t s )
         }
         case EVENT( Enter ):
         {
-            Emitter_Create(EVENT(Tick), node_state->timer, 250);
+//            Emitter_Create(EVENT(Tick), node_state->timer, 250);
             ret = HANDLED();
             break;
         }

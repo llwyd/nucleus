@@ -179,13 +179,15 @@ extern void Enviro_Read(void)
 
 extern void Enviro_Print(void)
 {
-    /*
+    
     printf("\tTemperature: %.2f\n", bme280_rawData.temperature);
     printf("\tHumidity: %.2f\n", bme280_rawData.humidity);
     printf("\tPressure: %.2f\n", bme280_rawData.pressure);
-    */
+    
+    /*
     printf("\tTemperature: %d (0x%x)\n", bme280_rawData.temperature, bme280_rawData.temperature);
     printf("\tHumidity: %d (0x%x)\n", bme280_rawData.humidity, bme280_rawData.humidity);
     printf("\tPressure: %d (0x%x)\n", bme280_rawData.pressure, bme280_rawData.pressure);
+    */
 }
 
