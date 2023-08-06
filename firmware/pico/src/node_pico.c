@@ -24,7 +24,7 @@
 DEFINE_STATE( Idle );
 
 /* Top level state */
-//DEFINE_STATE(Setup);
+DEFINE_STATE(Setup);
 DEFINE_STATE(Root);
 
 /* Second level */
@@ -58,31 +58,30 @@ static mqtt_subs_t subs[3] =
     {"test_sub3", mqtt_type_bool, SubscribeCallback},
 };
 
-static state_ret_t State_Root( state_t * this, event_t s )
+static state_ret_t State_Setup( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
     state_ret_t ret = NO_PARENT(this);
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
-        case EVENT( ReadSensor ):
+        case EVENT( Tick ):
         {
-            Enviro_Read();
-            Enviro_Print();
+            WIFI_ToggleLed();
             ret = HANDLED();
             break;
         }
         case EVENT( Enter ):
         {
-            //Emitter_Create(EVENT(Tick), node_state->timer, 500);
-            //Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
+            Emitter_Create(EVENT(Tick), node_state->timer, 250);
             ret = HANDLED();
             break;
         }
         case EVENT( Exit ):
         {
             /* Should never try and leave here! */
-            assert(false);
+            //assert(false);
+            ret = HANDLED();
             break;
         }
         default:
@@ -97,13 +96,12 @@ static state_ret_t State_Root( state_t * this, event_t s )
 static state_ret_t State_WifiConnected( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this,Root);
+    state_ret_t ret = PARENT(this,Setup);
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
         case EVENT( Enter ):
         {
-            WIFI_SetLed();
             ret = HANDLED();
             break;
         }
@@ -123,14 +121,13 @@ static state_ret_t State_WifiConnected( state_t * this, event_t s )
 static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, Root);
+    state_ret_t ret = PARENT(this, Setup);
     node_state_t * node_state = (node_state_t *)this;
 
     switch(s)
     {
         case EVENT( Enter ):
         {
-            WIFI_ClearLed();
             WIFI_TryConnect();
             Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
             ret = HANDLED();
@@ -313,6 +310,35 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
     
     return ret;
 }
+
+static state_ret_t State_Root( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = NO_PARENT(this);
+    node_state_t * node_state = (node_state_t *)this;
+    switch(s)
+    {
+        case EVENT( Enter ):
+        {
+            Emitter_Destroy(node_state->timer);
+            Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
+            WIFI_SetLed();
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            /* Should never try and leave here! */
+            Emitter_Destroy(node_state->read_timer);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return ret;
+}
 static state_ret_t State_Idle( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
@@ -324,6 +350,13 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Exit ):
         case EVENT( Enter ):
         {
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( ReadSensor ):
+        {
+            Enviro_Read();
+            Enviro_Print();
             ret = HANDLED();
             break;
         }

@@ -14,5 +14,6 @@ extern bool WIFI_CheckStatus(void);
 extern void WIFI_TryConnect(void);
 extern void WIFI_SetLed(void);
 extern void WIFI_ClearLed(void);
+extern void WIFI_ToggleLed(void);
 
 #endif /* WIFI_H_ */

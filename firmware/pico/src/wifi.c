@@ -50,3 +50,12 @@ extern void WIFI_ClearLed(void)
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0); 
 }
 
+extern void WIFI_ToggleLed(void)
+{
+    static bool status = true;
+
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, status);
+
+    status ^= true;
+}
+
