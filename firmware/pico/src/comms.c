@@ -6,7 +6,7 @@
 #define MQTT_TIMEOUT ( 0xb4 )
 
 #define BUFFER_SIZE (256)
-#define POLL_PERIOD (2)
+#define POLL_PERIOD (5U)
 
 static uint8_t send_buffer[ BUFFER_SIZE ];
 static uint8_t recv_buffer[ BUFFER_SIZE ];
@@ -34,10 +34,11 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
     printf("\tTCP Recv\n");
     printf("\tReceived %d bytes total\n", p->tot_len);
-
+    cyw43_arch_lwip_check();
+    struct pbuf * q = p;
     for(; p != NULL; p = p->next )
     {
-        printf("\tMessage len %d bytes\n", p->len);
+        //printf("\tMessage len %d bytes\n", p->len);
         
         /* Handle bunched together mqtt packets */
         
@@ -47,14 +48,14 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
         for( uint32_t idx = 0; idx < p->len; idx+=size_to_copy )
         {
             size_to_copy = *(msg_ptr + 1) + 2U;
+
             printf("\tSize to copy: %d\n\t", size_to_copy);
-            
             for( uint32_t jdx = 0; jdx < size_to_copy; jdx++)
             {
                 printf("0x%x,", msg_ptr[jdx]);
             }
+            
             printf("\b \n");
-
             if( !FIFO_IsFull( &msg_fifo->base ) )
             {
                 FIFO_Enqueue( msg_fifo, msg_ptr);
@@ -66,7 +67,9 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
             msg_ptr += size_to_copy;
         }
     }
-    
+    tcp_recved(tpcb, p->tot_len);
+    pbuf_free(q);
+
     return ERR_OK;
 }
 
@@ -141,7 +144,7 @@ extern bool Comms_TCPInit(void)
     /* Define Callbacks */
     // tcp_arg
     tcp_sent(tcp_pcb, Sent);
-//    tcp_poll(tcp_pcb, Poll, POLL_PERIOD);
+    //tcp_poll(tcp_pcb, Poll, POLL_PERIOD);
     tcp_recv(tcp_pcb, Recv);
     tcp_err(tcp_pcb, Error);
 

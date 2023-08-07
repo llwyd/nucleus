@@ -228,8 +228,8 @@ bool Ack_Publish(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
     if( return_code == MQTT_PUBACK_CODE )
     {
         printf("\tPUBACK msg id: %d\n", msg_id );
-        bool success = CheckMsgIDBuffer( msg_id );
 
+        bool success = true;
         if( success )
         {
             ret = true;
@@ -481,8 +481,8 @@ static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
             strcat(text_buff, client_name);
             uint16_t topic_size = strlen(text_buff);
 
-            printf("\t topic: %s\n", text_buff);
-            printf("\t  size: %d\n", topic_size);
+            printf("\ttopic: %s\n", text_buff);
+            printf("\tsize: %d\n", topic_size);
 
             uint8_t * msg_ptr = send_buffer;
             *msg_ptr++ = ( msg_code[mqtt_msg_Publish].send_code | 0x2 );
@@ -685,8 +685,78 @@ extern bool MQTT_Subscribe( mqtt_t * mqtt )
     return success;
 }
 
+extern bool MQTT_Publish( mqtt_t * mqtt, char * topic, char * data)
+{
+    assert(mqtt!=NULL);
+    assert(topic!=NULL);
+    assert(data!=NULL);
+    bool success = false;
+
+    uint16_t full_packet_size = 0;
+    memset(send_buffer, 0x00, 128);
+            
+    char text_buff[64];
+    memset( text_buff, 0x00, 64);
+            
+    strcat(text_buff, parent_topic);
+    strcat(text_buff,"/");
+    strcat(text_buff, topic);
+    strcat(text_buff, "/");
+    strcat(text_buff, mqtt->client_name);
+    uint16_t topic_size = strlen(text_buff);
+
+    printf("\t topic: %s\n", text_buff);
+    printf("\t  size: %d\n", topic_size);
+
+    uint8_t * msg_ptr = send_buffer;
+    *msg_ptr++ = ( msg_code[mqtt_msg_Publish].send_code | 0x2 );
+    msg_ptr++; /* This is where message length would go */ 
+    msg_ptr++; /* MSB topic length */
+    *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
+    memcpy(msg_ptr, text_buff, topic_size);
+    memset( text_buff, 0x00, 64);
+    msg_ptr+=topic_size;
+
+    /* Message ID */
+    *msg_ptr++ = (uint8_t)((send_msg_id >> 8U)&0xFF);
+    *msg_ptr++ = (uint8_t)(send_msg_id&0xFF);
+            
+    strcat( text_buff, data );
+
+    uint8_t data_len = strlen(text_buff);
+            
+    printf("\t  data: %s\n", text_buff);
+    printf("\t  size: %d\n", data_len);
+
+    memcpy(msg_ptr, text_buff, data_len);
+
+    /* Topic len + topic + data + msg id */
+    uint8_t total_packet_size = (uint8_t)topic_size + data_len + 2 + 2;
+    send_buffer[1] = total_packet_size;
+    /* header and size byte */
+    full_packet_size = total_packet_size + 2;
+
+    if( !FIFO_IsFull(&resp_fifo.base))
+    {
+        if(mqtt->send( send_buffer, full_packet_size ))
+        {
+            mqtt_resp_t expected_resp =
+            {
+                .msg_type = mqtt_msg_Publish,
+                .seq_num = send_msg_id,
+            };
+            FIFO_Enqueue( &resp_fifo, expected_resp);
+            IncrementSendMessageID();
+            success = true;
+        }
+    }
+
+    return success;
+}
+
 extern void MQTT_Init( mqtt_t * mqtt )
 {
+    assert(mqtt!=NULL);
     printf("Initialising MQTT\n");
     InitRespFifo(&resp_fifo);
 }

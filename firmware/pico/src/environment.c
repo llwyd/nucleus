@@ -191,3 +191,10 @@ extern void Enviro_Print(void)
     */
 }
 
+extern void Enviro_PrintToBuffer(char * buffer)
+{
+    memset(buffer,0x00, 8U);
+    snprintf(buffer, 8U,"%.2f", bme280_rawData.temperature);
+}
+
+

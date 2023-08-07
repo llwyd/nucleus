@@ -320,7 +320,6 @@ static state_ret_t State_Root( state_t * this, event_t s )
     {
         case EVENT( Enter ):
         {
-            Emitter_Destroy(node_state->timer);
             Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
             WIFI_SetLed();
             ret = HANDLED();
@@ -357,6 +356,9 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             Enviro_Read();
             Enviro_Print();
+            char temp_text[8];
+            Enviro_PrintToBuffer(temp_text);
+            MQTT_Publish(node_state->mqtt,"temperature_live",temp_text);
             ret = HANDLED();
             break;
         }
@@ -386,7 +388,7 @@ static void SubscribeCallback(mqtt_data_t * data)
 
 int main()
 {
-    char * client_name = "node_pico";
+    char * client_name = "pico";
     event_fifo_t events;
     critical_section_t crit;
     msg_fifo_t msg_fifo;

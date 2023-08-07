@@ -11,5 +11,6 @@
 extern void Enviro_Init(void);
 extern void Enviro_Read(void);
 extern void Enviro_Print(void);
+extern void Enviro_PrintToBuffer(char * buffer);
 
 #endif /* ENVIRONMENT_H_ */
