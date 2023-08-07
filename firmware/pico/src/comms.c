@@ -35,41 +35,52 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
     printf("\tTCP Recv\n");
     printf("\tReceived %d bytes total\n", p->tot_len);
     //cyw43_arch_lwip_check();
-    for(struct pbuf *q = p; q != NULL; q = q->next )
+    err_t ret = ERR_OK;
+
+    if( p != NULL )
     {
-        //printf("\tMessage len %d bytes\n", p->len);
-        
-        /* Handle bunched together mqtt packets */
-        
-        uint8_t * msg_ptr = (uint8_t*)q->payload;
-        uint32_t size_to_copy = 0U;
-
-        for( uint32_t idx = 0; idx < q->len; idx+=size_to_copy )
+        for(struct pbuf *q = p; q != NULL; q = q->next )
         {
-            size_to_copy = *(msg_ptr + 1) + 2U;
-
-            printf("\tSize to copy: %d\n\t", size_to_copy);
-            for( uint32_t jdx = 0; jdx < size_to_copy; jdx++)
-            {
-                printf("0x%x,", msg_ptr[jdx]);
-            }
+            //printf("\tMessage len %d bytes\n", p->len);
             
-            printf("\b \n");
-            if( !FIFO_IsFull( &msg_fifo->base ) )
+            /* Handle bunched together mqtt packets */
+            
+            uint8_t * msg_ptr = (uint8_t*)q->payload;
+            uint32_t size_to_copy = 0U;
+
+            for( uint32_t idx = 0; idx < q->len; idx+=size_to_copy )
             {
-                FIFO_Enqueue( msg_fifo, msg_ptr);
+                size_to_copy = *(msg_ptr + 1) + 2U;
 
-                /* Only emit event if the message was actually put in buffer */
-                Emitter_EmitEvent(EVENT(MessageReceived));
+                printf("\tSize to copy: %d\n\t", size_to_copy);
+                for( uint32_t jdx = 0; jdx < size_to_copy; jdx++)
+                {
+                    printf("0x%x,", msg_ptr[jdx]);
+                }
+                
+                printf("\b \n");
+                if( !FIFO_IsFull( &msg_fifo->base ) )
+                {
+                    FIFO_Enqueue( msg_fifo, msg_ptr);
+
+                    /* Only emit event if the message was actually put in buffer */
+                    Emitter_EmitEvent(EVENT(MessageReceived));
+                }
+
+                msg_ptr += size_to_copy;
             }
-
-            msg_ptr += size_to_copy;
         }
+        tcp_recved(tpcb, p->tot_len);
+        pbuf_free(p);
     }
-    tcp_recved(tpcb, p->tot_len);
-    pbuf_free(p);
+    else
+    {
+        printf("\tConnection Closed\n");
+        Emitter_EmitEvent(EVENT(TCPDisconnected));
+        ret = ERR_CLSD;
+    }
 
-    return ERR_OK;
+    return ret;
 }
 
 static void Error(void *arg, err_t err)

@@ -227,6 +227,11 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
             ret = HANDLED();
             break;
         }
+        case EVENT( TCPDisconnected ):
+        {
+            ret = TRANSITION(this, TCPNotConnected);
+            break;
+        }
         case EVENT( MQTTRetryConnect ):
         case EVENT( Enter ):
         {
@@ -329,6 +334,7 @@ static state_ret_t State_Root( state_t * this, event_t s )
         {
             /* Should never try and leave here! */
             Emitter_Destroy(node_state->read_timer);
+            ret = HANDLED();
             break;
         }
         default:
@@ -350,6 +356,11 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Enter ):
         {
             ret = HANDLED();
+            break;
+        }
+        case EVENT( TCPDisconnected ):
+        {
+            ret = TRANSITION(this, TCPNotConnected);
             break;
         }
         case EVENT( ReadSensor ):
@@ -383,7 +394,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 static void SubscribeCallback(mqtt_data_t * data)
 {
     (void)data;
-    printf("\tSubscribe Callback Test, Data: %d\n", data->i);
+    printf("\tSubscribe Callback Test, Data: %s\n", data->s);
 }
 
 int main()

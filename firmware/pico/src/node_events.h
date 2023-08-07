@@ -11,6 +11,7 @@
     SIG( WifiDisconnected ) \
     SIG( TCPRetryConnect ) \
     SIG( TCPConnected ) \
+    SIG( TCPDisconnected ) \
     SIG( MessageReceived ) \
     SIG( MQTTRetryConnect ) \
 
