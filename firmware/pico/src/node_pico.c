@@ -429,7 +429,7 @@ int main()
     Comms_Init(&msg_fifo);
     MQTT_Init(&mqtt);
     Emitter_Init(&events, &crit);
-    (void)WIFI_Init();
+    WIFI_Init();
 
     node_state_t state_machine; 
     state_machine.timer = &timer;

@@ -1,21 +1,17 @@
 #include "wifi.h"
 #include "secret_keys.h"
+#include <assert.h>
 
-extern bool WIFI_Init(void)
+extern void WIFI_Init(void)
 {
-    bool success = false;
     printf("Initialising WIFI driver\n");
     if(cyw43_arch_init_with_country(CYW43_COUNTRY_UK))
     {
-        printf("Failed\n");
-        goto cleanup;
+        assert(false);
     }
     WIFI_ClearLed();
     cyw43_arch_enable_sta_mode();
     
-    success = true;
-cleanup:
-    return success;
 }
 
 extern void WIFI_TryConnect(void)
