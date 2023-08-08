@@ -6,7 +6,7 @@ static void Flush( fifo_base_t * const fifo );
 
 extern void Events_Init(event_fifo_t * fifo)
 {
-    printf("Initialising Events\n");
+    printf("Initialising Events FIFO\n");
     
     static const fifo_vfunc_t vfunc =
     {
