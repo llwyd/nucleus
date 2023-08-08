@@ -367,9 +367,12 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             Enviro_Read();
             Enviro_Print();
-            char temp_text[8];
-            Enviro_PrintToBuffer(temp_text);
-            MQTT_Publish(node_state->mqtt,"temperature_live",temp_text);
+            char sensor_str[8];
+            Enviro_ConvertToStr(sensor_str, 8U, Enviro_GetTemperature());
+            MQTT_Publish(node_state->mqtt,"temperature_live", sensor_str);
+            
+            Enviro_ConvertToStr(sensor_str, 8U, Enviro_GetHumidity());
+            MQTT_Publish(node_state->mqtt,"humidity_live", sensor_str);
             ret = HANDLED();
             break;
         }

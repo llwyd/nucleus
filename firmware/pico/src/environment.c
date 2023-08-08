@@ -11,7 +11,7 @@
 
 static struct   bme280_dev dev;
 static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
-static struct   bme280_data bme280_rawData;
+static struct   bme280_data env_data;
 static struct   bme280_settings settings;
 
 static void BME280_Setup( void );
@@ -166,7 +166,7 @@ extern void Enviro_Init(void)
 
 extern void Enviro_Read(void)
 {
-    int8_t rslt = bme280_get_sensor_data(BME280_ALL, &bme280_rawData, &dev);
+    int8_t rslt = bme280_get_sensor_data(BME280_ALL, &env_data, &dev);
     if( rslt != BME280_OK )
     {
         printf("\tBME280 Sensor Read FAIL\n");
@@ -180,21 +180,39 @@ extern void Enviro_Read(void)
 extern void Enviro_Print(void)
 {
     
-    printf("\tTemperature: %.2f\n", bme280_rawData.temperature);
-    printf("\tHumidity: %.2f\n", bme280_rawData.humidity);
-    printf("\tPressure: %.2f\n", bme280_rawData.pressure);
+    printf("\tTemperature: %.2f\n", env_data.temperature);
+    printf("\tHumidity: %.2f\n", env_data.humidity);
+    printf("\tPressure: %.2f\n", env_data.pressure);
     
     /*
-    printf("\tTemperature: %d (0x%x)\n", bme280_rawData.temperature, bme280_rawData.temperature);
-    printf("\tHumidity: %d (0x%x)\n", bme280_rawData.humidity, bme280_rawData.humidity);
-    printf("\tPressure: %d (0x%x)\n", bme280_rawData.pressure, bme280_rawData.pressure);
+    printf("\tTemperature: %d (0x%x)\n", env_data.temperature, env_data.temperature);
+    printf("\tHumidity: %d (0x%x)\n", env_data.humidity, env_data.humidity);
+    printf("\tPressure: %d (0x%x)\n", env_data.pressure, env_data.pressure);
     */
 }
 
-extern void Enviro_PrintToBuffer(char * buffer)
+extern const double * const Enviro_GetTemperature(void)
 {
-    memset(buffer,0x00, 8U);
-    snprintf(buffer, 8U,"%.2f", bme280_rawData.temperature);
+    return &env_data.temperature;
+}
+
+extern const double * const Enviro_GetHumidity(void)
+{
+    return &env_data.humidity;
+}
+
+extern const double * const Enviro_GetPressure(void)
+{
+    return &env_data.pressure;
+}
+
+extern void Enviro_ConvertToStr(char * buffer, uint8_t buffer_len, const double * const data)
+{
+    assert(data != NULL );
+    assert(buffer != NULL);
+
+    memset(buffer,0x00, buffer_len);
+    snprintf(buffer, buffer_len,"%.4f", *data);
 }
 
 
