@@ -124,7 +124,18 @@ extern bool Comms_Send( uint8_t * buffer, uint16_t len )
     {
         printf("\nFailed to write\n");
         success = false;
+        goto cleanup;
     }
+    
+    err = tcp_output(tcp_pcb);  
+    if( err != ERR_OK )
+    {
+        printf("\nFailed to output\n");
+        success = false;
+        goto cleanup;
+    }
+
+cleanup:
     return success;
 }
 

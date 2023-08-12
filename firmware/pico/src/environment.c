@@ -220,7 +220,7 @@ extern void Enviro_GenerateJSON(char * buffer, uint8_t buffer_len)
     assert(buffer != NULL);
 
     memset(buffer,0x00, buffer_len);
-    snprintf(buffer, buffer_len,"{\"temperature\":%.4f,\"humidity\":%.4f}",
+    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f}",
             env_data.temperature,
             env_data.humidity);
 }

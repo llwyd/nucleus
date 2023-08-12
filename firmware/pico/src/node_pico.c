@@ -367,12 +367,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             Enviro_Read();
             Enviro_Print();
-            char sensor_str[8];
-            Enviro_ConvertToStr(sensor_str, 8U, Enviro_GetTemperature());
-            MQTT_Publish(node_state->mqtt,"temperature_live", sensor_str);
-            
-            Enviro_ConvertToStr(sensor_str, 8U, Enviro_GetHumidity());
-            MQTT_Publish(node_state->mqtt,"humidity_live", sensor_str);
 
             char json[64];
             Enviro_GenerateJSON(json, 64);
