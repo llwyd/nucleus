@@ -215,4 +215,13 @@ extern void Enviro_ConvertToStr(char * buffer, uint8_t buffer_len, const double 
     snprintf(buffer, buffer_len,"%.4f", *data);
 }
 
+extern void Enviro_GenerateJSON(char * buffer, uint8_t buffer_len)
+{
+    assert(buffer != NULL);
+
+    memset(buffer,0x00, buffer_len);
+    snprintf(buffer, buffer_len,"{\"temperature\":%.4f,\"humidity\":%.4f}",
+            env_data.temperature,
+            env_data.humidity);
+}
 
