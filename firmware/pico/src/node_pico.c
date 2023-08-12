@@ -325,7 +325,7 @@ static state_ret_t State_Root( state_t * this, event_t s )
     {
         case EVENT( Enter ):
         {
-            Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 1000);
+            Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 250);
             WIFI_SetLed();
             ret = HANDLED();
             break;

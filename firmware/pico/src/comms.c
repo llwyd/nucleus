@@ -36,16 +36,20 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
     printf("\tReceived %d bytes total\n", p->tot_len);
     //cyw43_arch_lwip_check();
     err_t ret = ERR_OK;
-
+    uint8_t recv[64] = {0U};
+    
     if( p != NULL )
     {
         for(struct pbuf *q = p; q != NULL; q = q->next )
         {
             //printf("\tMessage len %d bytes\n", p->len);
-            
+           
+            memset(recv,0x00, 64U);
+            pbuf_copy_partial(q, recv, 64U, 0);
             /* Handle bunched together mqtt packets */
             
-            uint8_t * msg_ptr = (uint8_t*)q->payload;
+            uint8_t * msg_ptr = recv;
+            //uint8_t * msg_ptr = (uint8_t*)q->payload;
             uint32_t size_to_copy = 0U;
 
             for( uint32_t idx = 0; idx < q->len; idx+=size_to_copy )
@@ -69,8 +73,8 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 
                 msg_ptr += size_to_copy;
             }
+            tcp_recved(tpcb, q->len);
         }
-        tcp_recved(tpcb, p->tot_len);
         pbuf_free(p);
     }
     else
