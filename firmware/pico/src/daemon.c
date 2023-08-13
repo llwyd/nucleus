@@ -6,6 +6,7 @@
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "pico/critical_section.h"
+#include "pico/unique_id.h"
 
 #include "daemon.h"
 #include "environment.h"
@@ -21,8 +22,9 @@
 #include "i2c.h"
 
 #define RETRY_PERIOD_MS (1500)
+#define SENSOR_PERIOD_MS (500)
 
-DEFINE_STATE( Idle );
+#define ID_STRING_SIZE ( 8U )
 
 /* Top level state */
 DEFINE_STATE(Setup);
@@ -330,7 +332,7 @@ static state_ret_t State_Root( state_t * this, event_t s )
     {
         case EVENT( Enter ):
         {
-            Emitter_Create(EVENT(ReadSensor), node_state->read_timer, 500);
+            Emitter_Create(EVENT(ReadSensor), node_state->read_timer, SENSOR_PERIOD_MS);
             WIFI_SetLed();
             ret = HANDLED();
             break;
@@ -399,13 +401,15 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
 extern void Daemon_Run(void)
 {
-    char * client_name = "pico";
+    char unique_id[ID_STRING_SIZE]={0};
+    pico_get_unique_board_id_string(unique_id, ID_STRING_SIZE);
+
     event_fifo_t events;
     critical_section_t crit;
     msg_fifo_t msg_fifo;
     mqtt_t mqtt =
     {
-        .client_name = client_name,
+        .client_name = unique_id,
         .send = Comms_Send,
         .recv = Comms_Recv,
         .subs = subs,
