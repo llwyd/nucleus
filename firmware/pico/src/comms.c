@@ -26,7 +26,7 @@ static err_t Poll(void *arg, struct tcp_pcb *tpcb);
 
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
 {
-    printf("\tTCP Sent\n");
+    //printf("\tTCP Sent\n");
     return ERR_OK;
 }
 
@@ -34,18 +34,22 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
     printf("\tTCP Recv\n");
     printf("\tReceived %d bytes total\n", p->tot_len);
-    //cyw43_arch_lwip_check();
+    cyw43_arch_lwip_check();
     err_t ret = ERR_OK;
-
+    uint8_t recv[64] = {0U};
+    
     if( p != NULL )
     {
         for(struct pbuf *q = p; q != NULL; q = q->next )
         {
             //printf("\tMessage len %d bytes\n", p->len);
-            
+           
+            memset(recv,0x00, 64U);
+            pbuf_copy_partial(q, recv, 64U, 0);
             /* Handle bunched together mqtt packets */
             
-            uint8_t * msg_ptr = (uint8_t*)q->payload;
+            uint8_t * msg_ptr = recv;
+            //uint8_t * msg_ptr = (uint8_t*)q->payload;
             uint32_t size_to_copy = 0U;
 
             for( uint32_t idx = 0; idx < q->len; idx+=size_to_copy )
@@ -118,13 +122,26 @@ extern void Comms_MQTTConnect(void)
 
 extern bool Comms_Send( uint8_t * buffer, uint16_t len )
 {
+    cyw43_arch_lwip_begin();
     err_t err = tcp_write(tcp_pcb, buffer, len, TCP_WRITE_FLAG_COPY);
+    cyw43_arch_lwip_end();
     bool success = true;
     if( err != ERR_OK )
     {
         printf("\nFailed to write\n");
         success = false;
+        goto cleanup;
     }
+   /* 
+    err = tcp_output(tcp_pcb);  
+    if( err != ERR_OK )
+    {
+        printf("\nFailed to output\n");
+        success = false;
+        goto cleanup;
+    }
+    */
+cleanup:
     return success;
 }
 
