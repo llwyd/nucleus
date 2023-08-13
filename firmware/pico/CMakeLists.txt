@@ -21,6 +21,8 @@ add_executable(node
     src/emitter.h
     src/comms.h
     src/comms.c
+    src/i2c.c
+    src/i2c.h
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h

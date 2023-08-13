@@ -17,9 +17,9 @@
 #include "mqtt.h"
 #include "msg_fifo.h"
 #include "node_events.h"
+#include "i2c.h"
 
 #define RETRY_PERIOD_MS (1500)
-
 
 DEFINE_STATE( Idle );
 
@@ -420,6 +420,7 @@ int main()
     /* Initialise various sub modules */ 
     stdio_init_all();
     critical_section_init(&crit);
+    I2C_Init();
     Enviro_Init(); 
     Events_Init(&events);
     
