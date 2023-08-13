@@ -295,8 +295,8 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
             else
             {
                 /* This doesn't work, need to fix */
-                ret = TRANSITION(this, MQTTNotConnected);
-                assert(false);
+                ret = TRANSITION(this, MQTTSubscribing);
+                //assert(false);
             }
             break;
         }

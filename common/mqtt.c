@@ -677,6 +677,7 @@ extern bool MQTT_Subscribe( mqtt_t * mqtt )
     assert( mqtt->num_subs > 0U );
 
     bool success = true;
+    successful_subs = 0;
     for( uint8_t i = 0; i < mqtt->num_subs; i++ )
     {
         success &= Subscribe( mqtt, &mqtt->subs[i] );
