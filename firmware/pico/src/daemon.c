@@ -22,7 +22,7 @@
 #include "i2c.h"
 
 #define RETRY_PERIOD_MS (1500)
-#define SENSOR_PERIOD_MS (500)
+#define SENSOR_PERIOD_MS (250)
 
 #define ID_STRING_SIZE ( 8U )
 
@@ -428,7 +428,7 @@ extern void Daemon_Run(void)
     Events_Init(&events);
     
     Message_Init(&msg_fifo);
-    Comms_Init(&msg_fifo);
+    Comms_Init(&msg_fifo, &crit);
     MQTT_Init(&mqtt);
     Emitter_Init(&events, &crit);
     WIFI_Init();
