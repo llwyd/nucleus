@@ -15,6 +15,9 @@ static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
 static struct   bme280_data env_data;
 static struct   bme280_settings settings;
 
+static absolute_time_t timestamp;
+static uint32_t uptime_ms;
+
 static void BME280_Setup( void );
 static void BME280_Configure( void );
 
@@ -95,6 +98,7 @@ extern void Enviro_Read(void)
     {
         printf("\tBME280 Sensor Read OK\n");
     }
+    timestamp = get_absolute_time();
 }
 
 extern void Enviro_Print(void)
@@ -103,7 +107,9 @@ extern void Enviro_Print(void)
     printf("\tTemperature: %.2f\n", env_data.temperature);
     printf("\tHumidity: %.2f\n", env_data.humidity);
     printf("\tPressure: %.2f\n", env_data.pressure);
-    
+
+    uptime_ms = to_ms_since_boot(timestamp);
+    printf("\tms Since boot: %d\n", uptime_ms); 
     /*
     printf("\tTemperature: %d (0x%x)\n", env_data.temperature, env_data.temperature);
     printf("\tHumidity: %d (0x%x)\n", env_data.humidity, env_data.humidity);
@@ -140,8 +146,9 @@ extern void Enviro_GenerateJSON(char * buffer, uint8_t buffer_len)
     assert(buffer != NULL);
 
     memset(buffer,0x00, buffer_len);
-    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f}",
+    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%d}",
             env_data.temperature,
-            env_data.humidity);
+            env_data.humidity,
+            uptime_ms);
 }
 
