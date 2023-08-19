@@ -10,6 +10,7 @@ set(PICO_BOARD pico_w )
 
 pico_sdk_init()
 
+
 add_executable(node
     src/node_pico.c
     src/daemon.c
@@ -44,6 +45,8 @@ add_executable(node
 pico_enable_stdio_usb(node 1)
 pico_enable_stdio_uart(node 1)
 pico_add_extra_outputs(node)
+
+target_compile_definitions(node PRIVATE SENSOR_MCP9808 )
 
 target_include_directories(node PRIVATE ${CMAKE_CURRENT_LIST_DIR} )
 include_directories( node PRIVATE src )

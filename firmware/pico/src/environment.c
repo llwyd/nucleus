@@ -84,11 +84,18 @@ static void BME280_Setup( void )
 extern void Enviro_Init(void)
 {
     printf("Initialising Enviro Sensor\n");
+#ifdef SENSOR_MCP9808
+
+#else
     BME280_Setup();
+#endif
 }
 
 extern void Enviro_Read(void)
 {
+#ifdef SENSOR_MCP9808
+
+#else
     int8_t rslt = bme280_get_sensor_data(BME280_ALL, &env_data, &dev);
     if( rslt != BME280_OK )
     {
@@ -98,6 +105,7 @@ extern void Enviro_Read(void)
     {
         printf("\tBME280 Sensor Read OK\n");
     }
+#endif
     timestamp = get_absolute_time();
 }
 
