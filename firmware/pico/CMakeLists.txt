@@ -33,6 +33,8 @@ add_executable(node
     ../../common/events.c
     ../../common/bme280.c
     ../../common/bme280.h
+    ../../common/MCP9808.h
+    ../../common/MCP9808.c
     ../../common/msg_fifo.c
     ../../common/msg_fifo.h
     ../../common/mqtt.c

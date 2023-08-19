@@ -24,7 +24,7 @@
 #define RETRY_PERIOD_MS (1500)
 #define SENSOR_PERIOD_MS (250)
 
-#define ID_STRING_SIZE ( 8U )
+#define ID_STRING_SIZE ( 32U )
 
 /* Top level state */
 DEFINE_STATE(Setup);
