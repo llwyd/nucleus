@@ -10,10 +10,11 @@
 #include "pico/cyw43_arch.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
+#include "pico/critical_section.h"
 
 #include "msg_fifo.h"
 
-extern void Comms_Init(msg_fifo_t * fifo);
+extern void Comms_Init(msg_fifo_t * fifo, critical_section_t * crit);
 extern bool Comms_TCPInit(void);
 extern bool Comms_CheckStatus(void);
 extern void Comms_MQTTConnect(void);

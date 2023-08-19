@@ -16,6 +16,7 @@ static struct tcp_pcb * tcp_pcb;
 static bool connected = false;
 static char * client_name = "pico";
 static msg_fifo_t * msg_fifo;
+static critical_section_t * critical;
 
 /* LWIP callback functions */
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
@@ -32,8 +33,8 @@ static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
 
 static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
-    printf("\tTCP Recv\n");
-    printf("\tReceived %d bytes total\n", p->tot_len);
+   // printf("\tTCP Recv\n");
+   // printf("\tReceived %d bytes total\n", p->tot_len);
     cyw43_arch_lwip_check();
     err_t ret = ERR_OK;
     uint8_t recv[64] = {0U};
@@ -55,7 +56,8 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
             for( uint32_t idx = 0; idx < q->len; idx+=size_to_copy )
             {
                 size_to_copy = *(msg_ptr + 1) + 2U;
-
+                
+                /*
                 printf("\tSize to copy: %d\n\t", size_to_copy);
                 for( uint32_t jdx = 0; jdx < size_to_copy; jdx++)
                 {
@@ -63,6 +65,7 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
                 }
                 
                 printf("\b \n");
+                */
                 if( !FIFO_IsFull( &msg_fifo->base ) )
                 {
                     FIFO_Enqueue( msg_fifo, msg_ptr);
@@ -122,9 +125,11 @@ extern void Comms_MQTTConnect(void)
 
 extern bool Comms_Send( uint8_t * buffer, uint16_t len )
 {
+    critical_section_enter_blocking(critical);
     cyw43_arch_lwip_begin();
     err_t err = tcp_write(tcp_pcb, buffer, len, TCP_WRITE_FLAG_COPY);
     cyw43_arch_lwip_end();
+    critical_section_exit(critical);
     bool success = true;
     if( err != ERR_OK )
     {
@@ -132,15 +137,19 @@ extern bool Comms_Send( uint8_t * buffer, uint16_t len )
         success = false;
         goto cleanup;
     }
-   /* 
+    
+    critical_section_enter_blocking(critical);
+    cyw43_arch_lwip_begin();
     err = tcp_output(tcp_pcb);  
+    cyw43_arch_lwip_end();
+    critical_section_exit(critical);
     if( err != ERR_OK )
     {
         printf("\nFailed to output\n");
         success = false;
         goto cleanup;
     }
-    */
+    
 cleanup:
     return success;
 }
@@ -205,9 +214,10 @@ extern bool Comms_CheckStatus(void)
     return connected;
 }
 
-extern void Comms_Init(msg_fifo_t * fifo)
+extern void Comms_Init(msg_fifo_t * fifo, critical_section_t * crit)
 {
     printf("Initialising Comms\n");
     msg_fifo = fifo;
+    critical = crit;
 }
 
