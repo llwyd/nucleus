@@ -20,6 +20,7 @@
 #include "msg_fifo.h"
 #include "node_events.h"
 #include "i2c.h"
+#include "accelerometer.h"
 
 #define RETRY_PERIOD_MS (1500)
 #define SENSOR_PERIOD_MS (250)
@@ -424,7 +425,8 @@ extern void Daemon_Run(void)
     stdio_init_all();
     critical_section_init(&crit);
     I2C_Init();
-    Enviro_Init(); 
+    Enviro_Init();
+    Accelerometer_Init();
     Events_Init(&events);
     
     Message_Init(&msg_fifo);

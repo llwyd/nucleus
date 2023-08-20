@@ -10,7 +10,6 @@ set(PICO_BOARD pico_w )
 
 pico_sdk_init()
 
-
 add_executable(node
     src/node_pico.c
     src/daemon.c
@@ -26,6 +25,8 @@ add_executable(node
     src/comms.c
     src/i2c.c
     src/i2c.h
+    src/accelerometer.h
+    src/accelerometer.c
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
