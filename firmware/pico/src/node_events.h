@@ -14,6 +14,8 @@
     SIG( TCPDisconnected ) \
     SIG( MessageReceived ) \
     SIG( MQTTRetryConnect ) \
+    SIG( AccelDataReady ) \
+    SIG( AccelMotion ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );

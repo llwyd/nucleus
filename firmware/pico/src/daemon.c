@@ -363,6 +363,14 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Exit ):
         case EVENT( Enter ):
         {
+            Accelerometer_Start();
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( AccelMotion ):
+        case EVENT( AccelDataReady ):
+        {
+            Accelerometer_Ack();
             ret = HANDLED();
             break;
         }
