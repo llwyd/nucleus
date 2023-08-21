@@ -51,11 +51,11 @@ static void Configure(void)
     (void)I2C_WriteReg(0x15,&data, 1U,(void*)&address);
     
     printf("\tConfigure FF_MT_THS\n");
-    data = 0x04;
+    data = 0x11;
     (void)I2C_WriteReg(0x17,&data, 1U,(void*)&address);
     
     printf("\tConfigure FF_MT_COUNT\n");
-    data = 0x04;
+    data = 0x00;
     (void)I2C_WriteReg(0x18,&data, 1U,(void*)&address);
     
     printf("\tConfigure XYZ_DATA_CFG\n");
