@@ -34,9 +34,12 @@ static void ConfigureGPIO(void)
     gpio_init(INT2_PIN);
 
     gpio_set_dir(INT1_PIN, GPIO_IN);
-    gpio_set_pulls(INT1_PIN,true,false);
+    gpio_set_pulls(INT1_PIN,false,false);
     gpio_set_dir(INT2_PIN, GPIO_IN);
-    gpio_set_pulls(INT2_PIN,true,false);    
+    gpio_set_pulls(INT2_PIN,false,false);    
+    
+    gpio_set_irq_enabled_with_callback(INT1_PIN, GPIO_IRQ_EDGE_FALL, true, IRQ_Callback);
+    gpio_set_irq_enabled(INT2_PIN, GPIO_IRQ_EDGE_FALL, true);
 }
 
 static void Configure(void)
@@ -48,7 +51,7 @@ static void Configure(void)
     (void)I2C_WriteReg(0x15,&data, 1U,(void*)&address);
     
     printf("\tConfigure FF_MT_THS\n");
-    data = 0x07;
+    data = 0x04;
     (void)I2C_WriteReg(0x17,&data, 1U,(void*)&address);
     
     printf("\tConfigure FF_MT_COUNT\n");
@@ -69,18 +72,21 @@ static void Configure(void)
     data = 0x04;
     (void)I2C_WriteReg(0x2E,&data, 1U,(void*)&address);
     
+    /*
     printf("\tConfigure CTRL_REG3\n");
     data = 0x02;
     (void)I2C_WriteReg(0x2C,&data, 1U,(void*)&address);
-    
+    */
+
     printf("\tConfigure CTRL_REG2\n");
     data = 0x02;
     (void)I2C_WriteReg(0x2B,&data, 1U,(void*)&address);
-   
+  
+    /*
     printf("\tConfigure CTRL_REG1\n");
     data = 0x04;
     (void)I2C_WriteReg(0x2A,&data, 1U,(void*)&address);
-    
+    */
 }
 
 extern void Accelerometer_ReadAll(void)
@@ -99,19 +105,36 @@ extern void Accelerometer_ReadAll(void)
 
 extern void Accelerometer_Start(void)
 {
-    printf("\tAccelerometer Set Active\n");
-    gpio_set_irq_enabled_with_callback(INT1_PIN, GPIO_IRQ_EDGE_FALL, true, IRQ_Callback);
-    gpio_set_irq_enabled(INT2_PIN, GPIO_IRQ_EDGE_RISE, true);
+    printf("\tAccelerometer: Set Active\n");
     
     uint8_t data = 0x05;
     (void)I2C_WriteReg(0x2A,&data, 1U,(void*)&address);
-    Accelerometer_Ack();
+    //Accelerometer_Ack();
 }
 
 extern void Accelerometer_Ack(void)
 {
     uint8_t data;
     (void)I2C_ReadReg(0x16, &data, 1U, (void*)&address);
+    printf("\tAccelerometer: Ack\n");
+}
+
+static void Reset(void)
+{
+    printf("\tAccelerometer: Resetting...");
+    uint8_t data = 0x40;
+    (void)I2C_WriteReg(0x2B,&data, 1U,(void*)&address);
+    data = 0x0;
+    do
+    {
+        (void)I2C_ReadReg(0x2B,&data, 1U,(void*)&address);
+    }
+    while(data&0x40);
+    /* Wait for boot process to finish */
+    printf("Complete\n");
+    
+    (void)I2C_ReadReg(0x0D, &data, 1U, (void*)&address);
+    assert(data==0x1a);
 }
 
 extern void Accelerometer_Init(void)
@@ -125,14 +148,15 @@ extern void Accelerometer_Init(void)
     
     if( data == 0x1A )
     {
-        printf("\tAccelerometer WHOAMI detected\n");
-        ConfigureGPIO();
+        printf("\tAccelerometer: WHOAMI detected\n");
+        Reset();
         Configure();
+        ConfigureGPIO();
     }
     else
     {
         assert(false);
     }
     (void)I2C_ReadReg(0x0C, &data, 1U, (void*)&address);
-    printf("\tINT status: 0x%x\n",data);
+    printf("\tAccelerometer: INT 0x%x\n",data);
 }
