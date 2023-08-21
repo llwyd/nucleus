@@ -38,8 +38,8 @@ static void ConfigureGPIO(void)
     gpio_set_dir(INT2_PIN, GPIO_IN);
     gpio_set_pulls(INT2_PIN,true,false);    
     
-    gpio_set_irq_enabled_with_callback(INT1_PIN, GPIO_IRQ_EDGE_FALL, true, IRQ_Callback);
-    gpio_set_irq_enabled(INT2_PIN, GPIO_IRQ_EDGE_FALL, true);
+    gpio_set_irq_enabled_with_callback(INT1_PIN, GPIO_IRQ_EDGE_FALL, false, IRQ_Callback);
+    gpio_set_irq_enabled(INT2_PIN, GPIO_IRQ_EDGE_FALL, false);
 }
 
 static void Configure(void)
@@ -79,6 +79,9 @@ static void Configure(void)
 extern void Accelerometer_Start(void)
 {
     printf("\tAccelerometer: Set Active\n");    
+    gpio_set_irq_enabled(INT1_PIN, GPIO_IRQ_EDGE_FALL, true);
+    gpio_set_irq_enabled(INT2_PIN, GPIO_IRQ_EDGE_FALL, true);
+    
     uint8_t data = 0x05;
     (void)I2C_WriteReg(0x2A,&data, 1U,(void*)&address);
 }
