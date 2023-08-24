@@ -368,7 +368,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             break;
         }
         case EVENT( AccelMotion ):
-        case EVENT( AccelDataReady ):
         {
             Accelerometer_Ack();
             MQTT_Publish(node_state->mqtt,"motion","1");
