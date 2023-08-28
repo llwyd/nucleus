@@ -27,6 +27,10 @@ add_executable(node
     src/i2c.h
     src/accelerometer.h
     src/accelerometer.c
+    src/udp.c
+    src/udp.h
+    src/ntp.c
+    src/ntp.h
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h

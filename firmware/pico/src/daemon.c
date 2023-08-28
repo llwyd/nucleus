@@ -21,6 +21,8 @@
 #include "node_events.h"
 #include "i2c.h"
 #include "accelerometer.h"
+#include "udp.h"
+#include "ntp.h"
 
 #define RETRY_PERIOD_MS (1500)
 #define SENSOR_PERIOD_MS (250)
@@ -49,7 +51,9 @@ typedef struct
     struct repeating_timer * read_timer;
     struct repeating_timer * retry_timer;
     mqtt_t * mqtt;
+    ntp_t * ntp;
     msg_fifo_t * msg_fifo;
+    msg_fifo_t * udp_fifo;
 }
 node_state_t;
 
@@ -416,6 +420,7 @@ extern void Daemon_Run(void)
     event_fifo_t events;
     critical_section_t crit;
     msg_fifo_t msg_fifo;
+    msg_fifo_t udp_fifo;
     mqtt_t mqtt =
     {
         .client_name = unique_id,
@@ -423,6 +428,11 @@ extern void Daemon_Run(void)
         .recv = Comms_Recv,
         .subs = subs,
         .num_subs = 3U,
+    };
+
+    ntp_t ntp =
+    {
+        .send = UDP_Send,
     };
 
     struct repeating_timer timer;
@@ -438,8 +448,11 @@ extern void Daemon_Run(void)
     Events_Init(&events);
     
     Message_Init(&msg_fifo);
+    Message_Init(&udp_fifo);
     Comms_Init(&msg_fifo, &crit);
+    UDP_Init(&udp_fifo, &crit);
     MQTT_Init(&mqtt);
+    NTP_Init(&ntp);
     Emitter_Init(&events, &crit);
     WIFI_Init();
 
@@ -449,6 +462,8 @@ extern void Daemon_Run(void)
     state_machine.retry_timer = &retry_timer;
     state_machine.mqtt = &mqtt;
     state_machine.msg_fifo = &msg_fifo;
+    state_machine.udp_fifo = &udp_fifo;
+    state_machine.ntp = &ntp;
 
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
 
