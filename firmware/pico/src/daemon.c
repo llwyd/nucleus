@@ -241,6 +241,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         }
         case EVENT( TCPDisconnected ):
         {
+            Comms_Close();
             ret = TRANSITION(this, TCPNotConnected);
             break;
         }
@@ -380,6 +381,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( TCPDisconnected ):
         {
+            Comms_Close();
             ret = TRANSITION(this, TCPNotConnected);
             break;
         }

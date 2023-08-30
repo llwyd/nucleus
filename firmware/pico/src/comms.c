@@ -24,7 +24,6 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
 static void Error(void *arg, err_t err);
 static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err);
 static err_t Poll(void *arg, struct tcp_pcb *tpcb);
-static void Close(void);
 
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
 {
@@ -86,13 +85,12 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
         printf("\tConnection Closed\n");
         Emitter_EmitEvent(EVENT(TCPDisconnected));
         ret = ERR_CLSD;
-        Close();
     }
 
     return ret;
 }
 
-static void Close(void)
+extern void Comms_Close(void)
 {
     connected = false;
     err_t close_err = tcp_close(tcp_pcb);
@@ -106,7 +104,7 @@ static void Close(void)
 static void Error(void *arg, err_t err)
 {
     printf("\tTCP Error\n");
-    Close();
+    Emitter_EmitEvent(EVENT(TCPDisconnected));
 }
 
 static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
@@ -179,7 +177,7 @@ extern bool Comms_TCPInit(void)
 
     if(tcp_pcb != NULL )
     {
-        Close();
+        Comms_Close();
     }
 
     /* Init */
