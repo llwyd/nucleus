@@ -46,12 +46,14 @@ static void Configure(void)
 
 extern void Accelerometer_Start(void)
 {
+#ifdef ACCELEROMETER_ENABLED
     printf("\tAccelerometer: Set Active\n");    
     gpio_set_irq_enabled(INT1_PIN, GPIO_IRQ_EDGE_FALL, true);
     gpio_set_irq_enabled(INT2_PIN, GPIO_IRQ_EDGE_FALL, true);
     
     uint8_t data = 0x05;
     (void)I2C_WriteReg(0x2A,&data, 1U,(void*)&address);
+#endif
 }
 
 extern void Accelerometer_Ack(void)
@@ -81,6 +83,7 @@ static void Reset(void)
 
 extern void Accelerometer_Init(void)
 {
+#ifdef ACCELEROMETER_ENABLED
     printf("Initialising Accelerometer\n");
 
     uint8_t data = 0x0;
@@ -98,4 +101,5 @@ extern void Accelerometer_Init(void)
     {
         assert(false);
     }
+#endif
 }
