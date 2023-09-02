@@ -31,6 +31,8 @@ add_executable(node
     src/udp.h
     src/ntp.c
     src/ntp.h
+    src/gpio.h
+    src/gpio.c
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
@@ -52,6 +54,7 @@ pico_enable_stdio_uart(node 1)
 pico_add_extra_outputs(node)
 
 target_compile_definitions(node PRIVATE SENSOR_MCP9808 )
+target_compile_definitions(node PRIVATE ACCELEROMETER_ENABLED )
 
 target_include_directories(node PRIVATE ${CMAKE_CURRENT_LIST_DIR} )
 include_directories( node PRIVATE src )

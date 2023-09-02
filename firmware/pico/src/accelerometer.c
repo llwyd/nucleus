@@ -10,38 +10,6 @@
 
 static const uint8_t address = 0x1D;
 
-static void IRQ_Callback(uint gpio, uint32_t events)
-{
-    switch(gpio)
-    {
-        case INT2_PIN:
-            Emitter_EmitEvent(EVENT(AccelDataReady));
-            break;
-        case INT1_PIN:
-            Emitter_EmitEvent(EVENT(AccelMotion));
-            break;
-        default:
-            printf("GPIO: %d\n", gpio);
-            assert(false);
-            break;
-    }
-}
-
-static void ConfigureGPIO(void)
-{
-    printf("\tConfiguring GPIO\n");
-    gpio_init(INT1_PIN);
-    gpio_init(INT2_PIN);
-
-    gpio_set_dir(INT1_PIN, GPIO_IN);
-    gpio_set_pulls(INT1_PIN,true,false);
-    gpio_set_dir(INT2_PIN, GPIO_IN);
-    gpio_set_pulls(INT2_PIN,true,false);    
-    
-    gpio_set_irq_enabled_with_callback(INT1_PIN, GPIO_IRQ_EDGE_FALL, false, IRQ_Callback);
-    gpio_set_irq_enabled(INT2_PIN, GPIO_IRQ_EDGE_FALL, false);
-}
-
 static void Configure(void)
 {
     uint8_t data = 0U;
@@ -125,7 +93,6 @@ extern void Accelerometer_Init(void)
         printf("\tAccelerometer: WHOAMI detected\n");
         Reset();
         Configure();
-        ConfigureGPIO();
     }
     else
     {

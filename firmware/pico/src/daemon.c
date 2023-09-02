@@ -23,6 +23,7 @@
 #include "accelerometer.h"
 #include "udp.h"
 #include "ntp.h"
+#include "gpio.h"
 
 #define RETRY_PERIOD_MS (1500)
 #define SENSOR_PERIOD_MS (250)
@@ -444,6 +445,7 @@ extern void Daemon_Run(void)
     /* Initialise various sub modules */ 
     stdio_init_all();
     critical_section_init(&crit);
+    GPIO_Init();
     I2C_Init();
     Enviro_Init();
     Accelerometer_Init();

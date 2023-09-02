@@ -2,20 +2,11 @@
 
 #define I2C_BAUDRATE ( 400000U )
 #define I2C_TIMEOUT  ( 500000U )
-#define SDA_PIN (16U)
-#define SCL_PIN (17U)
 
 void I2C_Init(void)
 {
     printf("Initialising I2C Bus\n");
-    i2c_init(i2c_default, I2C_BAUDRATE );
-    
-    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(SDA_PIN);
-    gpio_pull_up(SCL_PIN);
-
-    bi_decl(bi_2pins_with_func(SDA_PIN, SCL_PIN, GPIO_FUNC_I2C));
+    i2c_init(i2c_default, I2C_BAUDRATE );    
 }
 
 int8_t I2C_ReadReg(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
