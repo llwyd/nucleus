@@ -20,11 +20,15 @@
 #include "msg_fifo.h"
 #include "node_events.h"
 #include "i2c.h"
+#include "accelerometer.h"
+#include "udp.h"
+#include "ntp.h"
+#include "gpio.h"
 
 #define RETRY_PERIOD_MS (1500)
 #define SENSOR_PERIOD_MS (250)
 
-#define ID_STRING_SIZE ( 8U )
+#define ID_STRING_SIZE ( 32U )
 
 /* Top level state */
 DEFINE_STATE(Setup);
@@ -48,7 +52,9 @@ typedef struct
     struct repeating_timer * read_timer;
     struct repeating_timer * retry_timer;
     mqtt_t * mqtt;
+    ntp_t * ntp;
     msg_fifo_t * msg_fifo;
+    msg_fifo_t * udp_fifo;
 }
 node_state_t;
 
@@ -236,6 +242,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         }
         case EVENT( TCPDisconnected ):
         {
+            Comms_Close();
             ret = TRANSITION(this, TCPNotConnected);
             break;
         }
@@ -362,11 +369,20 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Exit ):
         case EVENT( Enter ):
         {
+            Accelerometer_Start();
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( AccelMotion ):
+        {
+            Accelerometer_Ack();
+            MQTT_Publish(node_state->mqtt,"motion","1");
             ret = HANDLED();
             break;
         }
         case EVENT( TCPDisconnected ):
         {
+            Comms_Close();
             ret = TRANSITION(this, TCPNotConnected);
             break;
         }
@@ -407,6 +423,7 @@ extern void Daemon_Run(void)
     event_fifo_t events;
     critical_section_t crit;
     msg_fifo_t msg_fifo;
+    msg_fifo_t udp_fifo;
     mqtt_t mqtt =
     {
         .client_name = unique_id,
@@ -416,6 +433,11 @@ extern void Daemon_Run(void)
         .num_subs = 3U,
     };
 
+    ntp_t ntp =
+    {
+        .send = UDP_Send,
+    };
+
     struct repeating_timer timer;
     struct repeating_timer read_timer;
     struct repeating_timer retry_timer;
@@ -423,13 +445,18 @@ extern void Daemon_Run(void)
     /* Initialise various sub modules */ 
     stdio_init_all();
     critical_section_init(&crit);
+    GPIO_Init();
     I2C_Init();
-    Enviro_Init(); 
+    Enviro_Init();
+    Accelerometer_Init();
     Events_Init(&events);
     
     Message_Init(&msg_fifo);
+    Message_Init(&udp_fifo);
     Comms_Init(&msg_fifo, &crit);
+    UDP_Init(&udp_fifo, &crit);
     MQTT_Init(&mqtt);
+    NTP_Init(&ntp);
     Emitter_Init(&events, &crit);
     WIFI_Init();
 
@@ -439,6 +466,8 @@ extern void Daemon_Run(void)
     state_machine.retry_timer = &retry_timer;
     state_machine.mqtt = &mqtt;
     state_machine.msg_fifo = &msg_fifo;
+    state_machine.udp_fifo = &udp_fifo;
+    state_machine.ntp = &ntp;
 
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
 

@@ -11,6 +11,7 @@
 
 void I2C_Init(void);
 int8_t I2C_ReadReg(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr);
+int8_t I2C_ReadRegQuiet(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr);
 int8_t I2C_WriteReg(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr);
 
 #endif /* I2C_H_ */

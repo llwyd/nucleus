@@ -25,6 +25,14 @@ add_executable(node
     src/comms.c
     src/i2c.c
     src/i2c.h
+    src/accelerometer.h
+    src/accelerometer.c
+    src/udp.c
+    src/udp.h
+    src/ntp.c
+    src/ntp.h
+    src/gpio.h
+    src/gpio.c
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
@@ -33,6 +41,8 @@ add_executable(node
     ../../common/events.c
     ../../common/bme280.c
     ../../common/bme280.h
+    ../../common/MCP9808.h
+    ../../common/MCP9808.c
     ../../common/msg_fifo.c
     ../../common/msg_fifo.h
     ../../common/mqtt.c
@@ -42,6 +52,9 @@ add_executable(node
 pico_enable_stdio_usb(node 1)
 pico_enable_stdio_uart(node 1)
 pico_add_extra_outputs(node)
+
+target_compile_definitions(node PRIVATE SENSOR_MCP9808 )
+target_compile_definitions(node PRIVATE ACCELEROMETER_ENABLED )
 
 target_include_directories(node PRIVATE ${CMAKE_CURRENT_LIST_DIR} )
 include_directories( node PRIVATE src )

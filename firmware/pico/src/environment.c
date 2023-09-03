@@ -1,14 +1,12 @@
 #include "environment.h"
 #include "bme280.h"
+#include "MCP9808.h"
 
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
 #include "hardware/i2c.h"
 #include "i2c.h"
 #include <string.h>
-
-#define I2C_BAUDRATE ( 400000U )
-#define I2C_TIMEOUT  ( 500000U )
 
 static struct   bme280_dev dev;
 static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
@@ -84,11 +82,18 @@ static void BME280_Setup( void )
 extern void Enviro_Init(void)
 {
     printf("Initialising Enviro Sensor\n");
+#ifdef SENSOR_MCP9808
+    MCP9808_Setup();
+#else
     BME280_Setup();
+#endif
 }
 
 extern void Enviro_Read(void)
 {
+#ifdef SENSOR_MCP9808
+    MCP9808_Read();
+#else
     int8_t rslt = bme280_get_sensor_data(BME280_ALL, &env_data, &dev);
     if( rslt != BME280_OK )
     {
@@ -98,16 +103,22 @@ extern void Enviro_Read(void)
     {
         printf("\tBME280 Sensor Read OK\n");
     }
+#endif
     timestamp = get_absolute_time();
 }
 
 extern void Enviro_Print(void)
 {
     
+#ifdef SENSOR_MCP9808
+    printf("\tTemperature: %.2f\n", MCP9808_GetTemperature());
+    printf("\tHumidity: %.2f\n", 0.0);
+    printf("\tPressure: %.2f\n", 0.0);
+#else
     printf("\tTemperature: %.2f\n", env_data.temperature);
     printf("\tHumidity: %.2f\n", env_data.humidity);
     printf("\tPressure: %.2f\n", env_data.pressure);
-
+#endif
     uptime_ms = to_ms_since_boot(timestamp);
     printf("\tms Since boot: %d\n", uptime_ms); 
     /*
@@ -117,38 +128,21 @@ extern void Enviro_Print(void)
     */
 }
 
-extern const double * const Enviro_GetTemperature(void)
-{
-    return &env_data.temperature;
-}
-
-extern const double * const Enviro_GetHumidity(void)
-{
-    return &env_data.humidity;
-}
-
-extern const double * const Enviro_GetPressure(void)
-{
-    return &env_data.pressure;
-}
-
-extern void Enviro_ConvertToStr(char * buffer, uint8_t buffer_len, const double * const data)
-{
-    assert(data != NULL );
-    assert(buffer != NULL);
-
-    memset(buffer,0x00, buffer_len);
-    snprintf(buffer, buffer_len,"%.4f", *data);
-}
-
 extern void Enviro_GenerateJSON(char * buffer, uint8_t buffer_len)
 {
     assert(buffer != NULL);
 
     memset(buffer,0x00, buffer_len);
+#ifdef SENSOR_MCP9808
+    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%d}",
+            MCP9808_GetTemperature(),
+            0.0,
+            uptime_ms);
+#else
     snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%d}",
             env_data.temperature,
             env_data.humidity,
             uptime_ms);
+#endif
 }
 

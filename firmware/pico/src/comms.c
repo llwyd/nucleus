@@ -90,10 +90,21 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
     return ret;
 }
 
+extern void Comms_Close(void)
+{
+    connected = false;
+    err_t close_err = tcp_close(tcp_pcb);
+    if( close_err != ERR_OK )
+    {
+        tcp_abort(tcp_pcb);
+    }
+    tcp_pcb = NULL;
+}
+
 static void Error(void *arg, err_t err)
 {
     printf("\tTCP Error\n");
-    connected = false;
+    Emitter_EmitEvent(EVENT(TCPDisconnected));
 }
 
 static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
@@ -163,6 +174,12 @@ extern bool Comms_TCPInit(void)
 {
     bool ret = false;
     connected = false;
+
+    if(tcp_pcb != NULL )
+    {
+        Comms_Close();
+    }
+
     /* Init */
     ip4addr_aton(MQTT_BROKER_IP, &remote_addr);
     
