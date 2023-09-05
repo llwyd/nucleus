@@ -32,17 +32,20 @@
 
 /* Top level state */
 DEFINE_STATE(Setup);
+DEFINE_STATE(ConfigureRTC);
 DEFINE_STATE(Root);
 
 /* Second level */
 DEFINE_STATE(WifiConnected);
 DEFINE_STATE(WifiNotConnected);
+DEFINE_STATE(DNSRequest);
+DEFINE_STATE(RequestNTP);
+DEFINE_STATE(Idle);
 
 /* Third level */
 DEFINE_STATE(TCPNotConnected);
 DEFINE_STATE(MQTTNotConnected);
 DEFINE_STATE(MQTTSubscribing);
-DEFINE_STATE(Idle);
 
 /* Inherit from state_t */
 typedef struct
@@ -258,8 +261,8 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         {
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            char * msg = FIFO_Dequeue(node_state->msg_fifo);
-            if(MQTT_HandleMessage(node_state->mqtt, msg))
+            msg_t * msg = FIFO_Dequeue(node_state->msg_fifo);
+            if(MQTT_HandleMessage(node_state->mqtt, msg->data))
             {
                 ret = TRANSITION(this, MQTTSubscribing);
             }
@@ -289,12 +292,12 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
         case EVENT( MessageReceived ):
         {
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            char * msg = FIFO_Dequeue(node_state->msg_fifo);
-            if(MQTT_HandleMessage(node_state->mqtt, msg))
+            msg_t * msg = FIFO_Dequeue(node_state->msg_fifo);
+            if(MQTT_HandleMessage(node_state->mqtt, msg->data))
             {
                 if(MQTT_AllSubscribed(node_state->mqtt))
                 {
-                    ret = TRANSITION(this, Idle);
+                    ret = TRANSITION(this, DNSRequest);
                 }
                 else
                 {
@@ -303,9 +306,7 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
             }
             else
             {
-                /* This doesn't work, need to fix */
                 ret = TRANSITION(this, MQTTSubscribing);
-                //assert(false);
             }
             break;
         }
@@ -327,6 +328,113 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
         }
     }
     
+    return ret;
+}
+
+static state_ret_t State_ConfigureRTC( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = NO_PARENT(this);
+    node_state_t * node_state = (node_state_t *)this;
+    switch(s)
+    {
+        case EVENT( Tick ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( Enter ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return ret;
+}
+
+static state_ret_t State_DNSRequest( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, ConfigureRTC);
+    node_state_t * node_state = (node_state_t *)this;
+    switch(s)
+    {
+        case EVENT( DNSRetryRequest ):
+        case EVENT( Enter ):
+        {
+            ret = HANDLED();
+            Emitter_Destroy(node_state->retry_timer);
+            NTP_RequestDNS(node_state->ntp);
+            if(WIFI_CheckStatus())
+            {
+                Emitter_Create(EVENT(DNSRetryRequest), node_state->retry_timer, RETRY_PERIOD_MS);
+            }
+            else
+            {
+                /* Possible WIFI may have failed at this point, re-connect */
+                ret = TRANSITION(this, WifiNotConnected);
+            }
+            break;
+        }
+        case EVENT( DNSReceived ):
+        {
+            Emitter_Destroy(node_state->retry_timer);
+            NTP_PrintIP(node_state->ntp);
+            ret = TRANSITION(this, Idle);
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return ret;
+}
+
+static state_ret_t State_RequestNTP( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, ConfigureRTC);
+    node_state_t * node_state = (node_state_t *)this;
+    switch(s)
+    {
+        case EVENT( NTPRetryRequest ):
+        case EVENT( Enter ):
+        {
+            ret = HANDLED();
+            Emitter_Destroy(node_state->retry_timer);
+            NTP_Get(node_state->ntp);
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        case EVENT(NTPReceived):
+        {
+            ret = HANDLED();
+        }
+        default:
+        {
+            break;
+        }
+    }
     return ret;
 }
 
@@ -358,6 +466,7 @@ static state_ret_t State_Root( state_t * this, event_t s )
     }
     return ret;
 }
+
 static state_ret_t State_Idle( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
@@ -401,8 +510,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            char * msg = FIFO_Dequeue(node_state->msg_fifo);
-            (void)MQTT_HandleMessage(node_state->mqtt, msg); 
+            msg_t * msg = FIFO_Dequeue(node_state->msg_fifo);
+            (void)MQTT_HandleMessage(node_state->mqtt, msg->data); 
             ret = HANDLED();
             break;
         }

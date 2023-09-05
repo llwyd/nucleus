@@ -18,7 +18,9 @@ ntp_t;
 
 extern void NTP_Init( ntp_t * ntp );
 extern void NTP_Get( ntp_t * ntp );
+extern void NTP_PrintIP( ntp_t * ntp );
 extern void NTP_Decode( uint8_t * buffer );
+extern void NTP_RequestDNS( ntp_t * ntp );
 
 #endif /* NTP_H_ */
 

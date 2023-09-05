@@ -8,6 +8,11 @@ static uint8_t recv_buffer[ BUFFER_SIZE ];
 static msg_fifo_t * msg_fifo;
 static critical_section_t * critical;
 
+static void Close(void)
+{
+
+}
+
 extern void UDP_Recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {
 }

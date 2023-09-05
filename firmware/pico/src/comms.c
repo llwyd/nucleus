@@ -56,7 +56,12 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
             for( uint32_t idx = 0; idx < q->len; idx+=size_to_copy )
             {
                 size_to_copy = *(msg_ptr + 1) + 2U;
-                
+               
+                msg_t msg =
+                {
+                    .data = msg_ptr,
+                    .len = size_to_copy,
+                };
                 /*
                 printf("\tSize to copy: %d\n\t", size_to_copy);
                 for( uint32_t jdx = 0; jdx < size_to_copy; jdx++)
@@ -68,7 +73,7 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
                 */
                 if( !FIFO_IsFull( &msg_fifo->base ) )
                 {
-                    FIFO_Enqueue( msg_fifo, msg_ptr);
+                    FIFO_Enqueue( msg_fifo, &msg);
 
                     /* Only emit event if the message was actually put in buffer */
                     Emitter_EmitEvent(EVENT(MessageReceived));

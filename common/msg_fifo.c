@@ -29,10 +29,10 @@ static void Enqueue( fifo_base_t * const base )
     /* Clear what was in there */
     memset(fifo->queue[ fifo->base.write_index ], 0x00, MSG_SIZE);
 
-    int bytes_to_copy = fifo->data[1] + 2U;
+    int bytes_to_copy = fifo->data->len;
 
     /* Copy the new string */
-    memcpy(fifo->queue[ fifo->base.write_index ], fifo->data, bytes_to_copy);
+    memcpy(fifo->queue[ fifo->base.write_index ], fifo->data->data, bytes_to_copy);
 
     fifo->base.write_index++;
     fifo->base.fill++;
@@ -43,7 +43,7 @@ static void Dequeue( fifo_base_t * const base )
 {
     assert( base != NULL );
     msg_fifo_t * fifo = (msg_fifo_t *)base;
-    fifo->data = fifo->queue[ fifo->base.read_index ];
+    fifo->data->data = fifo->queue[ fifo->base.read_index ];
     fifo->base.read_index++;
     fifo->base.fill--;
     fifo->base.read_index = ( fifo->base.read_index & ( fifo->base.max - 1U ) );
