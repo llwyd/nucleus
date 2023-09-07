@@ -73,7 +73,7 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
                 */
                 if( !FIFO_IsFull( &msg_fifo->base ) )
                 {
-                    FIFO_Enqueue( msg_fifo, &msg);
+                    FIFO_Enqueue( msg_fifo, msg);
 
                     /* Only emit event if the message was actually put in buffer */
                     Emitter_EmitEvent(EVENT(MessageReceived));

@@ -8,6 +8,8 @@
 #include <state.h>
 #include <string.h>
 #include <fifo_base.h>
+#include "pico/critical_section.h"
+#include "pico/cyw43_arch.h"
 
 #define MSG_FIFO_LEN (32U)
 #define MSG_SIZE (128U)
@@ -23,10 +25,10 @@ typedef struct
 {
     fifo_base_t base;
     char queue[MSG_FIFO_LEN][MSG_SIZE];
-    msg_t * data;
+    msg_t data;
 } msg_fifo_t;
 
-extern void Message_Init(msg_fifo_t * fifo);
+extern void Message_Init(msg_fifo_t * fifo, critical_section_t * crit);
 
 #endif /* MSG_FIFO_H_ */
 

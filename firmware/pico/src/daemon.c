@@ -26,7 +26,7 @@
 #include "gpio.h"
 
 #define RETRY_PERIOD_MS (1500)
-#define SENSOR_PERIOD_MS (250)
+#define SENSOR_PERIOD_MS (100)
 
 #define ID_STRING_SIZE ( 32U )
 
@@ -58,6 +58,7 @@ typedef struct
     ntp_t * ntp;
     msg_fifo_t * msg_fifo;
     msg_fifo_t * udp_fifo;
+    critical_section_t * crit;
 }
 node_state_t;
 
@@ -261,8 +262,8 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         {
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            msg_t * msg = FIFO_Dequeue(node_state->msg_fifo);
-            if(MQTT_HandleMessage(node_state->mqtt, msg->data))
+            msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
+            if(MQTT_HandleMessage(node_state->mqtt, msg.data))
             {
                 ret = TRANSITION(this, MQTTSubscribing);
             }
@@ -292,8 +293,8 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
         case EVENT( MessageReceived ):
         {
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            msg_t * msg = FIFO_Dequeue(node_state->msg_fifo);
-            if(MQTT_HandleMessage(node_state->mqtt, msg->data))
+            msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
+            if(MQTT_HandleMessage(node_state->mqtt, msg.data))
             {
                 if(MQTT_AllSubscribed(node_state->mqtt))
                 {
@@ -389,6 +390,7 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
         {
             Emitter_Destroy(node_state->retry_timer);
             NTP_PrintIP(node_state->ntp);
+            //ret = TRANSITION(this, RequestNTP);
             ret = TRANSITION(this, Idle);
             break;
         }
@@ -486,6 +488,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             Accelerometer_Ack();
             MQTT_Publish(node_state->mqtt,"motion","1");
+            
             ret = HANDLED();
             break;
         }
@@ -510,8 +513,9 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            msg_t * msg = FIFO_Dequeue(node_state->msg_fifo);
-            (void)MQTT_HandleMessage(node_state->mqtt, msg->data); 
+            msg_t msg = FIFO_Peek(node_state->msg_fifo);
+            (void)MQTT_HandleMessage(node_state->mqtt, msg.data); 
+            (void)FIFO_Dequeue(node_state->msg_fifo);
             ret = HANDLED();
             break;
         }
@@ -560,8 +564,8 @@ extern void Daemon_Run(void)
     Accelerometer_Init();
     Events_Init(&events);
     
-    Message_Init(&msg_fifo);
-    Message_Init(&udp_fifo);
+    Message_Init(&msg_fifo, &crit);
+    Message_Init(&udp_fifo, &crit);
     Comms_Init(&msg_fifo, &crit);
     UDP_Init(&udp_fifo, &crit);
     MQTT_Init(&mqtt);
@@ -577,6 +581,7 @@ extern void Daemon_Run(void)
     state_machine.msg_fifo = &msg_fifo;
     state_machine.udp_fifo = &udp_fifo;
     state_machine.ntp = &ntp;
+    state_machine.crit = &crit;
 
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
 

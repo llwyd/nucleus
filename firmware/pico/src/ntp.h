@@ -7,12 +7,12 @@
 
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
-
+#include "lwip/udp.h"
 #include <time.h>
 
 typedef struct
 {
-    bool (*send)( uint8_t * buffer, uint16_t len, char * ip, uint16_t port);
+    bool (*send)( uint8_t * buffer, uint16_t len, ip_addr_t ip, uint16_t port);
 }
 ntp_t;
 
