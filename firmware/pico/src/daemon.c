@@ -25,8 +25,8 @@
 #include "ntp.h"
 #include "gpio.h"
 
-#define RETRY_PERIOD_MS (1500)
-#define SENSOR_PERIOD_MS (100)
+#define RETRY_PERIOD_MS (1250)
+#define SENSOR_PERIOD_MS (200)
 
 #define ID_STRING_SIZE ( 32U )
 
@@ -513,9 +513,9 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            msg_t msg = FIFO_Peek(node_state->msg_fifo);
-            (void)MQTT_HandleMessage(node_state->mqtt, msg.data); 
             (void)FIFO_Dequeue(node_state->msg_fifo);
+            char * msg = Message_Get();
+            (void)MQTT_HandleMessage(node_state->mqtt, msg); 
             ret = HANDLED();
             break;
         }
@@ -554,23 +554,35 @@ extern void Daemon_Run(void)
     struct repeating_timer timer;
     struct repeating_timer read_timer;
     struct repeating_timer retry_timer;
+    
+    critical_section_t crit_events;
+    critical_section_t crit_tcp;
+    critical_section_t crit_udp;
+    critical_section_t crit_msg_fifo;
+    critical_section_t crit_udp_fifo;
    
     /* Initialise various sub modules */ 
     stdio_init_all();
     critical_section_init(&crit);
+    critical_section_init_with_lock_num(&crit_events, 0U);
+    critical_section_init_with_lock_num(&crit_tcp, 1U);
+    critical_section_init_with_lock_num(&crit_udp, 2U);
+    critical_section_init_with_lock_num(&crit_msg_fifo, 3U);
+    critical_section_init_with_lock_num(&crit_udp_fifo, 4U);
+    
     GPIO_Init();
     I2C_Init();
     Enviro_Init();
     Accelerometer_Init();
     Events_Init(&events);
     
-    Message_Init(&msg_fifo, &crit);
-    Message_Init(&udp_fifo, &crit);
-    Comms_Init(&msg_fifo, &crit);
-    UDP_Init(&udp_fifo, &crit);
+    Message_Init(&msg_fifo, &crit_msg_fifo);
+//    Message_Init(&udp_fifo, &c);
+    Comms_Init(&msg_fifo, &crit_tcp);
+    UDP_Init(&udp_fifo, &crit_udp);
     MQTT_Init(&mqtt);
     NTP_Init(&ntp);
-    Emitter_Init(&events, &crit);
+    Emitter_Init(&events, &crit_events);
     WIFI_Init();
 
     node_state_t state_machine; 
@@ -591,7 +603,9 @@ extern void Daemon_Run(void)
         {
             tight_loop_contents();
         }
+        critical_section_enter_blocking(&crit_events);
         event_t e = FIFO_Dequeue( &events );
+        critical_section_exit(&crit_events);
         STATEMACHINE_Dispatch(&state_machine.state, e);
     }
 

@@ -5,11 +5,8 @@
 #define MQTT_PORT ( 1883 )
 #define MQTT_TIMEOUT ( 0xb4 )
 
-#define BUFFER_SIZE (256)
+#define BUFFER_SIZE (128)
 #define POLL_PERIOD (5U)
-
-static uint8_t send_buffer[ BUFFER_SIZE ];
-static uint8_t recv_buffer[ BUFFER_SIZE ];
 
 static ip_addr_t remote_addr;
 static struct tcp_pcb * tcp_pcb;
@@ -28,25 +25,26 @@ static err_t Poll(void *arg, struct tcp_pcb *tpcb);
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
 {
     //printf("\tTCP Sent\n");
+//    printf("\n--Sent %d bytes total\n", len);
     return ERR_OK;
 }
 
 static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
    // printf("\tTCP Recv\n");
-   // printf("\tReceived %d bytes total\n", p->tot_len);
+  //  printf("\n--Recv %d bytes total\n", p->tot_len);
     cyw43_arch_lwip_check();
     err_t ret = ERR_OK;
-    uint8_t recv[64] = {0U};
-    
+    uint8_t recv[BUFFER_SIZE] = {0U};
+    assert(p->tot_len < BUFFER_SIZE); 
     if( p != NULL )
     {
         for(struct pbuf *q = p; q != NULL; q = q->next )
         {
             //printf("\tMessage len %d bytes\n", p->len);
            
-            memset(recv,0x00, 64U);
-            pbuf_copy_partial(q, recv, 64U, 0);
+            memset(recv,0x00, BUFFER_SIZE);
+            pbuf_copy_partial(q, recv, BUFFER_SIZE, 0);
             /* Handle bunched together mqtt packets */
             
             uint8_t * msg_ptr = recv;
@@ -62,8 +60,7 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
                     .data = msg_ptr,
                     .len = size_to_copy,
                 };
-                /*
-                printf("\tSize to copy: %d\n\t", size_to_copy);
+                /*            
                 for( uint32_t jdx = 0; jdx < size_to_copy; jdx++)
                 {
                     printf("0x%x,", msg_ptr[jdx]);
@@ -71,6 +68,7 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
                 
                 printf("\b \n");
                 */
+                critical_section_enter_blocking(critical);
                 if( !FIFO_IsFull( &msg_fifo->base ) )
                 {
                     FIFO_Enqueue( msg_fifo, msg);
@@ -78,6 +76,7 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
                     /* Only emit event if the message was actually put in buffer */
                     Emitter_EmitEvent(EVENT(MessageReceived));
                 }
+                critical_section_exit(critical);
 
                 msg_ptr += size_to_copy;
             }

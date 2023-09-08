@@ -256,11 +256,12 @@ bool Ack_Publish(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
     else
     {
         char topic[64];
-        char full_topic[64];
-        char data[32];
+        char full_topic[128];
+        char data[64];
 
         memset( topic, 0x00, 64);
-        memset( data, 0x00, 32);
+        memset( full_topic, 0x00, 128);
+        memset( data, 0x00, 64);
                 
         unsigned char msg_len = len;
         unsigned char topic_len = buff[2] << 8 | buff[3];

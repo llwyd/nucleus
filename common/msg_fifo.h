@@ -29,6 +29,7 @@ typedef struct
 } msg_fifo_t;
 
 extern void Message_Init(msg_fifo_t * fifo, critical_section_t * crit);
+extern char * Message_Get(void);
 
 #endif /* MSG_FIFO_H_ */
 
