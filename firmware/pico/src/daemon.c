@@ -390,8 +390,8 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
         {
             Emitter_Destroy(node_state->retry_timer);
             NTP_PrintIP(node_state->ntp);
-            //ret = TRANSITION(this, RequestNTP);
-            ret = TRANSITION(this, Idle);
+            ret = TRANSITION(this, RequestNTP);
+            //ret = TRANSITION(this, Idle);
             break;
         }
         case EVENT( Exit ):
@@ -420,7 +420,15 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
             ret = HANDLED();
             Emitter_Destroy(node_state->retry_timer);
             NTP_Get(node_state->ntp);
-            ret = HANDLED();
+            if(WIFI_CheckStatus())
+            {
+                Emitter_Create(EVENT(DNSRetryRequest), node_state->retry_timer, RETRY_PERIOD_MS);
+            }
+            else
+            {
+                /* Possible WIFI may have failed at this point, re-connect */
+                ret = TRANSITION(this, WifiNotConnected);
+            }
             break;
         }
         case EVENT( Exit ):
@@ -430,7 +438,12 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
         }
         case EVENT(NTPReceived):
         {
-            ret = HANDLED();
+            Emitter_Destroy(node_state->retry_timer);
+            assert( !FIFO_IsEmpty( &node_state->udp_fifo->base ) );
+            msg_t msg = FIFO_Dequeue(node_state->udp_fifo);
+            NTP_Decode(msg.data);
+            ret = TRANSITION(this, Idle);
+            //ret = HANDLED();
         }
         default:
         {
@@ -576,7 +589,7 @@ extern void Daemon_Run(void)
     Events_Init(&events);
     
     Message_Init(&msg_fifo, &crit_msg_fifo);
-//    Message_Init(&udp_fifo, &c);
+    Message_Init(&udp_fifo, &crit_udp_fifo);
     Comms_Init(&msg_fifo, &crit_tcp);
     UDP_Init(&udp_fifo, &crit_udp);
     MQTT_Init(&mqtt);
