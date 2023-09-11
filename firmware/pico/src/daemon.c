@@ -513,9 +513,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            (void)FIFO_Dequeue(node_state->msg_fifo);
-            char * msg = Message_Get();
-            (void)MQTT_HandleMessage(node_state->mqtt, msg); 
+            msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
+            (void)MQTT_HandleMessage(node_state->mqtt, msg.data); 
             ret = HANDLED();
             break;
         }

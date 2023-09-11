@@ -25,7 +25,8 @@ typedef struct
 {
     fifo_base_t base;
     char queue[MSG_FIFO_LEN][MSG_SIZE];
-    msg_t data;
+    msg_t in;
+    msg_t out;
 } msg_fifo_t;
 
 extern void Message_Init(msg_fifo_t * fifo, critical_section_t * crit);

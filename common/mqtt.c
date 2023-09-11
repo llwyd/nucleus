@@ -39,7 +39,8 @@ typedef struct
 {
     fifo_base_t base;
     mqtt_resp_t queue[RESP_FIFO_LEN];
-    mqtt_resp_t data;
+    mqtt_resp_t in;
+    mqtt_resp_t out;
 }
 resp_fifo_t;
 
@@ -923,7 +924,7 @@ static void InitRespFifo(resp_fifo_t * fifo)
     FIFO_Init( (fifo_base_t *)fifo, RESP_FIFO_LEN );
     
     fifo->base.vfunc = &vfunc;
-    memset(fifo->queue, 0x00, RESP_FIFO_LEN * sizeof(fifo->data));
+    memset(fifo->queue, 0x00, RESP_FIFO_LEN * sizeof(fifo->in));
 }
 
 static void RespEnqueue( fifo_base_t * const base )

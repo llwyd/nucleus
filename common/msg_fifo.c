@@ -9,8 +9,6 @@ static void Dequeue( fifo_base_t * const base );
 static void Flush( fifo_base_t * const base );
 static void Peek( fifo_base_t * const base );
 
-char dequeued_data[MSG_SIZE];
-
 /* Need critical section... */
 
 extern void Message_Init(msg_fifo_t * fifo, critical_section_t * crit)
@@ -41,10 +39,10 @@ static void Enqueue( fifo_base_t * const base )
     /* Clear what was in there */
     memset(fifo->queue[ fifo->base.write_index ], 0x00, MSG_SIZE);
 
-    int bytes_to_copy = fifo->data.len;
+    int bytes_to_copy = fifo->in.len;
     assert(bytes_to_copy <= MSG_SIZE);
     /* Copy the new string */
-    memcpy(fifo->queue[ fifo->base.write_index ], fifo->data.data, bytes_to_copy);
+    memcpy(fifo->queue[ fifo->base.write_index ], fifo->in.data, bytes_to_copy);
 
     fifo->base.write_index++;
     fifo->base.fill++;
@@ -61,19 +59,14 @@ static void Dequeue( fifo_base_t * const base )
     assert( base != NULL );
     msg_fifo_t * fifo = (msg_fifo_t *)base;
 //    printf("DEQ read:%d, write:%d, Fill:%d\n", fifo->base.read_index, fifo->base.write_index, fifo->base.fill);
-    fifo->data.data = fifo->queue[ fifo->base.read_index ];
-    memcpy(dequeued_data, fifo->data.data, MSG_SIZE);
+    fifo->out.data = fifo->queue[ fifo->base.read_index ];
+    
     fifo->base.read_index++;
     fifo->base.fill--;
     fifo->base.read_index = ( fifo->base.read_index & ( fifo->base.max - 1U ) );
 //    printf("DEQ read:%d, write:%d, Fill:%d\n", fifo->base.read_index, fifo->base.write_index, fifo->base.fill);
     
     critical_section_exit(critical);
-}
-
-extern char * Message_Get(void)
-{
-    return dequeued_data;
 }
 
 static void Peek( fifo_base_t * const base )
@@ -85,7 +78,7 @@ static void Peek( fifo_base_t * const base )
 //    printf("PK read:%d, write:%d, Fill:%d\n", fifo->base.read_index, fifo->base.write_index, fifo->base.fill);
     char * ptr = fifo->queue[ fifo->base.read_index ];
     
-    fifo->data.data = ptr;
+    fifo->out.data = ptr;
     critical_section_exit(critical);
 }
 
