@@ -33,6 +33,8 @@ add_executable(node
     src/ntp.h
     src/gpio.h
     src/gpio.c
+    src/alarm.h
+    src/alarm.c
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
@@ -56,6 +58,8 @@ pico_add_extra_outputs(node)
 target_compile_definitions(node PRIVATE SENSOR_MCP9808 )
 target_compile_definitions(node PRIVATE ACCELEROMETER_ENABLED )
 
+target_compile_options(node PRIVATE -Wfatal-errors )
+
 target_include_directories(node PRIVATE ${CMAKE_CURRENT_LIST_DIR} )
 include_directories( node PRIVATE src )
 include_directories( node PRIVATE common )
@@ -65,4 +69,5 @@ include_directories( node PRIVATE ../../stateengine/src )
 target_link_libraries(node 
     pico_cyw43_arch_lwip_threadsafe_background 
     pico_stdlib 
-    hardware_i2c)
+    hardware_i2c
+    hardware_rtc)
