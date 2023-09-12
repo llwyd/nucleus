@@ -24,8 +24,9 @@
 #include "udp.h"
 #include "ntp.h"
 #include "gpio.h"
+#include "alarm.h"
 
-#define RETRY_PERIOD_MS (1250)
+#define RETRY_PERIOD_MS (1500)
 #define SENSOR_PERIOD_MS (200)
 
 #define ID_STRING_SIZE ( 32U )
@@ -464,12 +465,14 @@ static state_ret_t State_Root( state_t * this, event_t s )
         {
             Emitter_Create(EVENT(ReadSensor), node_state->read_timer, SENSOR_PERIOD_MS);
             WIFI_SetLed();
+            Alarm_Start();
             ret = HANDLED();
             break;
         }
         case EVENT( Exit ):
         {
             /* Should never try and leave here! */
+            Alarm_Stop();
             Emitter_Destroy(node_state->read_timer);
             ret = HANDLED();
             break;
@@ -531,6 +534,14 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             ret = HANDLED();
             break;
         }
+        case EVENT( AlarmElapsed ):
+        {
+            char json[64];
+            Enviro_GenerateJSON(json, 64);
+            MQTT_Publish(node_state->mqtt,"summary", json);
+            ret = HANDLED();
+            break;
+        }
         default:
         {
             break;
@@ -584,6 +595,7 @@ extern void Daemon_Run(void)
     
     GPIO_Init();
     I2C_Init();
+    Alarm_Init();
     Enviro_Init();
     Accelerometer_Init();
     Events_Init(&events);

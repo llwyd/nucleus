@@ -20,6 +20,7 @@
     SIG( DNSRetryRequest ) \
     SIG( NTPReceived ) \
     SIG( NTPRetryRequest ) \
+    SIG( AlarmElapsed ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );
