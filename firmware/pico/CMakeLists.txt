@@ -33,6 +33,8 @@ add_executable(node
     src/ntp.h
     src/gpio.h
     src/gpio.c
+    src/alarm.h
+    src/alarm.c
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
@@ -67,4 +69,5 @@ include_directories( node PRIVATE ../../stateengine/src )
 target_link_libraries(node 
     pico_cyw43_arch_lwip_threadsafe_background 
     pico_stdlib 
-    hardware_i2c)
+    hardware_i2c
+    hardware_rtc)

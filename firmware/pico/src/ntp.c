@@ -4,6 +4,7 @@
 #include "node_events.h"
 #include "emitter.h"
 #include <time.h>
+#include "alarm.h"
 
 #define NTP_IP ("pool.ntp.org")
 #define NTP_PORT (123U)
@@ -54,6 +55,6 @@ extern void NTP_Decode( uint8_t * buffer )
     uint32_t timestamp = raw[10];
     timestamp -= NTP2UNIX;
     unixtime = (time_t)timestamp;
-    printf("\t%s", ctime(&unixtime));
+    Alarm_SetClock(&unixtime);
 }
 
