@@ -37,6 +37,8 @@ add_executable(node
     src/alarm.c
     src/config.h
     src/config.c
+    src/eeprom.c
+    src/eeprom.h
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h

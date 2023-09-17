@@ -25,6 +25,7 @@
 #include "ntp.h"
 #include "gpio.h"
 #include "alarm.h"
+#include "eeprom.h"
 
 DEFINE_STATE(Config);
 
@@ -43,6 +44,7 @@ static state_ret_t State_Config( state_t * this, event_t s )
     {
         case EVENT( Enter ):
         {
+            EEPROM_Test();
             ret = HANDLED();
             break;
         }
