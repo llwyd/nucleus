@@ -10,6 +10,7 @@
 
 #include "daemon.h"
 #include "gpio.h"
+#include "config.h"
 
 int main()
 {
@@ -22,7 +23,7 @@ int main()
     }
     else
     {
-        assert(false);
+        Config_Run();
     }
 
     assert(false);

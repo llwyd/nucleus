@@ -35,6 +35,8 @@ add_executable(node
     src/gpio.c
     src/alarm.h
     src/alarm.c
+    src/config.h
+    src/config.c
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
