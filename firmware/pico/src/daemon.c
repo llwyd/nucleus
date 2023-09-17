@@ -496,6 +496,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Exit ):
         case EVENT( Enter ):
         {
+            Accelerometer_Ack();
             Accelerometer_Start();
             ret = HANDLED();
             break;
@@ -585,7 +586,6 @@ extern void Daemon_Run(void)
     critical_section_t crit_udp_fifo;
    
     /* Initialise various sub modules */ 
-    stdio_init_all();
     critical_section_init(&crit);
     critical_section_init_with_lock_num(&crit_events, 0U);
     critical_section_init_with_lock_num(&crit_tcp, 1U);
@@ -593,7 +593,6 @@ extern void Daemon_Run(void)
     critical_section_init_with_lock_num(&crit_msg_fifo, 3U);
     critical_section_init_with_lock_num(&crit_udp_fifo, 4U);
     
-    GPIO_Init();
     I2C_Init();
     Alarm_Init();
     Enviro_Init();
