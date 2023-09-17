@@ -64,6 +64,7 @@ static state_ret_t State_Config( state_t * this, event_t s )
 extern void Config_Run(void)
 {
     config_state_t state_machine; 
+    I2C_Init();
     STATEMACHINE_Init( &state_machine.state, STATE( Config ) );
     while(true)
     {
