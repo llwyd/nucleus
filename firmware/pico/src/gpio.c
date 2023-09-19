@@ -29,7 +29,6 @@ extern void GPIO_Init(void)
     /* EEPROM Write protect */
     gpio_init(WRITE_PIN);
     gpio_set_dir(WRITE_PIN, GPIO_OUT);
-    gpio_set_pulls(WRITE_PIN,false,false);
     gpio_put(WRITE_PIN, false);
 
     /* Accelerometer */
