@@ -39,6 +39,8 @@ add_executable(node
     src/config.c
     src/eeprom.c
     src/eeprom.h
+    src/cli.c
+    src/cli.h
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h

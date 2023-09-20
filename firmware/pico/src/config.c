@@ -26,6 +26,7 @@
 #include "gpio.h"
 #include "alarm.h"
 #include "eeprom.h"
+#include "cli.h"
 
 DEFINE_STATE(Config);
 
@@ -65,6 +66,7 @@ extern void Config_Run(void)
 {
     config_state_t state_machine; 
     I2C_Init();
+    CLI_Init();
     STATEMACHINE_Init( &state_machine.state, STATE( Config ) );
     while(true)
     {
