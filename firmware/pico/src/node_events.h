@@ -21,6 +21,7 @@
     SIG( NTPReceived ) \
     SIG( NTPRetryRequest ) \
     SIG( AlarmElapsed ) \
+    SIG( HandleCommand ) \
 
 GENERATE_SIGNALS( SIGNALS );
 GENERATE_SIGNAL_STRINGS( SIGNALS );

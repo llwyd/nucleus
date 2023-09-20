@@ -7,6 +7,10 @@
 #include <assert.h>
 #include "pico/stdlib.h"
 
-extern void CLI_Init(void);
+#define CLI_CMD_SIZE (64)
+
+extern void CLI_Init(uint8_t * buffer);
+extern void CLI_Start(void);
+extern void CLI_Stop(void);
 
 #endif /* CLI_H_ */
