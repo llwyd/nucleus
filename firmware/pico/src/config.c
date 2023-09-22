@@ -38,6 +38,12 @@ typedef struct
 }
 config_state_t;
 
+#define NUM_COMMANDS (1)
+const cli_command_t command_table[NUM_COMMANDS] =
+{
+    { "test", STATE(AwaitingCommand) },
+};
+
 static state_ret_t State_Config( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
@@ -84,8 +90,32 @@ static state_ret_t State_AwaitingCommand( state_t * this, event_t s )
         case EVENT( HandleCommand ):
         {
             CLI_Stop();
-            CLI_Start();
-            ret = HANDLED();
+            bool valid_command = false;
+            uint32_t idx;
+            for( idx = 0; idx < NUM_COMMANDS; idx++)
+            {
+                if(strncmp(command_table[idx].command, config_state->buffer, CLI_CMD_SIZE) == 0U)
+                {
+                    valid_command = true;
+                    break;
+                } 
+            }
+
+            if(valid_command)
+            {
+                printf("Valid Command\n");
+                CLI_Start();
+                ret = HANDLED();
+
+                /* TODO: Fix in state machine lib */
+                //ret = TRANSITION2(this, command_table[idx].state);
+            }
+            else
+            {
+                printf("Invalid Command\n");
+                CLI_Start();
+                ret = HANDLED();
+            }
             break;
         }
         default:
