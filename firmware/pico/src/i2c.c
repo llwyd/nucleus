@@ -23,8 +23,9 @@ int8_t I2C_ReadReg(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf
                                      );
     if( ret0 < 0 )
     {
-        printf("\tI2C Read fail\n");
+        printf("\tI2C Read(W) fail\n");
         rslt = -1;
+        goto cleanup;
     }
    
     int ret1 = i2c_read_blocking(i2c_default,address,reg_data,len,false);
@@ -33,13 +34,14 @@ int8_t I2C_ReadReg(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf
     {
         printf("\tI2C Read fail\n");
         rslt = -1;
+        goto cleanup;
     }
     else
     {
         //printf("%d bytes read\n", ret1);
     }
     
-
+cleanup:
     return rslt;
 }
 
@@ -58,6 +60,7 @@ int8_t I2C_ReadRegQuiet(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void 
     if( ret0 < 0 )
     {
         rslt = -1;
+        goto cleanup;
     }
    
     int ret1 = i2c_read_blocking(i2c_default,address,reg_data,len,false);
@@ -65,13 +68,14 @@ int8_t I2C_ReadRegQuiet(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void 
     if( ret1 < 0 )
     {
         rslt = -1;
+        goto cleanup;
     }
     else
     {
         //printf("%d bytes read\n", ret1);
     }
     
-
+cleanup:
     return rslt;
 }
 
@@ -90,17 +94,19 @@ int8_t I2C_WriteReg(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, voi
                                     address,
                                     buffer,
                                     len + 1U,
-                                    true
+                                    false
                                      );
     if( ret < 0 )
     {
-        printf("\tI2C Read fail\n");
+        printf("\tI2C Write fail\n");
         rslt = -1;
+        goto cleanup;
     }
     else
     {
         //printf("%d bytes written\n", ret);
     }
     
+cleanup:
     return rslt;
 }

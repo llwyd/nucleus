@@ -35,6 +35,12 @@ add_executable(node
     src/gpio.c
     src/alarm.h
     src/alarm.c
+    src/config.h
+    src/config.c
+    src/eeprom.c
+    src/eeprom.h
+    src/cli.c
+    src/cli.h
     ../../stateengine/src/state.h
     ../../stateengine/src/state.c
     ../../stateengine/src/fifo_base.h
@@ -55,7 +61,7 @@ pico_enable_stdio_usb(node 1)
 pico_enable_stdio_uart(node 1)
 pico_add_extra_outputs(node)
 
-target_compile_definitions(node PRIVATE SENSOR_MCP9808 )
+#target_compile_definitions(node PRIVATE SENSOR_MCP9808 )
 target_compile_definitions(node PRIVATE ACCELEROMETER_ENABLED )
 
 target_compile_options(node PRIVATE -Wfatal-errors )

@@ -1,6 +1,7 @@
 #include "comms.h"
 #include "node_events.h"
 #include "emitter.h"
+#include "eeprom.h"
 
 #define MQTT_PORT ( 1883 )
 #define MQTT_TIMEOUT ( 0xb4 )
@@ -14,6 +15,8 @@ static bool connected = false;
 static char * client_name = "pico";
 static msg_fifo_t * msg_fifo;
 static critical_section_t * critical;
+
+static uint8_t broker_ip[EEPROM_ENTRY_SIZE] = {0U};
 
 /* LWIP callback functions */
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
@@ -185,7 +188,7 @@ extern bool Comms_TCPInit(void)
     }
 
     /* Init */
-    ip4addr_aton(MQTT_BROKER_IP, &remote_addr);
+    ip4addr_aton(broker_ip, &remote_addr);
     
     printf("\tInitialising TCP Comms\n");
     printf("\tAttempting Connection to %s port %d\n", ip4addr_ntoa(&remote_addr), MQTT_PORT);
@@ -238,6 +241,11 @@ extern bool Comms_CheckStatus(void)
 extern void Comms_Init(msg_fifo_t * fifo, critical_section_t * crit)
 {
     printf("Initialising Comms\n");
+    printf("\tRetrieving settings from EEPROM\n");
+
+    EEPROM_Read(broker_ip, EEPROM_ENTRY_SIZE, EEPROM_IP);
+
+    printf("\tBroker IP: %s\n", broker_ip);
     msg_fifo = fifo;
     critical = crit;
 }

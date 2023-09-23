@@ -1,10 +1,5 @@
 #include "gpio.h"
 
-#define INT1_PIN (14U)
-#define INT2_PIN (15U)
-#define SDA_PIN (16U)
-#define SCL_PIN (17U)
-
 static void IRQ_Callback(uint gpio, uint32_t events)
 {
     switch(gpio)
@@ -25,6 +20,16 @@ static void IRQ_Callback(uint gpio, uint32_t events)
 extern void GPIO_Init(void)
 {
     printf("Initialising GPIO\n");
+
+    /* Config Mode */
+    gpio_init(CONFIG_PIN);
+    gpio_set_dir(CONFIG_PIN, GPIO_IN);
+    gpio_set_pulls(CONFIG_PIN,true,false);
+    
+    /* EEPROM Write protect */
+    gpio_init(WRITE_PIN);
+    gpio_set_dir(WRITE_PIN, GPIO_OUT);
+    gpio_put(WRITE_PIN, false);
 
     /* Accelerometer */
     gpio_init(INT1_PIN);
