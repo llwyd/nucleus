@@ -18,7 +18,7 @@ static void rx_recv(void)
     while(uart_is_readable(uart0))
     {
         uint8_t latest_char = uart_getc(uart0);
-
+        bool enter_pressed = false;
         switch(latest_char)
         {
             case KEY_ENTER:
@@ -26,6 +26,7 @@ static void rx_recv(void)
                 uart_puts(uart0, "\r\n");
                 write_index = (CLI_CMD_SIZE - 1U);
                 Emitter_EmitEvent(EVENT(HandleCommand));
+                enter_pressed = true;
                 break;
             }
             case KEY_BACKSPACE:
@@ -58,12 +59,15 @@ static void rx_recv(void)
                 break;
             }
         }
-        printf("\r$ ");
-        for(uint32_t idx = 0U; idx < CLI_CMD_SIZE; idx++)
+        if( !enter_pressed)
         {
-            printf(" ");
+            printf("\r$ ");
+            for(uint32_t idx = 0U; idx < CLI_CMD_SIZE; idx++)
+            {
+                printf(" ");
+            }
+            printf("\r$ %s", command_buffer);
         }
-        printf("\r$ %s", command_buffer);
     }
 }
 

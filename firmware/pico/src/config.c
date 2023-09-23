@@ -31,23 +31,25 @@
 DEFINE_STATE(Config);
 DEFINE_STATE(AwaitingCommand);
 DEFINE_STATE(ReadRaw);
+DEFINE_STATE(SetValue);
 
 typedef struct
 {
     state_t state;
     uint8_t * buffer;
+    uint32_t command_idx;
 }
 config_state_t;
 
 #define NUM_COMMANDS (6U)
 const cli_command_t command_table[NUM_COMMANDS] =
 {
-    { "set ssid", STATE(AwaitingCommand) },
-    { "set pass", STATE(AwaitingCommand) },
-    { "set broker", STATE(AwaitingCommand) },
-    { "set name", STATE(AwaitingCommand) },
-    { "read all", STATE(AwaitingCommand) },
-    { "read raw", STATE(ReadRaw) },
+    { "set ssid", STATE(SetValue), "SSID", EEPROM_SSID},
+    { "set pass", STATE(SetValue), "PASSWORD", EEPROM_PASS},
+    { "set broker", STATE(SetValue), "BROKER", EEPROM_IP},
+    { "set name", STATE(SetValue), "NAME", EEPROM_NAME},
+    { "read all", STATE(AwaitingCommand), "ALL", EEPROM_NONE },
+    { "read raw", STATE(ReadRaw), "RAW", EEPROM_NONE},
 };
 
 _Static_assert(NUM_COMMANDS == (sizeof(command_table)/sizeof(cli_command_t)));
@@ -105,13 +107,13 @@ static state_ret_t State_AwaitingCommand( state_t * this, event_t s )
                 if(strncmp(command_table[idx].command, config_state->buffer, CLI_CMD_SIZE) == 0U)
                 {
                     valid_command = true;
+                    config_state->command_idx = idx;
                     break;
                 } 
             }
 
             if(valid_command)
             {
-                printf("Valid Command\n");
                 ret = TRANSITION(this, command_table[idx].state);
             }
             else
@@ -143,8 +145,7 @@ static state_ret_t State_ReadRaw( state_t * this, event_t s )
             uint8_t raw_buffer[16];
             for(uint32_t idx = 0; idx < eeprom_size; idx += 16U)
             {
-                EEPROM_ReadRaw(raw_buffer, 16U, idx);
-                
+                EEPROM_ReadRaw(raw_buffer, 16U, idx);                
                 for(uint32_t jdx = 0; jdx < 16U; jdx++)
                 {
                     printf("%x ", raw_buffer[jdx]);
@@ -158,6 +159,44 @@ static state_ret_t State_ReadRaw( state_t * this, event_t s )
         {
             ret = HANDLED();
             break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return ret;
+}
+
+static state_ret_t State_SetValue( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, STATE(Config));
+    config_state_t * config_state = (config_state_t *)this;
+    switch(s)
+    {
+        case EVENT( Enter ):
+        {
+            assert(config_state->command_idx < NUM_COMMANDS);
+            uint16_t cmd_idx = config_state->command_idx;
+            printf("Enter %s:\n", command_table[cmd_idx].name);
+            CLI_Start();
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( HandleCommand ):
+        {
+            CLI_Stop();
+            assert(config_state->command_idx < NUM_COMMANDS);
+            uint16_t cmd_idx = config_state->command_idx;
+            uint16_t str_len = strnlen(config_state->buffer, CLI_CMD_SIZE);
+            EEPROM_Write(config_state->buffer, str_len, command_table[cmd_idx].label);
+            ret = TRANSITION(this, STATE(AwaitingCommand));
         }
         default:
         {

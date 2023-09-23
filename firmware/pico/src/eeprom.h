@@ -11,7 +11,7 @@ typedef enum
     EEPROM_IP,
     EEPROM_NAME,
 
-    EEPROM_LABEL_COUNT,
+    EEPROM_NONE,
 }
 eeprom_label_t;
 
