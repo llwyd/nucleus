@@ -5,6 +5,10 @@
 
 #define KEY_ENTER (0x0D)
 #define KEY_BACKSPACE (0x08)
+#define KEY_UP (0x18)
+#define KEY_DOWN (0x19)
+#define KEY_LEFT (0x1B)
+#define KEY_RIGHT (0x1A)
 
 uint8_t * command_buffer;
 static uint8_t write_index;
@@ -31,6 +35,14 @@ static void rx_recv(void)
                     write_index--;
                     command_buffer[write_index] = 0U;
                 }
+                break;
+            }
+            case KEY_UP:
+            case KEY_DOWN:
+            case KEY_LEFT:
+            case KEY_RIGHT:
+            {
+                /* Do Nothing */
                 break;
             }
             default:
