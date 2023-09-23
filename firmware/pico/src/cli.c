@@ -28,7 +28,6 @@ static void rx_recv(void)
             {
                 if(write_index > 0U)
                 {
-                    printf("\b \b%c", 0x1B);
                     write_index--;
                     command_buffer[write_index] = 0U;
                 }
@@ -41,13 +40,18 @@ static void rx_recv(void)
                 /* -1 because the string needs to be null terminated*/
                 if(write_index < (CLI_CMD_SIZE - 1U))
                 {
-                    printf("%c", latest_char);
                     command_buffer[write_index] = latest_char;
                     write_index++;
                 } 
                 break;
             }
         }
+        printf("\r$ ");
+        for(uint32_t idx = 0U; idx < CLI_CMD_SIZE; idx++)
+        {
+            printf(" ");
+        }
+        printf("\r$ %s", command_buffer);
     }
 }
 
