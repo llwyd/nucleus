@@ -194,7 +194,8 @@ static state_ret_t State_SetValue( state_t * this, event_t s )
             CLI_Stop();
             assert(config_state->command_idx < NUM_COMMANDS);
             uint16_t cmd_idx = config_state->command_idx;
-            uint16_t str_len = strnlen(config_state->buffer, CLI_CMD_SIZE);
+            uint16_t str_len = strnlen(config_state->buffer, CLI_CMD_SIZE - 1U);
+            str_len++;
             EEPROM_Write(config_state->buffer, str_len, command_table[cmd_idx].label);
             ret = TRANSITION(this, STATE(AwaitingCommand));
         }

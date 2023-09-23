@@ -85,17 +85,20 @@ extern bool EEPROM_Write(uint8_t * buffer, uint16_t len, eeprom_label_t loc)
             (void)I2C_WriteReg(raw_index, write_ptr, remaining_len, (void*)&address);
             raw_index += remaining_len;
             bytes_written += remaining_len;
-            remaining_len -= remaining_len;
             write_ptr += remaining_len;
+            remaining_len -= remaining_len;
         }
         else
         {
             (void)I2C_WriteReg(raw_index, write_ptr, 16U, (void*)&address);
             raw_index += 16U;
             bytes_written += 16U;
+            write_ptr += 16U;
             remaining_len -= 16U;
-            write_ptr += remaining_len;
         }
+        /* Wait for write to complete before next attempt */
+        uint8_t unused_data;
+        while( I2C_ReadRegQuiet(raw_index, &unused_data, 1U, (void*)&address) < 0);
     }
 
     assert(remaining_len == 0U);
