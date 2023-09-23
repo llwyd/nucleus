@@ -30,6 +30,7 @@
 
 DEFINE_STATE(Config);
 DEFINE_STATE(AwaitingCommand);
+DEFINE_STATE(ReadRaw);
 
 typedef struct
 {
@@ -38,7 +39,7 @@ typedef struct
 }
 config_state_t;
 
-#define NUM_COMMANDS (5)
+#define NUM_COMMANDS (6U)
 const cli_command_t command_table[NUM_COMMANDS] =
 {
     { "set ssid", STATE(AwaitingCommand) },
@@ -46,6 +47,7 @@ const cli_command_t command_table[NUM_COMMANDS] =
     { "set broker", STATE(AwaitingCommand) },
     { "set name", STATE(AwaitingCommand) },
     { "read all", STATE(AwaitingCommand) },
+    { "read raw", STATE(AwaitingCommand) },
 };
 
 _Static_assert(NUM_COMMANDS == (sizeof(command_table)/sizeof(cli_command_t)));

@@ -4,8 +4,22 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef enum
+{
+    EEPROM_SSID,
+    EEPROM_PASS,
+    EEPROM_IP,
+    EEPROM_NAME,
+
+    EEPROM_LABEL_COUNT,
+}
+eeprom_label_t;
+
 extern void EEPROM_Test(void);
-extern void EEPROM_Write(uint8_t * buffer, uint16_t len);
-extern void EEPROM_Read(uint8_t * buffer, uint16_t len);
+extern void EEPROM_WriteRaw(uint8_t * buffer, uint16_t len, uint16_t loc);
+extern void EEPROM_ReadRaw(uint8_t * buffer, uint16_t len, uint16_t loc);
+
+extern bool EEPROM_Write(uint8_t * buffer, uint16_t len, eeprom_label_t loc);
+extern bool EEPROM_Read(uint8_t * buffer, uint16_t len, eeprom_label_t loc);
 
 #endif /* EEPROM_H_ */
