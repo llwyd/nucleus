@@ -15,7 +15,8 @@ typedef enum
 }
 eeprom_label_t;
 
-extern void EEPROM_Test(void);
+#define EEPROM_ENTRY_SIZE (32U)
+
 extern void EEPROM_WriteRaw(uint8_t * buffer, uint16_t len, uint16_t loc);
 extern void EEPROM_ReadRaw(uint8_t * buffer, uint16_t len, uint16_t loc);
 

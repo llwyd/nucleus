@@ -25,6 +25,7 @@
 #include "ntp.h"
 #include "gpio.h"
 #include "alarm.h"
+#include "eeprom.h"
 
 #define RETRY_PERIOD_MS (1500)
 #define SENSOR_PERIOD_MS (200)
@@ -597,7 +598,10 @@ extern void Daemon_Run(void)
     Enviro_Init();
     Accelerometer_Init();
     Events_Init(&events);
+    EEPROM_Read(unique_id, EEPROM_ENTRY_SIZE, EEPROM_NAME);
     
+
+
     Message_Init(&msg_fifo, &crit_msg_fifo);
     Message_Init(&udp_fifo, &crit_udp_fifo);
     Comms_Init(&msg_fifo, &crit_tcp);

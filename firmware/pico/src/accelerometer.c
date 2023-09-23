@@ -18,7 +18,7 @@ static void Configure(void)
     printf("\tConfigure FF_MT_CFG (0x%x)\n", data);
     (void)I2C_WriteReg(0x15,&data, 1U,(void*)&address);
     
-    data = 0x09;
+    data = 0x10;
     printf("\tConfigure FF_MT_THS (0x%x)\n", data);
     (void)I2C_WriteReg(0x17,&data, 1U,(void*)&address);
     

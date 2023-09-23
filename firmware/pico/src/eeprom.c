@@ -21,25 +21,6 @@ static uint32_t GetIndex(eeprom_label_t label)
     return raw_index;
 }
 
-extern void EEPROM_Test(void)
-{
-    printf("\tTesting EEPROM\n");
-    /* Try Read */ 
-    uint8_t data = 0U;
-    (void)I2C_ReadReg(0x00, &data, 1U, (void*)&address);
-    printf("\tReceived: 0x%x\n", data);
-
-    /* Try write and then read again */
-    data = 0xAB;
-    (void)I2C_WriteReg(0x00, &data, 1U, (void*)&address);
-    
-    data = 0x11;
-    while( I2C_ReadReg(0x00, &data, 1U, (void*)&address) < 0);
-
-    (void)I2C_ReadReg(0x00, &data, 1U, (void*)&address);
-    printf("\tReceived: 0x%x\n", data);
-}
-
 extern void EEPROM_WriteRaw(uint8_t * buffer, uint16_t len, uint16_t loc)
 {
     assert(buffer != NULL);
