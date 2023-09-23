@@ -5,8 +5,13 @@
 #include "eeprom.h"
 
 static const uint32_t entry_size = 32U;
-static const uint32_t eeprom_size = 256U;
+static const uint16_t eeprom_size = 256U;
 static const uint8_t address = 0x50;
+
+extern uint16_t EEPROM_GetSize(void)
+{
+    return eeprom_size;
+}
 
 extern void EEPROM_Test(void)
 {
@@ -46,6 +51,7 @@ extern void EEPROM_ReadRaw(uint8_t * buffer, uint16_t len, uint16_t loc)
 {
     assert(buffer != NULL);
     assert((loc + len) <= eeprom_size);
+    memset(buffer, 0U, len);
     I2C_ReadReg(loc, buffer, len, (void*)&address);
 }
 

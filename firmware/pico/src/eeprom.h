@@ -22,4 +22,6 @@ extern void EEPROM_ReadRaw(uint8_t * buffer, uint16_t len, uint16_t loc);
 extern bool EEPROM_Write(uint8_t * buffer, uint16_t len, eeprom_label_t loc);
 extern bool EEPROM_Read(uint8_t * buffer, uint16_t len, eeprom_label_t loc);
 
+extern uint16_t EEPROM_GetSize(void);
+
 #endif /* EEPROM_H_ */

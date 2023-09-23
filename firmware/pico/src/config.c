@@ -47,7 +47,7 @@ const cli_command_t command_table[NUM_COMMANDS] =
     { "set broker", STATE(AwaitingCommand) },
     { "set name", STATE(AwaitingCommand) },
     { "read all", STATE(AwaitingCommand) },
-    { "read raw", STATE(AwaitingCommand) },
+    { "read raw", STATE(ReadRaw) },
 };
 
 _Static_assert(NUM_COMMANDS == (sizeof(command_table)/sizeof(cli_command_t)));
@@ -112,11 +112,7 @@ static state_ret_t State_AwaitingCommand( state_t * this, event_t s )
             if(valid_command)
             {
                 printf("Valid Command\n");
-                CLI_Start();
-                ret = HANDLED();
-
-                /* TODO: Fix in state machine lib */
-                //ret = TRANSITION2(this, command_table[idx].state);
+                ret = TRANSITION(this, command_table[idx].state);
             }
             else
             {
@@ -124,6 +120,43 @@ static state_ret_t State_AwaitingCommand( state_t * this, event_t s )
                 CLI_Start();
                 ret = HANDLED();
             }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return ret;
+}
+
+static state_ret_t State_ReadRaw( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, STATE(Config));
+    config_state_t * config_state = (config_state_t *)this;
+    switch(s)
+    {
+        case EVENT( Enter ):
+        {
+            uint32_t eeprom_size = EEPROM_GetSize();
+            uint8_t raw_buffer[16];
+            for(uint32_t idx = 0; idx < eeprom_size; idx += 16U)
+            {
+                EEPROM_ReadRaw(raw_buffer, 16U, idx);
+                
+                for(uint32_t jdx = 0; jdx < 16U; jdx++)
+                {
+                    printf("%x ", raw_buffer[jdx]);
+                }
+                printf("\n");
+            }
+            ret = TRANSITION(this, STATE(AwaitingCommand));
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
             break;
         }
         default:
