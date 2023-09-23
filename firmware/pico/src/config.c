@@ -38,11 +38,17 @@ typedef struct
 }
 config_state_t;
 
-#define NUM_COMMANDS (1)
+#define NUM_COMMANDS (5)
 const cli_command_t command_table[NUM_COMMANDS] =
 {
-    { "test", STATE(AwaitingCommand) },
+    { "set ssid", STATE(AwaitingCommand) },
+    { "set pass", STATE(AwaitingCommand) },
+    { "set broker", STATE(AwaitingCommand) },
+    { "set name", STATE(AwaitingCommand) },
+    { "read all", STATE(AwaitingCommand) },
 };
+
+_Static_assert(NUM_COMMANDS == (sizeof(command_table)/sizeof(cli_command_t)));
 
 static state_ret_t State_Config( state_t * this, event_t s )
 {
