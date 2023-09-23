@@ -117,7 +117,7 @@ static state_ret_t State_Setup( state_t * this, event_t s )
 static state_ret_t State_WifiConnected( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this,Setup);
+    state_ret_t ret = PARENT(this,STATE(Setup));
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
@@ -142,7 +142,7 @@ static state_ret_t State_WifiConnected( state_t * this, event_t s )
 static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, Setup);
+    state_ret_t ret = PARENT(this, STATE(Setup));
     node_state_t * node_state = (node_state_t *)this;
 
     switch(s)
@@ -159,7 +159,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
             if( WIFI_CheckStatus() )
             {
                 Emitter_Destroy(node_state->retry_timer);
-                ret = TRANSITION(this, TCPNotConnected);
+                ret = TRANSITION(this, STATE(TCPNotConnected));
             }
             else
             {
@@ -187,7 +187,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
 static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, WifiConnected);
+    state_ret_t ret = PARENT(this, STATE(WifiConnected));
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
@@ -209,7 +209,7 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
                 else
                 {
                     /* Possible WIFI may have failed at this point, re-connect */
-                    ret = TRANSITION(this, WifiNotConnected);
+                    ret = TRANSITION(this, STATE(WifiNotConnected));
                 }
             }
             break;
@@ -217,7 +217,7 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
         case EVENT( TCPConnected ):
         {
             Emitter_Destroy(node_state->retry_timer);
-            ret = TRANSITION(this, MQTTNotConnected);
+            ret = TRANSITION(this, STATE(MQTTNotConnected));
             break;
         }
         case EVENT( Exit ):
@@ -236,7 +236,7 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
 static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, WifiConnected);
+    state_ret_t ret = PARENT(this, STATE(WifiConnected));
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
@@ -248,7 +248,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         case EVENT( TCPDisconnected ):
         {
             Comms_Close();
-            ret = TRANSITION(this, TCPNotConnected);
+            ret = TRANSITION(this, STATE(TCPNotConnected));
             break;
         }
         case EVENT( MQTTRetryConnect ):
@@ -266,7 +266,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
             msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
             if(MQTT_HandleMessage(node_state->mqtt, msg.data))
             {
-                ret = TRANSITION(this, MQTTSubscribing);
+                ret = TRANSITION(this, STATE(MQTTSubscribing));
             }
             else
             {
@@ -287,7 +287,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
 static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, WifiConnected);
+    state_ret_t ret = PARENT(this, STATE(WifiConnected));
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
@@ -299,7 +299,7 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
             {
                 if(MQTT_AllSubscribed(node_state->mqtt))
                 {
-                    ret = TRANSITION(this, DNSRequest);
+                    ret = TRANSITION(this, STATE(DNSRequest));
                 }
                 else
                 {
@@ -308,7 +308,7 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
             }
             else
             {
-                ret = TRANSITION(this, MQTTSubscribing);
+                ret = TRANSITION(this, STATE(MQTTSubscribing));
             }
             break;
         }
@@ -366,7 +366,7 @@ static state_ret_t State_ConfigureRTC( state_t * this, event_t s )
 static state_ret_t State_DNSRequest( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, ConfigureRTC);
+    state_ret_t ret = PARENT(this, STATE(ConfigureRTC));
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
@@ -383,7 +383,7 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
             else
             {
                 /* Possible WIFI may have failed at this point, re-connect */
-                ret = TRANSITION(this, WifiNotConnected);
+                ret = TRANSITION(this, STATE(WifiNotConnected));
             }
             break;
         }
@@ -391,8 +391,7 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
         {
             Emitter_Destroy(node_state->retry_timer);
             NTP_PrintIP(node_state->ntp);
-            ret = TRANSITION(this, RequestNTP);
-            //ret = TRANSITION(this, Idle);
+            ret = TRANSITION(this, STATE(RequestNTP));
             break;
         }
         case EVENT( Exit ):
@@ -411,7 +410,7 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
 static state_ret_t State_RequestNTP( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, ConfigureRTC);
+    state_ret_t ret = PARENT(this, STATE(ConfigureRTC));
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
@@ -428,7 +427,7 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
             else
             {
                 /* Possible WIFI may have failed at this point, re-connect */
-                ret = TRANSITION(this, WifiNotConnected);
+                ret = TRANSITION(this, STATE(WifiNotConnected));
             }
             break;
         }
@@ -443,7 +442,7 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
             assert( !FIFO_IsEmpty( &node_state->udp_fifo->base ) );
             msg_t msg = FIFO_Dequeue(node_state->udp_fifo);
             NTP_Decode(msg.data);
-            ret = TRANSITION(this, Idle);
+            ret = TRANSITION(this, STATE(Idle));
             //ret = HANDLED();
         }
         default:
@@ -488,7 +487,7 @@ static state_ret_t State_Root( state_t * this, event_t s )
 static state_ret_t State_Idle( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, Root);
+    state_ret_t ret = PARENT(this, STATE(Root));
     node_state_t * node_state = (node_state_t *)this;
 
     switch(s)
@@ -512,7 +511,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( TCPDisconnected ):
         {
             Comms_Close();
-            ret = TRANSITION(this, TCPNotConnected);
+            ret = TRANSITION(this, STATE(TCPNotConnected));
             break;
         }
         case EVENT( ReadSensor ):

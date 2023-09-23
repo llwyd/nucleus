@@ -80,7 +80,7 @@ static state_ret_t State_Config( state_t * this, event_t s )
 static state_ret_t State_AwaitingCommand( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, Config);
+    state_ret_t ret = PARENT(this, STATE(Config));
     config_state_t * config_state = (config_state_t *)this;
     switch(s)
     {
