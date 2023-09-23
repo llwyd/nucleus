@@ -32,6 +32,7 @@ DEFINE_STATE(Config);
 DEFINE_STATE(AwaitingCommand);
 DEFINE_STATE(ReadRaw);
 DEFINE_STATE(SetValue);
+DEFINE_STATE(ReadAll);
 
 typedef struct
 {
@@ -48,7 +49,7 @@ const cli_command_t command_table[NUM_COMMANDS] =
     { "set pass", STATE(SetValue), "PASSWORD", EEPROM_PASS},
     { "set broker", STATE(SetValue), "BROKER", EEPROM_IP},
     { "set name", STATE(SetValue), "NAME", EEPROM_NAME},
-    { "read all", STATE(AwaitingCommand), "ALL", EEPROM_NONE },
+    { "read all", STATE(ReadAll), "ALL", EEPROM_NONE },
     { "read raw", STATE(ReadRaw), "RAW", EEPROM_NONE},
 };
 
@@ -152,6 +153,46 @@ static state_ret_t State_ReadRaw( state_t * this, event_t s )
                 }
                 printf("\n");
             }
+            ret = TRANSITION(this, STATE(AwaitingCommand));
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return ret;
+}
+
+static state_ret_t State_ReadAll( state_t * this, event_t s )
+{
+    STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, STATE(Config));
+    config_state_t * config_state = (config_state_t *)this;
+    switch(s)
+    {
+        case EVENT( Enter ):
+        {
+            uint32_t eeprom_size = EEPROM_GetSize();
+            uint8_t raw_buffer[CLI_CMD_SIZE];
+            
+            (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_SSID);
+            printf("SSID: %s\n", raw_buffer);
+
+            (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_PASS);
+            printf("PASS: %s\n", raw_buffer);
+            
+            (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_IP);
+            printf("Broker IP: %s\n", raw_buffer);
+            
+            (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_NAME);
+            printf("NAME: %s\n", raw_buffer);
+
             ret = TRANSITION(this, STATE(AwaitingCommand));
             break;
         }

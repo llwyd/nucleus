@@ -71,8 +71,6 @@ extern bool EEPROM_Write(uint8_t * buffer, uint16_t len, eeprom_label_t loc)
     
     uint32_t raw_index = GetIndex(loc);
 
-    printf("Raw Index: %d\n", raw_index);
-
     uint16_t bytes_written = 0;
     uint16_t remaining_len = len;
     uint8_t * write_ptr = buffer;
@@ -104,32 +102,19 @@ extern bool EEPROM_Write(uint8_t * buffer, uint16_t len, eeprom_label_t loc)
     assert(remaining_len == 0U);
     assert(bytes_written == len);
 
-    /*
-    if( len <= 16 )
-    {
-        (void)I2C_WriteReg(loc, buffer, len, (void*)&address);
-    }
-    else
-    {
-        uint16_t remaining_len = len;
-        uint16_t bytes_written = 0U;
-        while(bytes_written < len )
-        {
-            if( len <= 16U )
-            {
-                (void)I2C_WriteReg(loc, buffer, len, (void*)&address);
-                bytes_written += len;
-            }
-            else
-            {
-                (void)I2C_WriteReg(loc, buffer, len, (void*)&address);
-            
-            }
-        }
-    }
-    */
     return true;
 }
 
-extern bool EEPROM_Read(uint8_t * buffer, uint16_t len, eeprom_label_t loc);
+extern bool EEPROM_Read(uint8_t * buffer, uint16_t len, eeprom_label_t loc)
+{
+    assert(buffer != NULL);
+    assert(((uint16_t)loc + len) <= eeprom_size);
+    assert(loc < EEPROM_NONE);
+    
+    uint32_t raw_index = GetIndex(loc);
+
+    I2C_ReadReg(raw_index, buffer, len, (void*)&address);
+
+    return true;
+}
 
