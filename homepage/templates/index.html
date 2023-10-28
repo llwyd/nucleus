@@ -1,0 +1,75 @@
+<html>
+    <head>
+        <title>NUCLEUS</title>
+                <meta charset="utf-8">
+                <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+        
+        <style>
+                th,td
+                {
+                    text-align: center;
+                    padding: 10px;
+                }
+                h1
+                {
+                    text-align: center;
+                }
+                footer
+                {
+                    text-align: center;
+                }
+                div.info
+                {
+                    text-align: center
+                }
+                div.container
+                {
+                    text-align: center;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+                </style>
+        </head>
+    <body>
+        <h1>Hello, World</h1>
+            <hr>
+                <!--
+            <div class = "info">
+                <img src="data:image/png;base64, {{graph}}"/>
+
+            </div>    
+                -->
+		<div class="container">
+    <table style ="margin-left:auto;margin-right:auto;">
+        <tr>
+            <th><b>Node</b></th>
+            <th><b>Temperature</b></th>
+            <th><b>Humidity</b></th>
+            <th><b>Uptime</b></th>
+        </tr>
+        {% for data in environment %}
+        {% for key, item in data.items() %}
+        <div class="table">
+            <tr>
+                <td>{{key}}</td>
+                <td>{{item['temperature']}} C</td>
+                <td>{{item['humidity']}} %</td>
+                <td>{{item['uptime_ms']}}</td>
+            </tr>
+        </div>
+        {% endfor %}
+        {% endfor %}
+        </table>
+    </div><!-- /.container -->	
+
+
+    </body>
+    <footer>
+        <hr>
+            <h7><b> Last Update: </b>{{last_update}}</h7>
+            <h7><b>      Uptime: </b>{{uptime}}</h7>
+            <!--<h7><b>    Git Hash: </b>????</h7> -->
+    </footer>
+</html>

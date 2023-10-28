@@ -181,8 +181,8 @@ state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Tick ):
             {
                 Sensor_Read();
-                float temperature = Sensor_GetTemperature();
-                if( MQTT_EncodeAndPublish("temperature_live", mqtt_type_float, &temperature ) )
+                char * json = Sensor_GenerateJSON();
+                if( MQTT_EncodeAndPublish("environment", mqtt_type_str, json ) )
                 {
                     ret = HANDLED();
                 }
@@ -280,7 +280,7 @@ void Daemon_OnBoardLED( mqtt_data_t * data )
 
 void Heartbeat( void )
 {
-    int led_fd = open("/sys/class/leds/led0/brightness", O_WRONLY );
+    int led_fd = open("/sys/class/leds/ACT/brightness", O_WRONLY );
     static bool led_on;
 
     if( led_on )
