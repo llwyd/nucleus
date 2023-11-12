@@ -85,7 +85,7 @@ state_ret_t State_Connect( state_t * this, event_t s )
             
             if( MQTT_Receive() )
             {
-                ret = TRANSITION(this, Subscribe );
+                ret = TRANSITION(this, STATE(Subscribe) );
             }
             else
             {
@@ -126,7 +126,7 @@ state_ret_t State_Subscribe( state_t * this, event_t s )
             }
             else
             {
-                ret = TRANSITION(this, Connect );
+                ret = TRANSITION(this, STATE(Connect) );
             }
             break;
         case EVENT( Exit ):
@@ -137,7 +137,7 @@ state_ret_t State_Subscribe( state_t * this, event_t s )
             {
                 if( MQTT_AllSubscribed() )
                 {
-                    ret = TRANSITION(this, Idle );
+                    ret = TRANSITION(this, STATE(Idle) );
                 }
                 else
                 {
@@ -146,7 +146,7 @@ state_ret_t State_Subscribe( state_t * this, event_t s )
             }
             else
             {
-                ret = TRANSITION(this, Connect );
+                ret = TRANSITION(this, STATE(Connect) );
             }
 
             break;
@@ -188,7 +188,7 @@ state_ret_t State_Idle( state_t * this, event_t s )
                 }
                 else
                 {
-                    ret = TRANSITION(this, Connect );
+                    ret = TRANSITION(this, STATE(Connect) );
                 }
             }
             break;
@@ -201,7 +201,7 @@ state_ret_t State_Idle( state_t * this, event_t s )
                 }
                 else
                 {
-                    ret = TRANSITION(this, Connect );
+                    ret = TRANSITION(this, STATE(Connect) );
                 }
             }
             break;
@@ -213,7 +213,7 @@ state_ret_t State_Idle( state_t * this, event_t s )
             }
             else
             {
-                ret = TRANSITION(this, Connect );
+                ret = TRANSITION(this, STATE(Connect) );
             }
 
             break;
