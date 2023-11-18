@@ -12,13 +12,17 @@ include_directories( daemon.out PRIVATE ../common )
 include_directories( daemon.out PRIVATE ../stateengine/src )
 
 add_executable( daemon.out
-                src/mqtt.c
-                src/mqtt.h
                 src/sensor.c
                 src/sensor.h
+                ../common/mqtt.h
+                ../common/mqtt.c
+                ../common/msg_fifo.h
+                ../common/msg_fifo.c
                 src/daemon.c
                 src/timestamp.h
                 src/timestamp.c
+                src/comms.h
+                src/comms.c
                 ../common/events.h
                 ../common/events.c
                 src/timer.h

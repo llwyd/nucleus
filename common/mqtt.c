@@ -66,7 +66,6 @@ bool Ack_Ping(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
 bool Ack_Disconnect(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
 
 static void IncrementSendMessageID(void);
-static bool CheckMsgIDBuffer( uint16_t val);
 static void FlushMsgIDBuffer( void );
 
 typedef struct mqtt_pairs_t
@@ -92,17 +91,10 @@ static mqtt_pairs_t msg_code [ 5 ] =
 
 
 static uint8_t send_buffer[ BUFFER_SIZE ];
-static uint8_t recv_buffer[ BUFFER_SIZE ];
 
-static char * client_name;
 static char * parent_topic = "home";
 
-static mqtt_subs_t * sub;
-static uint8_t num_sub = 0;
 static uint8_t successful_subs = 0;
-
-static char * broker_ip;
-static char * broker_port;
 
 static uint16_t send_msg_id = 0x0000;
 
@@ -151,6 +143,7 @@ mqtt_data_t Extract( char * data, mqtt_type_t type )
 
 bool Ack_Connect(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
+    (void)mqtt;
     bool ret = false;
 
     uint8_t message_code = *buff++;
@@ -185,6 +178,7 @@ bool Ack_Connect(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 
 bool Ack_Subscribe(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
+    (void)mqtt;
     bool ret = false;
     uint8_t message_code = *buff++;
     uint8_t msg_len = *buff++;
@@ -218,6 +212,7 @@ bool Ack_Subscribe(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 
 bool Ack_Publish(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
+    (void)mqtt;
     uint8_t return_code = buff[0];
     uint8_t msg_len = buff[1];
 
@@ -301,6 +296,7 @@ bool Ack_Publish(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 
 bool Ack_Ping(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
+    (void)mqtt;
     (void)buff;
     (void)len;
     return true;
@@ -308,6 +304,7 @@ bool Ack_Ping(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 
 bool Ack_Disconnect(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
 {
+    (void)mqtt;
     (void)buff;
     (void)len;
     return true;
@@ -322,40 +319,6 @@ static void FlushMsgIDBuffer( void )
     }
 }
 
-static void AddMessageIDToQueue( uint16_t id )
-{
-    if( msg_id.fill < ID_BUFFER_SIZE )
-    {
-        msg_id.id[ msg_id.write_index++ ] = id;
-        msg_id.fill++;
-        msg_id.write_index = ( msg_id.write_index & ( ID_BUFFER_SIZE - 1U ) );
-    }
-    else
-    {
-        printf("\tMQTT Error! Ack buffer full\n");
-        assert(false);
-    }
-}
-
-static bool MessagesAvailable( void )
-{
-    bool available = (msg_id.fill > 0U );
-    return available;
-}
-
-static uint16_t GetMessageIDFromQueue( void )
-{
-    uint16_t val = 0x0;
-    if( msg_id.fill > 0U )
-    {
-        val = msg_id.id[ msg_id.read_index++ ];
-        msg_id.fill--;
-        msg_id.read_index = ( msg_id.read_index & ( ID_BUFFER_SIZE - 1U ) );
-    }
-
-    return val;
-}
-
 static void IncrementSendMessageID(void )
 {
     send_msg_id++; 
@@ -368,213 +331,8 @@ static void IncrementSendMessageID(void )
 
 extern void MQTT_IncrementSeqID( mqtt_t * mqtt)
 {
+    (void)mqtt;
     IncrementSendMessageID();
-}
-
-static bool CheckMsgIDBuffer( uint16_t id )
-{
-    bool found = false;
-    
-    if( MessagesAvailable() )
-    {
-        unsigned char fill_copy = msg_id.fill;
-
-        for( int i = 0; i < fill_copy; i++ )
-        {
-            uint16_t val = GetMessageIDFromQueue();
-            if( val == id )
-            {
-                found = true;
-                break;
-            }
-            else
-            {
-                AddMessageIDToQueue( val );
-            }
-        }
-    }
-    else
-    {
-        printf("\tMQTT Error! No messages in buffer\n");
-        assert(false);
-    }
-
-    return found;
-}
-
-static uint16_t Format( mqtt_msg_type_t msg_type, void * msg_data )
-{
-    uint16_t full_packet_size = 0;
-
-    switch( msg_type )
-    {
-        case mqtt_msg_Connect:
-        {
-            /* Message Template for mqtt connect */
-            unsigned char mqtt_template_connect[] =
-            {
-                0x10,                                   /* connect */
-                0x00,                                   /* payload size */
-                0x00, 0x06,                             /* Protocol name size */
-                0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
-                0x03,                                   /* Version MQTT v3.1 */
-                0x02,                                   /* Fire and forget */
-                0x00, MQTT_TIMEOUT,                     /* Keep alive timeout */
-            };
-            
-            uint8_t * msg_ptr = send_buffer;
-            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
-            uint16_t name_size = strlen( client_name );
-
-            memcpy( msg_ptr, mqtt_template_connect, packet_size );
-            msg_ptr+= packet_size;
-            msg_ptr++;
-            *msg_ptr++ = (uint8_t)(name_size & 0xFF);
-            memcpy(msg_ptr, client_name, name_size);
-                
-            uint16_t total_packet_size = packet_size + name_size;
-            send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
-            full_packet_size = total_packet_size + 2;
-        }
-            break;
-
-        case mqtt_msg_Subscribe:
-        {
-            mqtt_subs_t * sub_data = (mqtt_subs_t *) msg_data;
-            const unsigned char mqtt_template_subscribe[] =
-            {
-                0x82,                                                                   // message type, qos, no retain
-                0x00,                                                                   // length of message
-            };
-    
-            char full_topic[64];
-            memset( full_topic, 0x00, 64);
-            
-            strcat(full_topic, parent_topic);
-            strcat(full_topic, "/");
-            strcat(full_topic, sub_data->name);
-            strcat(full_topic,"/");
-            strcat(full_topic, client_name);
-
-            memset(send_buffer, 0x00, 128);
-
-            /* Construct Packet */
-            uint8_t * msg_ptr = send_buffer;
-            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_subscribe );
-            uint16_t topic_size = strlen(full_topic );
-
-            memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
-            msg_ptr+= packet_size;
-            
-            *msg_ptr++ = (uint8_t)((send_msg_id >> 8U)&0xFF);
-            *msg_ptr++ = (uint8_t)(send_msg_id&0xFF);
-            
-            msg_ptr++;
-            *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
-            memcpy(msg_ptr, full_topic, topic_size);
-     
-            uint16_t total_packet_size = packet_size + topic_size + 1 + 2;
-            send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
-            full_packet_size = total_packet_size + 2;
-            
-            AddMessageIDToQueue( send_msg_id );
-            IncrementSendMessageID();
-        }
-            break;
-        case mqtt_msg_Publish:
-        {
-            printf("\tConstructing Packet\n");
-
-            mqtt_pub_t * pub_data = (mqtt_pub_t *) msg_data;
-            
-            memset(send_buffer, 0x00, 128);
-            
-            char text_buff[64];
-            memset( text_buff, 0x00, 64);
-            
-            strcat(text_buff, parent_topic);
-            strcat(text_buff,"/");
-            strcat(text_buff, pub_data->name);
-            strcat(text_buff, "/");
-            strcat(text_buff, client_name);
-            uint16_t topic_size = strlen(text_buff);
-
-            printf("\ttopic: %s\n", text_buff);
-            printf("\tsize: %d\n", topic_size);
-
-            uint8_t * msg_ptr = send_buffer;
-            *msg_ptr++ = ( msg_code[mqtt_msg_Publish].send_code | 0x2 );
-            msg_ptr++; /* This is where message length would go */ 
-            msg_ptr++; /* MSB topic length */
-            *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
-            memcpy(msg_ptr, text_buff, topic_size);
-            memset( text_buff, 0x00, 64);
-            msg_ptr+=topic_size;
-
-            /* Message ID */
-            *msg_ptr++ = (uint8_t)((send_msg_id >> 8U)&0xFF);
-            *msg_ptr++ = (uint8_t)(send_msg_id&0xFF);
-            
-            strcat( text_buff, pub_data->data );
-
-            uint8_t data_len = strlen(text_buff);
-            
-            printf("\t  data: %s\n", text_buff);
-            printf("\t  size: %d\n", data_len);
-
-            memcpy(msg_ptr, text_buff, data_len);
-
-            /* Topic len + topic + data + msg id */
-            uint8_t total_packet_size = (uint8_t)topic_size + data_len + 2 + 2;
-            send_buffer[1] = total_packet_size;
-            /* header and size byte */
-            full_packet_size = total_packet_size + 2;
-
-            AddMessageIDToQueue( send_msg_id );
-            IncrementSendMessageID();
-        }
-            break;
-        default:
-        {
-            assert(false);
-        }
-            break;
-    }
-    return full_packet_size;
-}
-
-static bool Decode( uint8_t * buffer, uint16_t len )
-{
-    (void)len;
-    bool ret = false;
-    uint8_t return_code = ( buffer[0] & 0xF0 );
-    uint8_t msg_length = buffer[1];
-    mqtt_msg_type_t msg_type;
-
-    switch( return_code )
-    {
-        case MQTT_CONNACK_CODE:
-            msg_type = mqtt_msg_Connect;
-            break;
-        case MQTT_PUBLISH_CODE:
-        case MQTT_PUBACK_CODE:
-            msg_type = mqtt_msg_Publish;
-            break;
-        case MQTT_SUBACK_CODE:
-            msg_type = mqtt_msg_Subscribe;
-            break;
-        default:
-            printf("\tMQTT ERROR! Bad Receive Packet\n");
-            printf("len: 0x%x\n",msg_length);
-            printf("rc: 0x%x\n", return_code);
-            assert( false );
-            break;
-    }
-    
-    printf("\tMQTT %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
-//    ret = msg_code[(int)msg_type].ack_fn( buffer, msg_length );
-
-    return ret;
 }
 
 extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data )
@@ -888,7 +646,6 @@ extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer)
             printf("\tMQTT ERROR! Bad Receive Packet\n");
             printf("len: 0x%x\n",msg_length);
             printf("rc: 0x%x\n", return_code);
-            printf("type: 0x%x\n", msg_type);
             assert( false );
             break;
         }

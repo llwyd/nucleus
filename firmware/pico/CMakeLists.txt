@@ -57,6 +57,55 @@ add_executable(node
     ../../common/mqtt.h
 )
 
+set_source_files_properties(
+    src/node_pico.c
+    src/daemon.c
+    src/daemon.h
+    src/node_events.h
+    src/environment.c
+    src/environment.h
+    src/wifi.c
+    src/wifi.h
+    src/emitter.c
+    src/emitter.h
+    src/comms.h
+    src/comms.c
+    src/i2c.c
+    src/i2c.h
+    src/accelerometer.h
+    src/accelerometer.c
+    src/udp.c
+    src/udp.h
+    src/ntp.c
+    src/ntp.h
+    src/gpio.h
+    src/gpio.c
+    src/alarm.h
+    src/alarm.c
+    src/config.h
+    src/config.c
+    src/eeprom.c
+    src/eeprom.h
+    src/cli.c
+    src/cli.h
+    ../../stateengine/src/state.h
+    ../../stateengine/src/state.c
+    ../../stateengine/src/fifo_base.h
+    ../../stateengine/src/fifo_base.c
+    ../../common/events.h
+    ../../common/events.c
+    ../../common/bme280.c
+    ../../common/bme280.h
+    ../../common/MCP9808.h
+    ../../common/MCP9808.c
+    ../../common/msg_fifo.c
+    ../../common/msg_fifo.h
+    ../../common/mqtt.c
+    ../../common/mqtt.h
+    PROPERTIES
+    COMPILE_FLAGS "-Wall -Werror -Wfatal-errors -Wextra -Wpointer-arith"
+)
+
 pico_enable_stdio_usb(node 1)
 pico_enable_stdio_uart(node 1)
 pico_add_extra_outputs(node)
@@ -64,7 +113,11 @@ pico_add_extra_outputs(node)
 #target_compile_definitions(node PRIVATE SENSOR_MCP9808 )
 target_compile_definitions(node PRIVATE ACCELEROMETER_ENABLED )
 
-target_compile_options(node PRIVATE -Wfatal-errors )
+target_compile_options(node PRIVATE -Wfatal-errors
+                        -Wall
+                        -Wextra
+                        #-Werror
+                        -Wpointer-arith)
 
 target_include_directories(node PRIVATE ${CMAKE_CURRENT_LIST_DIR} )
 include_directories( node PRIVATE src )

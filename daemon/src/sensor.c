@@ -2,8 +2,10 @@
 
 #define JSON_PACKET_SIZE (64U)
 
+#ifdef __arm__
 static const char * device = "/dev/i2c-1";
 static const uint8_t address = 0x18;
+#endif
 static float current_temp = 0.0f;
 static float current_hum = 0.0f;
 
@@ -55,8 +57,9 @@ void Sensor_Init( void )
 
 void Sensor_Read( void )
 {
-    int file = open( device, O_RDWR );
     uint8_t data[2] = { 0x00 };
+#ifdef __arm__
+    int file = open( device, O_RDWR );
     uint8_t reg = 0x05;
 
     if( file < 0 )
@@ -80,5 +83,6 @@ void Sensor_Read( void )
     }
 
     close( file );
+#endif
     CalculateTemperature( data );
 }
