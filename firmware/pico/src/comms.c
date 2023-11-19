@@ -12,7 +12,6 @@
 static ip_addr_t remote_addr;
 static struct tcp_pcb * tcp_pcb;
 static bool connected = false;
-static char * client_name = "pico";
 static msg_fifo_t * msg_fifo;
 static critical_section_t * critical;
 
@@ -23,19 +22,19 @@ static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
 static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
 static void Error(void *arg, err_t err);
 static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err);
-static err_t Poll(void *arg, struct tcp_pcb *tpcb);
 
 static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
 {
-    //printf("\tTCP Sent\n");
-//    printf("\n--Sent %d bytes total\n", len);
+    (void)arg;
+    (void)tpcb;
+    (void)len;
     return ERR_OK;
 }
 
 static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
-   // printf("\tTCP Recv\n");
-  //  printf("\n--Recv %d bytes total\n", p->tot_len);
+    (void)arg;
+    (void)err;
     cyw43_arch_lwip_check();
     err_t ret = ERR_OK;
     uint8_t recv[BUFFER_SIZE] = {0U};
@@ -60,7 +59,7 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
                
                 msg_t msg =
                 {
-                    .data = msg_ptr,
+                    .data = (char*)msg_ptr,
                     .len = size_to_copy,
                 };
                 /*            
@@ -110,12 +109,16 @@ extern void Comms_Close(void)
 
 static void Error(void *arg, err_t err)
 {
+    (void)arg;
+    (void)err;
     printf("\tTCP Error\n");
     Emitter_EmitEvent(EVENT(TCPDisconnected));
 }
 
 static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
+    (void)arg;
+    (void)tpcb;
     printf("\tTCP Connected...");
     connected = true;
     if( err == ERR_OK )
@@ -127,13 +130,6 @@ static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
     {
         printf("FAIL\n");
     }
-    return ERR_OK;
-}
-
-static err_t Poll(void *arg, struct tcp_pcb *tpcb)
-{
-    printf("\tTCP Poll\n");
-
     return ERR_OK;
 }
 
@@ -174,6 +170,8 @@ cleanup:
 
 extern bool Comms_Recv( uint8_t * buffer, uint16_t len )
 {
+    (void)buffer;
+    (void)len;
     return true;
 }
 
@@ -188,7 +186,7 @@ extern bool Comms_TCPInit(void)
     }
 
     /* Init */
-    ip4addr_aton(broker_ip, &remote_addr);
+    ip4addr_aton((char*)broker_ip, &remote_addr);
     
     printf("\tInitialising TCP Comms\n");
     printf("\tAttempting Connection to %s port %d\n", ip4addr_ntoa(&remote_addr), MQTT_PORT);

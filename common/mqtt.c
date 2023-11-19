@@ -464,7 +464,7 @@ extern bool MQTT_Subscribe( mqtt_t * mqtt )
     return success;
 }
 
-extern bool MQTT_Publish( mqtt_t * mqtt, char * topic, char * data)
+extern bool MQTT_Publish( mqtt_t * mqtt, char * topic, const char * const data)
 {
     assert(mqtt!=NULL);
     assert(topic!=NULL);

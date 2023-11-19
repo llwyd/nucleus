@@ -28,7 +28,7 @@ extern void WIFI_Init(void)
 extern void WIFI_TryConnect(void)
 {
     WIFI_ClearLed();
-    if(cyw43_arch_wifi_connect_async(ssid, pass, CYW43_AUTH_WPA2_MIXED_PSK))
+    if(cyw43_arch_wifi_connect_async((char*)ssid, (char*)pass, CYW43_AUTH_WPA2_MIXED_PSK))
     {
         printf("Failed to retry\n");
     }

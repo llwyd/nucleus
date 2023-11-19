@@ -5,9 +5,6 @@
 
 #define BUFFER_SIZE (128)
 
-static uint8_t send_buffer[ BUFFER_SIZE ];
-static uint8_t recv_buffer[ BUFFER_SIZE ];
-
 static msg_fifo_t * msg_fifo;
 static critical_section_t * critical;
 static struct udp_pcb * udp_pcb;
@@ -19,8 +16,11 @@ static void Close(void)
 
 extern void UDP_Recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {
+    (void)arg;
+    (void)pcb;
+    (void)addr;
+    (void)port;
     cyw43_arch_lwip_check();
-    err_t ret = ERR_OK;
     uint8_t recv[BUFFER_SIZE] = {0U};
     assert(p->tot_len < BUFFER_SIZE); 
     
@@ -42,7 +42,7 @@ extern void UDP_Recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_ad
             */
             msg_t msg =
             {
-                .data = msg_ptr,
+                .data = (char*)msg_ptr,
                 .len = q->len,
             };
                 
@@ -63,7 +63,6 @@ extern void UDP_Recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_ad
     else
     {
         printf("\tConnection Closed\n");
-        ret = ERR_CLSD;
     }
 
     Close();

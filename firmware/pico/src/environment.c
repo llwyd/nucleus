@@ -54,6 +54,7 @@ static void BME280_Configure( void )
 
 void Delay(uint32_t period, void *intf_ptr)
 {
+    (void)intf_ptr;
     sleep_us(period);
 }
 
@@ -120,12 +121,7 @@ extern void Enviro_Print(void)
     printf("\tPressure: %.2f\n", env_data.pressure);
 #endif
     uptime_ms = to_ms_since_boot(timestamp);
-    printf("\tms Since boot: %d\n", uptime_ms); 
-    /*
-    printf("\tTemperature: %d (0x%x)\n", env_data.temperature, env_data.temperature);
-    printf("\tHumidity: %d (0x%x)\n", env_data.humidity, env_data.humidity);
-    printf("\tPressure: %d (0x%x)\n", env_data.pressure, env_data.pressure);
-    */
+    printf("\tms Since boot: %lu\n", uptime_ms); 
 }
 
 extern void Enviro_GenerateJSON(char * buffer, uint8_t buffer_len)
@@ -134,12 +130,12 @@ extern void Enviro_GenerateJSON(char * buffer, uint8_t buffer_len)
 
     memset(buffer,0x00, buffer_len);
 #ifdef SENSOR_MCP9808
-    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%u}",
+    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%lu}",
             MCP9808_GetTemperature(),
             0.0,
             uptime_ms);
 #else
-    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%u}",
+    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%lu}",
             env_data.temperature,
             env_data.humidity,
             uptime_ms);

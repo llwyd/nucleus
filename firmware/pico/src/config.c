@@ -28,6 +28,8 @@
 #include "eeprom.h"
 #include "cli.h"
 
+GENERATE_SIGNAL_STRINGS( SIGNALS );
+
 DEFINE_STATE(Config);
 DEFINE_STATE(AwaitingCommand);
 DEFINE_STATE(ReadRaw);
@@ -60,6 +62,7 @@ static state_ret_t State_Config( state_t * this, event_t s )
     STATE_DEBUG(s);
     state_ret_t ret = NO_PARENT(this);
     config_state_t * config_state = (config_state_t *)this;
+    (void)config_state;
     switch(s)
     {
         case EVENT( Enter ):
@@ -105,7 +108,7 @@ static state_ret_t State_AwaitingCommand( state_t * this, event_t s )
             uint32_t idx;
             for( idx = 0; idx < NUM_COMMANDS; idx++)
             {
-                if(strncmp(command_table[idx].command, config_state->buffer, CLI_CMD_SIZE) == 0U)
+                if(strncmp(command_table[idx].command, (char*)config_state->buffer, CLI_CMD_SIZE) == 0U)
                 {
                     valid_command = true;
                     config_state->command_idx = idx;
@@ -138,6 +141,7 @@ static state_ret_t State_ReadRaw( state_t * this, event_t s )
     STATE_DEBUG(s);
     state_ret_t ret = PARENT(this, STATE(Config));
     config_state_t * config_state = (config_state_t *)this;
+    (void)config_state;
     switch(s)
     {
         case EVENT( Enter ):
@@ -174,11 +178,11 @@ static state_ret_t State_ReadAll( state_t * this, event_t s )
     STATE_DEBUG(s);
     state_ret_t ret = PARENT(this, STATE(Config));
     config_state_t * config_state = (config_state_t *)this;
+    (void)config_state;
     switch(s)
     {
         case EVENT( Enter ):
         {
-            uint32_t eeprom_size = EEPROM_GetSize();
             uint8_t raw_buffer[CLI_CMD_SIZE];
             
             (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_SSID);
@@ -235,7 +239,7 @@ static state_ret_t State_SetValue( state_t * this, event_t s )
             CLI_Stop();
             assert(config_state->command_idx < NUM_COMMANDS);
             uint16_t cmd_idx = config_state->command_idx;
-            uint16_t str_len = strnlen(config_state->buffer, CLI_CMD_SIZE - 1U);
+            uint16_t str_len = strnlen((char*)config_state->buffer, CLI_CMD_SIZE - 1U);
             str_len++;
             EEPROM_Write(config_state->buffer, str_len, command_table[cmd_idx].label);
             ret = TRANSITION(this, STATE(AwaitingCommand));
@@ -252,7 +256,6 @@ extern void Config_Run(void)
 {
     uint8_t command_buffer[CLI_CMD_SIZE];
     event_fifo_t events;
-    critical_section_t crit;
     critical_section_t crit_events;
     critical_section_init_with_lock_num(&crit_events, 0U);
     

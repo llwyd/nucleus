@@ -10,6 +10,15 @@ set(PICO_BOARD pico_w )
 
 pico_sdk_init()
 
+add_custom_command(
+    PRE_BUILD
+    COMMAND ../../../scripts/generate_meta.sh ../../../common/
+    OUTPUT ../../common/meta.h)
+
+add_custom_target(meta ALL
+    COMMAND ../../../scripts/generate_meta.sh ../../../common/
+    DEPENDS ../../common/meta.h)
+
 add_executable(node
     src/node_pico.c
     src/daemon.c
@@ -55,6 +64,7 @@ add_executable(node
     ../../common/msg_fifo.h
     ../../common/mqtt.c
     ../../common/mqtt.h
+    ../../common/meta.h
 )
 
 set_source_files_properties(

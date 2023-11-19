@@ -2,6 +2,7 @@
 
 static void IRQ_Callback(uint gpio, uint32_t events)
 {
+    (void)events;
     switch(gpio)
     {
         case INT2_PIN:

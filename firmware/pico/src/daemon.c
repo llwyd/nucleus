@@ -26,11 +26,13 @@
 #include "gpio.h"
 #include "alarm.h"
 #include "eeprom.h"
+#include "meta.h"
 
 #define RETRY_PERIOD_MS (1500)
 #define SENSOR_PERIOD_MS (200)
 
 #define ID_STRING_SIZE ( 32U )
+GENERATE_SIGNAL_STRINGS( SIGNALS );
 
 /* Top level state */
 DEFINE_STATE(Setup);
@@ -65,12 +67,13 @@ typedef struct
 node_state_t;
 
 static void SubscribeCallback(mqtt_data_t * data);
+static void HashRequest(mqtt_data_t * data);
 
 static mqtt_subs_t subs[3] = 
 {
+    {"req_hash", mqtt_type_str, HashRequest},
     {"test_sub1", mqtt_type_bool, SubscribeCallback},
     {"test_sub2", mqtt_type_bool, SubscribeCallback},
-    {"test_sub3", mqtt_type_bool, SubscribeCallback},
 };
 
 
@@ -80,11 +83,19 @@ static void SubscribeCallback(mqtt_data_t * data)
     printf("\tSubscribe Callback Test, Data: %s\n", data->s);
 }
 
+static void HashRequest(mqtt_data_t * data)
+{
+    (void)data;
+    printf("\tRequesting GIT hash: %s\n", data->s);
+    Emitter_EmitEvent(EVENT(HashRequest));
+}
+
 static state_ret_t State_Setup( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
     state_ret_t ret = NO_PARENT(this);
     node_state_t * node_state = (node_state_t *)this;
+    (void)node_state;
     switch(s)
     {
         case EVENT( Tick ):
@@ -120,6 +131,7 @@ static state_ret_t State_WifiConnected( state_t * this, event_t s )
     STATE_DEBUG(s);
     state_ret_t ret = PARENT(this,STATE(Setup));
     node_state_t * node_state = (node_state_t *)this;
+    (void)node_state;
     switch(s)
     {
         case EVENT( Enter ):
@@ -265,7 +277,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
             msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
-            if(MQTT_HandleMessage(node_state->mqtt, msg.data))
+            if(MQTT_HandleMessage(node_state->mqtt, (uint8_t*)msg.data))
             {
                 ret = TRANSITION(this, STATE(MQTTSubscribing));
             }
@@ -296,7 +308,7 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
         {
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
             msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
-            if(MQTT_HandleMessage(node_state->mqtt, msg.data))
+            if(MQTT_HandleMessage(node_state->mqtt, (uint8_t*)msg.data))
             {
                 if(MQTT_AllSubscribed(node_state->mqtt))
                 {
@@ -339,6 +351,7 @@ static state_ret_t State_ConfigureRTC( state_t * this, event_t s )
     STATE_DEBUG(s);
     state_ret_t ret = NO_PARENT(this);
     node_state_t * node_state = (node_state_t *)this;
+    (void)node_state;
     switch(s)
     {
         case EVENT( Tick ):
@@ -442,7 +455,7 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
             Emitter_Destroy(node_state->retry_timer);
             assert( !FIFO_IsEmpty( &node_state->udp_fifo->base ) );
             msg_t msg = FIFO_Dequeue(node_state->udp_fifo);
-            NTP_Decode(msg.data);
+            NTP_Decode((uint8_t*)msg.data);
             ret = TRANSITION(this, STATE(Idle));
             //ret = HANDLED();
         }
@@ -505,7 +518,12 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             Accelerometer_Ack();
             MQTT_Publish(node_state->mqtt,"motion","1");
-            
+            ret = HANDLED();
+            break;
+        }
+        case EVENT( HashRequest ):
+        {
+            MQTT_Publish(node_state->mqtt,"hash", META_GITHASH);
             ret = HANDLED();
             break;
         }
@@ -531,7 +549,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             /* Presumably the buffer has a message... */
             assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
             msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
-            (void)MQTT_HandleMessage(node_state->mqtt, msg.data); 
+            (void)MQTT_HandleMessage(node_state->mqtt, (uint8_t*)msg.data); 
             ret = HANDLED();
             break;
         }
@@ -598,7 +616,7 @@ extern void Daemon_Run(void)
     Enviro_Init();
     Accelerometer_Init();
     Events_Init(&events);
-    EEPROM_Read(unique_id, EEPROM_ENTRY_SIZE, EEPROM_NAME);
+    EEPROM_Read((uint8_t*)unique_id, EEPROM_ENTRY_SIZE, EEPROM_NAME);
     
 
 

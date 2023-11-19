@@ -27,6 +27,7 @@
 #include "timer.h"
 #include "comms.h"
 #include "msg_fifo.h"
+#include "meta.h"
 
 #define SIGNALS(SIG ) \
     SIG( Tick ) \
@@ -398,6 +399,8 @@ bool Init( int argc, char ** argv )
 
 int main( int argc, char ** argv )
 {
+    printf("Git Hash: %s\n", META_GITHASH);
+    printf("Build Time: %s %s\n", META_DATESTAMP, META_TIMESTAMP);
     (void)TimeStamp_Generate();
     Timer_Init();
     Events_Init(&events);

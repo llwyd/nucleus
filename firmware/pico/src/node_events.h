@@ -22,8 +22,8 @@
     SIG( NTPRetryRequest ) \
     SIG( AlarmElapsed ) \
     SIG( HandleCommand ) \
+    SIG( HashRequest ) \
 
 GENERATE_SIGNALS( SIGNALS );
-GENERATE_SIGNAL_STRINGS( SIGNALS );
 
 #endif /* NODE_EVENTS_H_ */

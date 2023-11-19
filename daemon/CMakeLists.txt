@@ -11,6 +11,15 @@ include_directories( daemon.out PRIVATE common )
 include_directories( daemon.out PRIVATE ../common )
 include_directories( daemon.out PRIVATE ../stateengine/src )
 
+add_custom_command(
+    PRE_BUILD
+    COMMAND ../scripts/generate_meta.sh ../common/
+    OUTPUT ../common/meta.h)
+
+add_custom_target(meta ALL
+    COMMAND ../scripts/generate_meta.sh ../common/
+    DEPENDS ../common/meta.h)
+
 add_executable( daemon.out
                 src/sensor.c
                 src/sensor.h
@@ -30,7 +39,9 @@ add_executable( daemon.out
                 ../stateengine/src/fifo_base.h
                 ../stateengine/src/fifo_base.c
                 ../stateengine/src/state.h
-                ../stateengine/src/state.c)
+                ../stateengine/src/state.c
+                ../common/meta.h
+                )
 
 target_compile_options( daemon.out
                         PUBLIC

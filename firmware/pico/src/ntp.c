@@ -16,23 +16,28 @@ static time_t unixtime = 0U;
 
 static void DNSFound(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 {
+    (void)name;
+    (void)callback_arg;
     ntp_addr = *ipaddr;
     Emitter_EmitEvent(EVENT(DNSReceived));
 }
 
 extern void NTP_Init( ntp_t * ntp )
 {
+    (void)ntp;
     printf("Initialising NTP\n");
 }
 
 extern void NTP_RequestDNS( ntp_t * ntp )
 {
+    (void)ntp;
     printf("\tRequesting IP for %s\n", url);
     dns_gethostbyname(url, &ntp_addr, DNSFound, NULL);
 }
 
 extern void NTP_PrintIP( ntp_t * ntp )
 {
+    (void)ntp;
     printf("\tIP Found: %s\n",ipaddr_ntoa(&ntp_addr));
 }
 
