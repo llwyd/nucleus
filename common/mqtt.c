@@ -548,6 +548,10 @@ extern bool MQTT_Connect( mqtt_t * mqtt )
     memset(send_buffer, 0x00, 128);
     printf("\tAttempting MQTT Connection\n");
     printf("\tClient name: %s\n", mqtt->client_name);
+    
+    /* Flush buffers here */
+    FIFO_Flush(&resp_fifo.base);
+    send_msg_id = 0U;
 
     uint16_t full_packet_size = 0;
     /* Message Template for mqtt connect */

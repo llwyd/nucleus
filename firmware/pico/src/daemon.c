@@ -485,6 +485,7 @@ static state_ret_t State_Root( state_t * this, event_t s )
         case EVENT( Exit ):
         {
             /* Should never try and leave here! */
+            WIFI_ClearLed();
             Alarm_Stop();
             Emitter_Destroy(node_state->read_timer);
             ret = HANDLED();
