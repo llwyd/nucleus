@@ -436,7 +436,7 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
             NTP_Get(node_state->ntp);
             if(WIFI_CheckStatus())
             {
-                Emitter_Create(EVENT(DNSRetryRequest), node_state->retry_timer, RETRY_PERIOD_MS);
+                Emitter_Create(EVENT(NTPRetryRequest), node_state->retry_timer, RETRY_PERIOD_MS);
             }
             else
             {
