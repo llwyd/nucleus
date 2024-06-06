@@ -139,11 +139,11 @@ extern void Comms_MQTTConnect(void)
 
 extern bool Comms_Send( uint8_t * buffer, uint16_t len )
 {
-    critical_section_enter_blocking(critical);
     cyw43_arch_lwip_begin();
+    critical_section_enter_blocking(critical);
     err_t err = tcp_write(tcp_pcb, buffer, len, TCP_WRITE_FLAG_COPY);
-    cyw43_arch_lwip_end();
     critical_section_exit(critical);
+    cyw43_arch_lwip_end();
     bool success = true;
     if( err != ERR_OK )
     {
@@ -152,11 +152,11 @@ extern bool Comms_Send( uint8_t * buffer, uint16_t len )
         goto cleanup;
     }
     
-    critical_section_enter_blocking(critical);
     cyw43_arch_lwip_begin();
+    critical_section_enter_blocking(critical);
     err = tcp_output(tcp_pcb);  
-    cyw43_arch_lwip_end();
     critical_section_exit(critical);
+    cyw43_arch_lwip_end();
     if( err != ERR_OK )
     {
         printf("\nFailed to output\n");
