@@ -55,8 +55,17 @@ add_executable( daemon.out
                 ../common/msg_fifo.h
                 ../common/msg_fifo.c
                 src/daemon_sm.c
+                src/daemon_sm.h
+                src/weather_sm.c
+                src/weather_sm.h
+                src/weather.c
+                src/weather.h
+                src/comms_sm.c
+                src/comms_sm.h
                 src/timestamp.h
                 src/timestamp.c
+                src/json.c
+                src/json.h
                 src/comms.h
                 src/comms.c
                 ../common/events.h
@@ -67,6 +76,8 @@ add_executable( daemon.out
                 ../boilerplate/src/fifo_base.c
                 ../boilerplate/src/state.h
                 ../boilerplate/src/state.c
+                ../boilerplate/src/event_observer.c
+                ../boilerplate/src/event_observer.h
                 ../common/meta.h
                 )
 

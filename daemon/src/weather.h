@@ -1,29 +1,23 @@
-#ifndef WEATHER_H_
-#define WEATHER_H_
+#ifndef _WEATHER_H_
+#define _WEATHER_H_
 
-#include <errno.h>
-#include <inttypes.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/sysinfo.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <time.h>
-#include <assert.h>
-#include "fifo_base.h"
-#include "state.h"
-#include "mqtt.h"
 #include "sensor.h"
-#include "timestamp.h"
-#include "events.h"
-#include "timer.h"
-#include "comms.h"
-#include "msg_fifo.h"
-#include "meta.h"
-#include "json.h"
+#include <linux/i2c-dev.h>
+#include <inttypes.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/fcntl.h>
+#include <sys/socket.h>
+#include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
 
-extern state_t * Weather_Init(void);
+void Weather_Init( char * key, char * loc );
+void Weather_Read( void );
+extern bool Weather_DataValid(void);
+extern float Weather_GetTemperature( void );
+extern char * Weather_GenerateJSON(void);
 
-#endif /* WEATHER_H */
+#endif /* _WEATHER_H_ */

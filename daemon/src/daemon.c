@@ -11,7 +11,9 @@
 #include <assert.h>
 
 #include "daemon_sm.h"
+#include "comms_sm.h"
 #include "daemon_events.h"
+#include "event_observer.h"
 #include "fifo_base.h"
 #include "state.h"
 #include "mqtt.h"
@@ -22,19 +24,28 @@
 #include "comms.h"
 #include "msg_fifo.h"
 #include "meta.h"
+#include "weather_sm.h"
 
 typedef struct
 {
-    daemon_settings_t daemon; 
-    char * api_key;
-    char * location;
+    daemon_settings_t daemon;
+    comms_settings_t comms;
+    weather_settings_t weather;
     bool weather_enabled;
 }
 settings_t;
 
+#define NUM_CLIENTS (1U)
+static comms_client_t comms_client[NUM_CLIENTS] =
+{
+    {.get_state = Daemon_GetState, .get_name = Daemon_GetName}
+};
+
 static void RefreshEvents( daemon_fifo_t * events )
 {
+    CommsSM_RefreshEvents(events);
     Daemon_RefreshEvents(events);
+    WeatherSM_RefreshEvents(events);
 }
 
 static void Loop( daemon_fifo_t * fifo )
@@ -50,7 +61,7 @@ static void Loop( daemon_fifo_t * fifo )
         state_event_t latest = FIFO_Dequeue( fifo );
 
         /* Dispatch */
-        STATEMACHINE_FlatDispatch( latest.state, latest.event );
+        STATEMACHINE_Dispatch( latest.state, latest.event );
     }
 }
 
@@ -69,15 +80,19 @@ bool HandleArgs( int argc, char ** argv, settings_t * settings )
             case 'b':
                 settings->daemon.broker_ip = optarg;
                 settings->daemon.broker_port = "1883";
+
+                settings->comms.ip = optarg;
+                settings->comms.port = "1883";
                 break;
             case 'c':
                 settings->daemon.client_name = optarg;
+                settings->comms.client_name = optarg;
                 break;
             case 'k':
-                settings->api_key = optarg;
+                settings->weather.api_key = optarg;
                 break;
             case 'l':
-                settings->location = optarg;
+                settings->weather.location = optarg;
                 break;
             default:
                 break;
@@ -88,8 +103,8 @@ bool HandleArgs( int argc, char ** argv, settings_t * settings )
                 (settings->daemon.broker_port != NULL) &&
                 (settings->daemon.client_name != NULL);
    
-    settings->weather_enabled = (settings->api_key != NULL) &&
-                                (settings->location != NULL);
+    settings->weather_enabled = (settings->weather.api_key != NULL) &&
+                                (settings->weather.location != NULL);
 
     return success;
 }
@@ -114,20 +129,47 @@ static void FailureMessage(void)
     printf("\t-l\tLocation\n");
 }
 
+static void InitComms(comms_t * comms, settings_t * settings, msg_fifo_t * msg_fifo)
+{
+    memset(comms, 0x00, sizeof(comms_t));
+    
+    comms->ip = settings->comms.ip;
+    comms->port = settings->comms.port;
+    comms->fifo = msg_fifo;
+
+    Comms_Init(comms);
+}
+
 int main( int argc, char ** argv )
 {
-    static settings_t settings;
+    settings_t settings;
     daemon_fifo_t event_fifo;
- 
-    WelcomeMessage();
+    msg_fifo_t msg_fifo;
+    comms_t comms;
+    
     bool success = HandleArgs( argc, argv, &settings);
-    DaemonEvents_Init(&event_fifo);
-    (void)TimeStamp_Generate();
-    Timer_Init();
+    
+    GENERATE_EVENT_OBSERVERS( observer, SIGNALS );
+    event_fifo.observer = observer;
 
+    WelcomeMessage();
+    InitComms(&comms, &settings, &msg_fifo);
+    
+    (void)TimeStamp_Generate();
+    
+    DaemonEvents_Init(&event_fifo);
     if( success )
     {
-        Daemon_Init(&settings.daemon, &event_fifo);
+        CommsSM_Init(&settings.comms, &comms, &event_fifo);
+        Daemon_Init(&settings.daemon, &comms, &event_fifo);
+        DaemonEvents_Subscribe(&event_fifo, Daemon_GetState(),EVENT(BrokerConnected));
+        DaemonEvents_Subscribe(&event_fifo, Daemon_GetState(),EVENT(BrokerDisconnected));
+        if(settings.weather_enabled)
+        {
+            WeatherSM_Init(&settings.weather, &comms, &event_fifo);
+            DaemonEvents_Subscribe(&event_fifo, WeatherSM_GetState(),EVENT(BrokerConnected));
+            DaemonEvents_Subscribe(&event_fifo, WeatherSM_GetState(),EVENT(BrokerDisconnected));
+        }
         Loop(&event_fifo);
     }
     else
