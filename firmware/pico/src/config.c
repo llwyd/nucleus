@@ -28,7 +28,7 @@
 #include "eeprom.h"
 #include "cli.h"
 
-GENERATE_SIGNAL_STRINGS( SIGNALS );
+GENERATE_EVENT_STRINGS( EVENTS );
 
 DEFINE_STATE(Config);
 DEFINE_STATE(AwaitingCommand);

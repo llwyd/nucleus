@@ -3,31 +3,32 @@
 
 #include "state.h"
 
-#define SIGNALS(SIG ) \
-    SIG( Tick ) \
-    SIG( ReadSensor ) \
-    SIG( WifiCheckStatus ) \
-    SIG( WifiConnected ) \
-    SIG( WifiDisconnected ) \
-    SIG( TCPRetryConnect ) \
-    SIG( RetryCounterIncrement ) \
-    SIG( TCPConnected ) \
-    SIG( TCPDisconnected ) \
-    SIG( MessageReceived ) \
-    SIG( MQTTRetryConnect ) \
-    SIG( AccelDataReady ) \
-    SIG( AccelMotion ) \
-    SIG( DNSReceived ) \
-    SIG( DNSRetryRequest ) \
-    SIG( NTPReceived ) \
-    SIG( NTPRetryRequest ) \
-    SIG( AlarmElapsed ) \
-    SIG( HandleCommand ) \
-    SIG( HashRequest ) \
-    SIG( TCPRetryClose ) \
-    SIG( AckReceived ) \
-    SIG( PCBInvalid ) \
+#define EVENTS(EVNT) \
+    EVNT( Tick ) \
+    EVNT( ReadSensor ) \
+    EVNT( WifiCheckStatus ) \
+    EVNT( WifiConnected ) \
+    EVNT( WifiDisconnected ) \
+    EVNT( TCPRetryConnect ) \
+    EVNT( RetryCounterIncrement ) \
+    EVNT( TCPConnected ) \
+    EVNT( TCPDisconnected ) \
+    EVNT( MessageReceived ) \
+    EVNT( MQTTRetryConnect ) \
+    EVNT( AccelDataReady ) \
+    EVNT( AccelMotion ) \
+    EVNT( DNSReceived ) \
+    EVNT( DNSRetryRequest ) \
+    EVNT( NTPReceived ) \
+    EVNT( NTPRetryRequest ) \
+    EVNT( AlarmElapsed ) \
+    EVNT( HandleCommand ) \
+    EVNT( HashRequest ) \
+    EVNT( TCPRetryClose ) \
+    EVNT( AckReceived ) \
+    EVNT( AckTimeout ) \
+    EVNT( PCBInvalid ) \
 
-GENERATE_SIGNALS( SIGNALS );
+GENERATE_EVENTS( EVENTS );
 
 #endif /* NODE_EVENTS_H_ */

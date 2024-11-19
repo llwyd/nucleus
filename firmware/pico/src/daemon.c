@@ -34,7 +34,7 @@
 #define SENSOR_PERIOD_MS (200)
 
 #define ID_STRING_SIZE ( 32U )
-GENERATE_SIGNAL_STRINGS( SIGNALS );
+GENERATE_EVENT_STRINGS( EVENTS );
 
 /* Top level state */
 DEFINE_STATE(SetupWIFI);
@@ -48,7 +48,7 @@ DEFINE_STATE(WifiNotConnected);
 DEFINE_STATE(DNSRequest);
 DEFINE_STATE(RequestNTP);
 DEFINE_STATE(Idle);
-DEFINE_STATE(AwaitingAck);
+//DEFINE_STATE(AwaitingAck);
 
 /* Third level */
 DEFINE_STATE(TCPNotConnected);
@@ -397,6 +397,7 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
             {
                 if(MQTT_AllSubscribed(node_state->mqtt))
                 {
+                    Emitter_Destroy(node_state->retry_timer);
                     ret = TRANSITION(this, STATE(Idle));
                 }
                 else
@@ -410,6 +411,27 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
             }
             break;
         }
+        case EVENT( TCPDisconnected ):
+        {
+            Comms_Close();
+            ret = TRANSITION(this, STATE(TCPNotConnected));
+            break;
+        }
+        case EVENT(RetryCounterIncrement):
+        {
+            Emitter_Destroy(node_state->retry_timer);
+            node_state->retry_counter++;
+            if(node_state->retry_counter < RETRY_ATTEMPTS)
+            {
+                Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
+            }
+            else
+            {
+                Emitter_EmitEvent(EVENT(TCPDisconnected));
+            }
+            ret = HANDLED();
+            break;
+        }
         case EVENT( Exit ):
         {
             ret = HANDLED();
@@ -418,8 +440,10 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
         case EVENT( Enter ):
         {
             Emitter_Destroy(node_state->retry_timer);
+            node_state->retry_counter = 0U;
             if(MQTT_Subscribe(node_state->mqtt))
             {
+                Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
                 ret = HANDLED();
             }
             else
@@ -633,8 +657,14 @@ static state_ret_t State_Idle( state_t * this, event_t s )
     switch(s)
     {
         case EVENT( Exit ):
+        {
+            Emitter_Destroy(node_state->retry_timer);
+            ret = HANDLED();
+            break;
+        }
         case EVENT( Enter ):
         {
+            Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, RETRY_PERIOD_MS);
             ret = HANDLED();
             break;
         }
@@ -644,7 +674,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             bool success = MQTT_Publish(node_state->mqtt,"motion","1");
             if(success)
             {
-                ret = TRANSITION(this, STATE(AwaitingAck));
+                ret = HANDLED();
             }
             else
             {
@@ -658,7 +688,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             bool success = MQTT_Publish(node_state->mqtt,"hash", META_GITHASH);
             if(success)
             {
-                ret = TRANSITION(this, STATE(AwaitingAck));
+                ret = HANDLED();
             }
             else
             {
@@ -684,7 +714,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             bool success = MQTT_Publish(node_state->mqtt,"environment", json);
             if(success)
             {
-                ret = TRANSITION(this, STATE(AwaitingAck));
+                ret = HANDLED();
             }
             else
             {
@@ -706,8 +736,31 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             char json[64];
             Enviro_GenerateJSON(json, 64);
-            MQTT_Publish(node_state->mqtt,"summary", json);
+            bool success = MQTT_Publish(node_state->mqtt,"summary", json);
+            if(success)
+            {
+                ret = HANDLED();
+            }
+            else
+            {
+                Comms_Close();
+                ret = TRANSITION(this, STATE(TCPNotConnected));
+            }
+            break;
+        }
+        case EVENT( AckReceived ):
+        {
+            printf("TCP ACK Received\n");
+            Emitter_Destroy(node_state->retry_timer);
+            Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, RETRY_PERIOD_MS);
             ret = HANDLED();
+            break;
+        }
+        case EVENT( AckTimeout ):
+        {
+            printf("TCP ACK Timeout\n");
+            Comms_Close();
+            ret = TRANSITION(this, STATE(TCPNotConnected));
             break;
         }
         default:
@@ -718,7 +771,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
     return ret;
 }
-
+/*
 static state_ret_t State_AwaitingAck( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
@@ -778,6 +831,7 @@ static state_ret_t State_AwaitingAck( state_t * this, event_t s )
 
     return ret;
 }
+*/
 
 extern void Daemon_Run(void)
 {
