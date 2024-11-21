@@ -48,7 +48,6 @@ DEFINE_STATE(WifiNotConnected);
 DEFINE_STATE(DNSRequest);
 DEFINE_STATE(RequestNTP);
 DEFINE_STATE(Idle);
-//DEFINE_STATE(AwaitingAck);
 
 /* Third level */
 DEFINE_STATE(TCPNotConnected);
@@ -771,67 +770,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
     return ret;
 }
-/*
-static state_ret_t State_AwaitingAck( state_t * this, event_t s )
-{
-    STATE_DEBUG(s);
-    state_ret_t ret = PARENT(this, STATE(Root));
-    node_state_t * node_state = (node_state_t *)this;
-    switch(s)
-    {
-        case EVENT( ReadSensor ):
-        case EVENT( Exit ):
-        {
-            ret = HANDLED();
-            break;
-        }
-        case EVENT( Enter ):
-        {
-            Emitter_Destroy(node_state->retry_timer);
-            node_state->retry_counter = 0U;
-            Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
-            ret = HANDLED();
-            break;
-        }
-        case EVENT(RetryCounterIncrement):
-        {
-            Emitter_Destroy(node_state->retry_timer);
-            node_state->retry_counter++;
-            if(node_state->retry_counter < RETRY_ATTEMPTS)
-            {
-                Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
-                ret = HANDLED();
-            }
-            else
-            {
-                Comms_Abort();
-                ret = TRANSITION(this, STATE(TCPNotConnected));
-            }
-            break;
-        }
-        case EVENT( AckReceived ):
-        {
-            Emitter_Destroy(node_state->retry_timer);
-            ret = TRANSITION(this, STATE(Idle));
-            break;
-        }
-        case EVENT( PCBInvalid ):
-        case EVENT( TCPDisconnected ):
-        {
-            Emitter_Destroy(node_state->retry_timer);
-            Comms_Close();
-            ret = TRANSITION(this, STATE(TCPNotConnected));
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-
-    return ret;
-}
-*/
 
 extern void Daemon_Run(void)
 {
