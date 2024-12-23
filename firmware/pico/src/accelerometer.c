@@ -77,8 +77,9 @@ static void Reset(void)
     /* Wait for boot process to finish */
     printf("Complete\n");
     
+    /* Read WHOAMI Register */
     (void)I2C_ReadReg(0x0D, &data, 1U, (void*)&address);
-    assert(data==0x1a);
+    assert(data==0x5a);
 }
 
 extern void Accelerometer_Init(void)
@@ -91,7 +92,7 @@ extern void Accelerometer_Init(void)
     /* Read WHOAMI Register */
     (void)I2C_ReadReg(0x0D, &data, 1U, (void*)&address);
     
-    if( data == 0x1A )
+    if( data == 0x5A )
     {
         printf("\tAccelerometer: WHOAMI detected\n");
         Reset();
