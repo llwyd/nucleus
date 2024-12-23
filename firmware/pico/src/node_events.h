@@ -28,6 +28,8 @@
     EVNT( AckReceived ) \
     EVNT( AckTimeout ) \
     EVNT( PCBInvalid ) \
+    EVNT( GPIOAEvent ) \
+    EVNT( GPIOBEvent ) \
 
 GENERATE_EVENTS( EVENTS );
 
