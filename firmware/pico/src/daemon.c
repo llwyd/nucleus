@@ -682,6 +682,34 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             }
             break;
         }
+        case EVENT( GPIOAEvent ):
+        {
+            bool success = MQTT_Publish(node_state->mqtt,"gpio_a","1");
+            if(success)
+            {
+                ret = HANDLED();
+            }
+            else
+            {
+                Comms_Close();
+                ret = TRANSITION(this, STATE(TCPNotConnected));
+            }
+            break;
+        }
+        case EVENT( GPIOBEvent ):
+        {
+            bool success = MQTT_Publish(node_state->mqtt,"gpio_b","1");
+            if(success)
+            {
+                ret = HANDLED();
+            }
+            else
+            {
+                Comms_Close();
+                ret = TRANSITION(this, STATE(TCPNotConnected));
+            }
+            break;
+        }
         case EVENT( HashRequest ):
         {
             bool success = MQTT_Publish(node_state->mqtt,"hash", META_GITHASH);
