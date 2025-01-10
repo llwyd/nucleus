@@ -28,6 +28,7 @@
 #include "eeprom.h"
 #include "meta.h"
 #include "watchdog.h"
+#include "uptime.h"
 
 #define RETRY_ATTEMPTS (5U)
 #define RETRY_PERIOD_MS (1000)
@@ -843,6 +844,7 @@ extern void Daemon_Run(void)
     Watchdog_Init();
     I2C_Init();
     Alarm_Init();
+    Uptime_Init();
     Enviro_Init();
     Accelerometer_Init();
     Events_Init(&events);
