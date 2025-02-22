@@ -8,3 +8,7 @@
 
 ## Debug
 `arm-none-eabi-gdb -ex "target remote localhost:3333" build/node.elf`
+
+## Setup
+`export PICO_SDK_PATH=../../../../pico/pico-sdk/`
+`cmake -DPICO_BOARD=pico_w ..`
