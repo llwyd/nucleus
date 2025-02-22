@@ -264,6 +264,8 @@ extern void Config_Run(void)
 
     I2C_Init();
     CLI_Init(state_machine.buffer);
+    Enviro_Init();
+    Accelerometer_Init();
     Events_Init(&events);
     Emitter_Init(&events, &crit_events);
     STATEMACHINE_Init( &state_machine.state, STATE( AwaitingCommand ) );

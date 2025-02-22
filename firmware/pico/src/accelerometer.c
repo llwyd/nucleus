@@ -4,9 +4,7 @@
 #include "i2c.h"
 #include <assert.h>
 #include "hardware/gpio.h"
-
-#define INT1_PIN (14U)
-#define INT2_PIN (15U)
+#include "gpio.h"
 
 static const uint8_t address = 0x1D;
 
@@ -51,7 +49,7 @@ extern void Accelerometer_Start(void)
     gpio_set_irq_enabled(INT1_PIN, GPIO_IRQ_EDGE_FALL, true);
     gpio_set_irq_enabled(INT2_PIN, GPIO_IRQ_EDGE_FALL, true);
     
-    uint8_t data = 0x05;
+    uint8_t data = 0x01;
     (void)I2C_WriteReg(0x2A,&data, 1U,(void*)&address);
 #endif
 }
@@ -77,8 +75,9 @@ static void Reset(void)
     /* Wait for boot process to finish */
     printf("Complete\n");
     
+    /* Read WHOAMI Register */
     (void)I2C_ReadReg(0x0D, &data, 1U, (void*)&address);
-    assert(data==0x1a);
+    assert(data==0x5a);
 }
 
 extern void Accelerometer_Init(void)
@@ -91,7 +90,7 @@ extern void Accelerometer_Init(void)
     /* Read WHOAMI Register */
     (void)I2C_ReadReg(0x0D, &data, 1U, (void*)&address);
     
-    if( data == 0x1A )
+    if( data == 0x5A )
     {
         printf("\tAccelerometer: WHOAMI detected\n");
         Reset();

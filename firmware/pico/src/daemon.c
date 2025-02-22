@@ -28,12 +28,15 @@
 #include "eeprom.h"
 #include "meta.h"
 #include "watchdog.h"
+#include "uptime.h"
 
 #define RETRY_ATTEMPTS (5U)
 #define RETRY_PERIOD_MS (1000)
 #define SENSOR_PERIOD_MS (200)
 
 #define ID_STRING_SIZE ( 32U )
+#define MSG_BUFFER_SIZE ( 128U )
+
 GENERATE_EVENT_STRINGS( EVENTS );
 
 /* Top level state */
@@ -67,6 +70,7 @@ typedef struct
     msg_fifo_t * msg_fifo;
     msg_fifo_t * udp_fifo;
     critical_section_t * crit;
+    char * msg_buffer;
 }
 node_state_t;
 
@@ -682,6 +686,34 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             }
             break;
         }
+        case EVENT( GPIOAEvent ):
+        {
+            bool success = MQTT_Publish(node_state->mqtt,"gpio_a","1");
+            if(success)
+            {
+                ret = HANDLED();
+            }
+            else
+            {
+                Comms_Close();
+                ret = TRANSITION(this, STATE(TCPNotConnected));
+            }
+            break;
+        }
+        case EVENT( GPIOBEvent ):
+        {
+            bool success = MQTT_Publish(node_state->mqtt,"gpio_b","1");
+            if(success)
+            {
+                ret = HANDLED();
+            }
+            else
+            {
+                Comms_Close();
+                ret = TRANSITION(this, STATE(TCPNotConnected));
+            }
+            break;
+        }
         case EVENT( HashRequest ):
         {
             bool success = MQTT_Publish(node_state->mqtt,"hash", META_GITHASH);
@@ -708,9 +740,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             Enviro_Read();
             Enviro_Print();
 
-            char json[64];
-            Enviro_GenerateJSON(json, 64);
-            bool success = MQTT_Publish(node_state->mqtt,"environment", json);
+            Enviro_GenerateJSON(node_state->msg_buffer, MSG_BUFFER_SIZE);
+            bool success = MQTT_Publish(node_state->mqtt,"environment", node_state->msg_buffer);
             if(success)
             {
                 ret = HANDLED();
@@ -733,9 +764,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( AlarmElapsed ):
         {
-            char json[64];
-            Enviro_GenerateJSON(json, 64);
-            bool success = MQTT_Publish(node_state->mqtt,"summary", json);
+            Enviro_GenerateJSON(node_state->msg_buffer, MSG_BUFFER_SIZE);
+            bool success = MQTT_Publish(node_state->mqtt,"summary", node_state->msg_buffer);
             if(success)
             {
                 ret = HANDLED();
@@ -773,6 +803,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
 extern void Daemon_Run(void)
 {
+    char msg_buffer[MSG_BUFFER_SIZE] = {0};
     char unique_id[ID_STRING_SIZE]={0};
     pico_get_unique_board_id_string(unique_id, ID_STRING_SIZE);
 
@@ -815,6 +846,7 @@ extern void Daemon_Run(void)
     Watchdog_Init();
     I2C_Init();
     Alarm_Init();
+    Uptime_Init();
     Enviro_Init();
     Accelerometer_Init();
     Events_Init(&events);
@@ -840,6 +872,7 @@ extern void Daemon_Run(void)
     state_machine.udp_fifo = &udp_fifo;
     state_machine.ntp = &ntp;
     state_machine.crit = &crit;
+    state_machine.msg_buffer = msg_buffer;
 
     Watchdog_Kick();
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );

@@ -40,8 +40,8 @@ extern void Alarm_SetClock(time_t * unixtime)
     struct tm * time = gmtime(unixtime);
 
     dt.year = time->tm_year + 1900U;
-    dt.month = time->tm_mon;
-    dt.day = time->tm_mon;
+    dt.month = time->tm_mon + 1U;
+    dt.day = time->tm_mday;
     dt.dotw = time->tm_wday;
     dt.hour = time->tm_hour;
     dt.min = time->tm_min;
