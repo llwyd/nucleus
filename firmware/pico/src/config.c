@@ -28,7 +28,7 @@
 #include "eeprom.h"
 #include "cli.h"
 
-GENERATE_EVENT_STRINGS( EVENTS );
+//GENERATE_EVENT_STRINGS( EVENTS );
 
 DEFINE_STATE(Config);
 DEFINE_STATE(AwaitingCommand);
@@ -59,7 +59,7 @@ _Static_assert(NUM_COMMANDS == (sizeof(command_table)/sizeof(cli_command_t)));
 
 static state_ret_t State_Config( state_t * this, event_t s )
 {
-    STATE_DEBUG(s);
+    //STATE_DEBUG(s);
     state_ret_t ret = NO_PARENT(this);
     config_state_t * config_state = (config_state_t *)this;
     (void)config_state;
@@ -85,7 +85,7 @@ static state_ret_t State_Config( state_t * this, event_t s )
 
 static state_ret_t State_AwaitingCommand( state_t * this, event_t s )
 {
-    STATE_DEBUG(s);
+    //STATE_DEBUG(s);
     state_ret_t ret = PARENT(this, STATE(Config));
     config_state_t * config_state = (config_state_t *)this;
     switch(s)
@@ -138,7 +138,7 @@ static state_ret_t State_AwaitingCommand( state_t * this, event_t s )
 
 static state_ret_t State_ReadRaw( state_t * this, event_t s )
 {
-    STATE_DEBUG(s);
+    //STATE_DEBUG(s);
     state_ret_t ret = PARENT(this, STATE(Config));
     config_state_t * config_state = (config_state_t *)this;
     (void)config_state;
@@ -175,7 +175,7 @@ static state_ret_t State_ReadRaw( state_t * this, event_t s )
 
 static state_ret_t State_ReadAll( state_t * this, event_t s )
 {
-    STATE_DEBUG(s);
+    //STATE_DEBUG(s);
     state_ret_t ret = PARENT(this, STATE(Config));
     config_state_t * config_state = (config_state_t *)this;
     (void)config_state;
@@ -215,7 +215,7 @@ static state_ret_t State_ReadAll( state_t * this, event_t s )
 
 static state_ret_t State_SetValue( state_t * this, event_t s )
 {
-    STATE_DEBUG(s);
+    //STATE_DEBUG(s);
     state_ret_t ret = PARENT(this, STATE(Config));
     config_state_t * config_state = (config_state_t *)this;
     switch(s)
