@@ -743,7 +743,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             Enviro_Print();
 
             Enviro_GenerateJSON(node_state->msg_buffer, MSG_BUFFER_SIZE);
-            bool success = MQTT_Publish(node_state->mqtt,"environment", node_state->msg_buffer);
+            bool success = MQTT_Publish(node_state->mqtt,"env", node_state->msg_buffer);
             if(success)
             {
                 ret = HANDLED();
