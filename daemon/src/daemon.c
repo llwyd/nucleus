@@ -41,21 +41,24 @@ static comms_client_t comms_client[NUM_CLIENTS] =
     {.get_state = Daemon_GetState, .get_name = Daemon_GetName}
 };
 
-static void RefreshEvents( daemon_fifo_t * events )
+static void RefreshEvents( settings_t * settings, daemon_fifo_t * events )
 {
     CommsSM_RefreshEvents(events);
     Daemon_RefreshEvents(events);
-    WeatherSM_RefreshEvents(events);
+    if(settings->weather_enabled)
+    {
+        WeatherSM_RefreshEvents(events);
+    }
 }
 
-static void Loop( daemon_fifo_t * fifo )
+static void Loop( settings_t * settings, daemon_fifo_t * fifo )
 {
     while( 1 )
     {
         /* Get Event */    
         while( FIFO_IsEmpty( (fifo_base_t *)fifo ) )
         {
-            RefreshEvents( fifo );
+            RefreshEvents( settings, fifo );
         }
 
         state_event_t latest = FIFO_Dequeue( fifo );
@@ -170,7 +173,7 @@ int main( int argc, char ** argv )
             DaemonEvents_Subscribe(&event_fifo, WeatherSM_GetState(),EVENT(BrokerConnected));
             DaemonEvents_Subscribe(&event_fifo, WeatherSM_GetState(),EVENT(BrokerDisconnected));
         }
-        Loop(&event_fifo);
+        Loop(&settings, &event_fifo);
     }
     else
     {
