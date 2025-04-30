@@ -2,6 +2,7 @@ from flask import render_template
 from sqlalchemy import or_
 from app import app, db
 from app.models import EnvironmentData
+from app.models import EventData
 import datetime as dt
 import pandas as pd
 from matplotlib.figure import Figure
@@ -17,6 +18,15 @@ def get_todays_data():
    
     with app.app_context():
         todays_data = db.session.query(EnvironmentData).filter( or_(EnvironmentData.datestamp == todays_date, EnvironmentData.datestamp == yesterdays_date)).all() 
+    return todays_data
+
+def get_todays_events():
+    todays_date            = dt.datetime.now().strftime('%Y-%m-%d')
+    yesterdays_date        = (dt.datetime.now() - dt.timedelta(days=1)).strftime('%Y-%m-%d') 
+    yesterdays_time        = (dt.datetime.now() - dt.timedelta(days=1)) 
+   
+    with app.app_context():
+        todays_data = db.session.query(EventData).filter( or_(EventData.datestamp == todays_date, EventData.datestamp == yesterdays_date)).all() 
     return todays_data
 
 def generate_data_graph(todays_data):
@@ -93,3 +103,8 @@ def index():
 def dump_data():
     todays_data = get_todays_data()
     return render_template("raw_data.html", readings=todays_data)
+
+@app.route('/events')
+def dump_events():
+    todays_data = get_todays_events()
+    return render_template("raw_events.html", readings=todays_data)

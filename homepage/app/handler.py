@@ -1,5 +1,6 @@
 from app import app, db, mqtt
 from app.models import EnvironmentData
+from app.models import EventData
 import json
 import datetime as dt
 
