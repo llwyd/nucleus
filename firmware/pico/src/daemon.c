@@ -704,7 +704,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( GPIOBEvent ):
         {
-            bool success = MQTT_Publish(node_state->mqtt,NODE_EVENT("gpio_b"),"1");
+            bool success = MQTT_Publish(node_state->mqtt,NODE_EVENT("gpiob"),"1");
             if(success)
             {
                 ret = HANDLED();
