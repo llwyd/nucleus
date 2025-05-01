@@ -5,6 +5,8 @@ echo "Generating metadata to meta.h"
 output_folder=$1
 githash=$(git rev-parse --short HEAD)
 
+echo "GIT Hash: ${githash}"
+
 gitstr="#define META_GITHASH (\"${githash}\")"
 datestamp="#define META_DATESTAMP (__DATE__)"
 timestamp="#define META_TIMESTAMP (__TIME__)"
