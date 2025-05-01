@@ -111,7 +111,7 @@ state_ret_t State_Idle( state_t * this, event_t s )
             {
                 Sensor_Read();
                 char * json = Sensor_GenerateJSON();
-                if( MQTT_Publish(&mqtt, "environment", json))
+                if( MQTT_Publish(&mqtt, "env", json))
                 {
                     ret = HANDLED();
                 }

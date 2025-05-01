@@ -18,8 +18,7 @@
             <th><b>Date</b></th>
             <th><b>Time</b></th>
             <th><b>Device</b></th>
-            <th><b>Temperature</b></th>
-            <th><b>Humidity</b></th>
+            <th><b>Event</b></th>
         </tr>
         {% for reading in readings %}
         <div class="table">
@@ -28,8 +27,7 @@
                 <td>{{reading.datestamp}}</td>
                 <td>{{reading.timestamp}}</td>
                 <td>{{reading.device_id}}</td>
-				<td>{{reading.temperature}} °C</td>
-                <td>{{reading.humidity}}</td>
+				<td>{{reading.event}}</td>
             </tr>
         </div>
         {% endfor %}

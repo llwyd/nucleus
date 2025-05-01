@@ -21,3 +21,22 @@ class EnvironmentData(db.Model):
 
     def __repr__(self):
         return (self.device_id, self.datestamp, self.timestamp, self.temperature, self.humidity)
+
+class EventData(db.Model):
+    __tablename__ = "event_data"
+    id              = db.Column(db.Integer, primary_key=True)
+    device_id       = db.Column(db.String(32))
+    datestamp       = db.Column(db.String(32))
+    timestamp       = db.Column(db.String(32))
+    event           = db.Column(db.String(16))
+
+    def __init__(self, device_id=None, datestamp=None, timestamp=None, event=None):
+        self.data = (device_id, datestamp, timestamp, event)
+        self.device_id = device_id
+        self.datestamp = datestamp
+        self.timestamp = timestamp
+        self.event = event
+
+    def __repr__(self):
+        return (self.device_id, self.datestamp, self.timestamp, self.event)
+

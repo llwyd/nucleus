@@ -30,6 +30,8 @@
 #include "watchdog.h"
 #include "uptime.h"
 
+#define NODE_EVENT(X) ("evnt/" X)
+
 #define RETRY_ATTEMPTS (5U)
 #define RETRY_PERIOD_MS (1000)
 #define SENSOR_PERIOD_MS (200)
@@ -674,7 +676,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( AccelMotion ):
         {
             Accelerometer_Ack();
-            bool success = MQTT_Publish(node_state->mqtt,"motion","1");
+            bool success = MQTT_Publish(node_state->mqtt,NODE_EVENT("accl"),"1");
             if(success)
             {
                 ret = HANDLED();
@@ -688,7 +690,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( GPIOAEvent ):
         {
-            bool success = MQTT_Publish(node_state->mqtt,"gpio_a","1");
+            bool success = MQTT_Publish(node_state->mqtt,NODE_EVENT("gpioa"),"1");
             if(success)
             {
                 ret = HANDLED();
@@ -702,7 +704,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( GPIOBEvent ):
         {
-            bool success = MQTT_Publish(node_state->mqtt,"gpio_b","1");
+            bool success = MQTT_Publish(node_state->mqtt,NODE_EVENT("gpiob"),"1");
             if(success)
             {
                 ret = HANDLED();
@@ -741,7 +743,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             Enviro_Print();
 
             Enviro_GenerateJSON(node_state->msg_buffer, MSG_BUFFER_SIZE);
-            bool success = MQTT_Publish(node_state->mqtt,"environment", node_state->msg_buffer);
+            bool success = MQTT_Publish(node_state->mqtt,"env", node_state->msg_buffer);
             if(success)
             {
                 ret = HANDLED();
