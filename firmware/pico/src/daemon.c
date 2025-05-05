@@ -35,7 +35,6 @@
 #define RETRY_ATTEMPTS (5U)
 #define RETRY_PERIOD_MS (1000)
 #define SENSOR_PERIOD_MS (200)
-#define STARTUP_DELAY_SECS (2U)
 
 #define ID_STRING_SIZE ( 32U )
 #define MSG_BUFFER_SIZE ( 128U )
@@ -43,7 +42,6 @@
 GENERATE_EVENT_STRINGS( EVENTS );
 
 /* Top level state */
-DEFINE_STATE(Startup);
 DEFINE_STATE(SetupWIFI);
 DEFINE_STATE(ConfigureRTC);
 DEFINE_STATE(Setup);
@@ -80,11 +78,13 @@ node_state_t;
 
 static void HashRequest(mqtt_data_t * data);
 static void ResetRequest(mqtt_data_t * data);
+static void SensorRequest(mqtt_data_t * data);
 
-static mqtt_subs_t subs[2] = 
+static mqtt_subs_t subs[3] = 
 {
     {"req_hash", mqtt_type_str, HashRequest},
     {"reset", mqtt_type_bool, ResetRequest},
+    {"sensor_rst", mqtt_type_bool, SensorRequest},
 };
 
 static void ResetRequest(mqtt_data_t * data)
@@ -94,58 +94,19 @@ static void ResetRequest(mqtt_data_t * data)
     while(1);
 }
 
+static void SensorRequest(mqtt_data_t * data)
+{
+    (void)data;
+    printf("\tRE-INIT Sensor\n");
+    Enviro_Init();
+}
+
 static void HashRequest(mqtt_data_t * data)
 {
     (void)data;
     printf("\tRequesting GIT hash: %s\n", data->s);
     Emitter_EmitEvent(EVENT(HashRequest));
 }
-
-static state_ret_t State_Startup( state_t * this, event_t s )
-{
-    STATE_DEBUG(s);
-    state_ret_t ret = NO_PARENT(this);
-    node_state_t * node_state = (node_state_t *)this;
-    (void)node_state;
-    switch(s)
-    {
-        case EVENT(RetryCounterIncrement):
-        {
-            Emitter_Destroy(node_state->retry_timer);
-            node_state->retry_counter++;
-            if(node_state->retry_counter < STARTUP_DELAY_SECS)
-            {
-                Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
-                ret = HANDLED();
-            }
-            else
-            {
-                Enviro_Init();
-                Accelerometer_Init();
-                ret = TRANSITION(this, STATE(WifiNotConnected));
-            }
-            break;
-        }
-        case EVENT( Enter ):
-        {
-            node_state->retry_counter = 0U;
-            Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS); 
-            ret = HANDLED();
-            break;
-        }
-        case EVENT( Exit ):
-        {
-            ret = HANDLED();
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-    return ret;
-}
-
 static state_ret_t State_Setup( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
@@ -715,6 +676,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( Enter ):
         {
+            Enviro_Init();
             Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, RETRY_PERIOD_MS);
             ret = HANDLED();
             break;
@@ -865,7 +827,7 @@ extern void Daemon_Run(void)
         .send = Comms_Send,
         .recv = Comms_Recv,
         .subs = subs,
-        .num_subs = 2U,
+        .num_subs = 3U,
     };
 
     ntp_t ntp =
@@ -895,6 +857,8 @@ extern void Daemon_Run(void)
     I2C_Init();
     Alarm_Init();
     Uptime_Init();
+    Enviro_Init();
+    Accelerometer_Init();
     Events_Init(&events);
     EEPROM_Read((uint8_t*)unique_id, EEPROM_ENTRY_SIZE, EEPROM_NAME);
     
@@ -921,7 +885,7 @@ extern void Daemon_Run(void)
     state_machine.msg_buffer = msg_buffer;
 
     Watchdog_Kick();
-    STATEMACHINE_Init( &state_machine.state, STATE( Startup ) );
+    STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
 
     while( true )
     {
