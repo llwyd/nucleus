@@ -6,6 +6,7 @@
 #include "hardware/i2c.h"
 #include "i2c.h"
 #include "uptime.h"
+#include "alarm.h"
 #include <string.h>
 
 static struct   bme280_dev dev;
@@ -107,7 +108,6 @@ extern void Enviro_Read(void)
 
 extern void Enviro_Print(void)
 { 
-    uint64_t uptime_ms = Uptime_Get();
 #ifdef SENSOR_MCP9808
     printf("\tTemperature: %.2f\n", MCP9808_GetTemperature());
     printf("\tHumidity: %.2f\n", 0.0);
@@ -117,25 +117,30 @@ extern void Enviro_Print(void)
     printf("\tHumidity: %.2f\n", env_data.humidity);
     printf("\tPressure: %.2f\n", env_data.pressure);
 #endif
-    printf("\tms Since boot: %llu\n", uptime_ms); 
 }
 
-extern void Enviro_GenerateJSON(char * buffer, uint8_t buffer_len)
+extern void Enviro_GenDigest(char * buffer, uint8_t buffer_len)
 {
     assert(buffer != NULL);
-    uint64_t uptime_ms = Uptime_Get();
+    uint64_t utime = (uint64_t)Alarm_GetUnixTime();
 
     memset(buffer,0x00, buffer_len);
-#ifdef SENSOR_MCP9808
-    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%llu}",
-            MCP9808_GetTemperature(),
-            0.0,
-            uptime_ms);
-#else
-    snprintf(buffer, buffer_len,"{\"temperature\":%.1f,\"humidity\":%.1f,\"uptime_ms\":%llu}",
+    
+    snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f,\"ts\":%llu}",
             env_data.temperature,
             env_data.humidity,
-            uptime_ms);
-#endif
+            utime);
 }
+
+extern void Enviro_GenShortDigest(char * buffer, uint8_t buffer_len)
+{
+    assert(buffer != NULL);
+
+    memset(buffer,0x00, buffer_len);
+    
+    snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f}",
+            env_data.temperature,
+            env_data.humidity);
+}
+
 

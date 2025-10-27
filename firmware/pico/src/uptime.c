@@ -1,4 +1,6 @@
 #include "uptime.h"
+#include <string.h>
+#include "meta.h"
 
 static absolute_time_t timestamp;
 static uint32_t last_uptime_ms;
@@ -15,6 +17,18 @@ extern void Uptime_Init(void)
 extern uint64_t Uptime_Get(void)
 {
     return uptime_ms;
+}
+
+extern void Uptime_Encode(char * buffer, uint8_t buffer_len)
+{
+    assert(buffer != NULL);
+    memset(buffer,0x00, buffer_len);
+    snprintf(buffer, buffer_len,"%llu", uptime_ms);
+    
+    snprintf(buffer, buffer_len,
+            "{\"ut\":%llu,\"gt\":\"%s\"}",
+            uptime_ms,
+            META_GITHASH);
 }
 
 extern uint64_t Uptime_Refresh(void)

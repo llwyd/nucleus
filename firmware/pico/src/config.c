@@ -15,7 +15,7 @@
 #include "state.h"
 #include "wifi.h"
 #include "emitter.h"
-#include "comms.h"
+#include "tcp.h"
 #include "mqtt.h"
 #include "msg_fifo.h"
 #include "node_events.h"

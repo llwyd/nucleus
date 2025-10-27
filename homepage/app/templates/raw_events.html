@@ -1,19 +1,44 @@
 <html>
-	<meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
-
-	<head>		
-	<title>
-			Home Automation Data Dump.
-		</title>
-	</head>
-	<body>
-		<div class="container">
-    <!--<h1>Raw Temperature Data</h1>-->
-        <table>
-        <tr>
+    <head>
+        <title>NUCLEUS</title>
+                <meta charset="utf-8">
+                <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                <meta http-equiv="refresh" content="300">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+        <style>
+                th,td
+                {
+                    text-align: center;
+                    padding: 10px;
+                }
+                h1
+                {
+                    text-align: center;
+                }
+                footer
+                {
+                    text-align: center;
+                }
+                div.info
+                {
+                    text-align: center
+                }
+                div.container
+                {
+                    text-align: center;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+                </style>
+        </head>
+    <body>
+        <h1>Events</h1>
+	   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+            <hr>
+	<div class="container">
+    	<table style ="margin-left:auto;margin-right:auto;">
+	<tr>
             <th><b>ID</b></th>
             <th><b>Date</b></th>
             <th><b>Time</b></th>
@@ -27,12 +52,14 @@
                 <td>{{reading.datestamp}}</td>
                 <td>{{reading.timestamp}}</td>
                 <td>{{reading.device_id}}</td>
-				<td>{{reading.event}}</td>
+		<td>{{reading.event}}</td>
             </tr>
         </div>
         {% endfor %}
         </table>
-    </div><!-- /.container -->	
-	</body>
+        </div>
+    </body>
+    <footer>
+        <hr>
+    </footer>
 </html>
-

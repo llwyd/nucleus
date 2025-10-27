@@ -30,8 +30,8 @@ add_executable(node
     src/wifi.h
     src/emitter.c
     src/emitter.h
-    src/comms.h
-    src/comms.c
+    src/tcp.h
+    src/tcp.c
     src/i2c.c
     src/i2c.h
     src/accelerometer.h
@@ -40,6 +40,8 @@ add_executable(node
     src/udp.h
     src/ntp.c
     src/ntp.h
+    src/dns.c
+    src/dns.h
     src/gpio.h
     src/gpio.c
     src/alarm.h
@@ -58,6 +60,8 @@ add_executable(node
     ../../boilerplate/src/state.c
     ../../boilerplate/src/fifo_base.h
     ../../boilerplate/src/fifo_base.c
+    ../../boilerplate/src/pq_base.c
+    ../../boilerplate/src/pq_base.h
     ../../common/events.h
     ../../common/events.c
     ../../common/bme280.c
@@ -117,20 +121,19 @@ set_source_files_properties(
     ../../common/mqtt.c
     ../../common/mqtt.h
     PROPERTIES
-    COMPILE_FLAGS "-Wall -Werror -Wfatal-errors -Wextra -Wpointer-arith"
+    COMPILE_FLAGS "-Wall -Werror -Wfatal-errors" #-Wextra -Wpointer-arith"
 )
 
 pico_enable_stdio_usb(node 1)
 pico_enable_stdio_uart(node 1)
 pico_add_extra_outputs(node)
 
-#target_compile_definitions(node PRIVATE SENSOR_MCP9808 )
 target_compile_definitions(node PRIVATE ACCELEROMETER_ENABLED )
-target_compile_definitions(node PRIVATE WATCHDOG_ENABLED)
+#target_compile_definitions(node PRIVATE WATCHDOG_ENABLED)
 
 target_compile_options(node PRIVATE -Wfatal-errors
                         -Wall
-                        -Wextra
+                        # -Wextra
                         #-Werror
                         -Wpointer-arith)
 

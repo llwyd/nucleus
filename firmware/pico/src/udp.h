@@ -11,11 +11,9 @@
 #include "lwip/udp.h"
 #include "pico/critical_section.h"
 
-#include "msg_fifo.h"
-
 extern void UDP_Recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port);
-extern bool UDP_Send( uint8_t * buffer, uint16_t len, ip_addr_t ip, uint16_t port);
-extern void UDP_Init(msg_fifo_t * fifo, critical_section_t * crit);
+extern bool UDP_Send( uint8_t * buffer, uint16_t len, ip_addr_t ip, uint16_t port, critical_section_t * crit);
+extern void UDP_Retrieve( uint8_t * buffer, uint16_t len);
 
 #endif /* UDP_H_ */
 

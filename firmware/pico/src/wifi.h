@@ -16,5 +16,6 @@ extern void WIFI_TryConnect(void);
 extern void WIFI_SetLed(void);
 extern void WIFI_ClearLed(void);
 extern void WIFI_ToggleLed(void);
+extern void WIFI_Teardown(void);
 
 #endif /* WIFI_H_ */

@@ -38,12 +38,16 @@ def generate_data_graph(todays_data):
     df['humidity'] = df['humidity'].astype(float)
     nodes = df.device_id.unique()
 
+    todays_date            = dt.datetime.now().strftime('%Y-%m-%d')
+    yesterdays_date        = (dt.datetime.now() - dt.timedelta(days=1)).strftime('%Y-%m-%d') 
+    yesterdays_time        = (dt.datetime.now() - dt.timedelta(days=1))
+
     for node in nodes:
         data = df.copy()
         data = data[data['device_id'] == node]
-        data['datetime'] = data['datestamp'] + " " + data['timestamp'] 
-        d_time = [dt.datetime.strptime(date,'%Y-%m-%d %H:%M') for date in data['datetime']]
-        ax.plot(d_time, np.float32(data['temperature']),label=node)
+        data['datetime'] = pd.to_datetime(data['datestamp'] + " " + data['timestamp'])
+        data = data[data.datetime > yesterdays_time]
+        ax.plot(data['datetime'], np.float32(data['temperature']),label=node)
     
     ax.set_title('Temperature')
     ax.set_xlabel('Time')
@@ -63,13 +67,17 @@ def generate_humidity_graph(todays_data):
     df['temperature'] = df['temperature'].astype(float)
     df['humidity'] = df['humidity'].astype(float)
     nodes = df.device_id.unique()
+    
+    todays_date            = dt.datetime.now().strftime('%Y-%m-%d')
+    yesterdays_date        = (dt.datetime.now() - dt.timedelta(days=1)).strftime('%Y-%m-%d') 
+    yesterdays_time        = (dt.datetime.now() - dt.timedelta(days=1))
 
     for node in nodes:
         data = df.copy()
         data = data[data['device_id'] == node]
-        data['datetime'] = data['datestamp'] + " " + data['timestamp'] 
-        d_time = [dt.datetime.strptime(date,'%Y-%m-%d %H:%M') for date in data['datetime']]
-        ax.plot(d_time, np.float32(data['humidity']),label=node)
+        data['datetime'] = pd.to_datetime(data['datestamp'] + " " + data['timestamp'])
+        data = data[data.datetime > yesterdays_time]
+        ax.plot(data['datetime'], np.float32(data['humidity']),label=node)
     
     ax.set_title('Humidity')
     ax.set_xlabel('Time')

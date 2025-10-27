@@ -20,16 +20,20 @@
     EVNT( DNSReceived ) \
     EVNT( DNSRetryRequest ) \
     EVNT( NTPReceived ) \
+    EVNT( UDPReceived ) \
     EVNT( NTPRetryRequest ) \
+    EVNT( TCPReceived ) \
     EVNT( AlarmElapsed ) \
     EVNT( HandleCommand ) \
-    EVNT( HashRequest ) \
     EVNT( TCPRetryClose ) \
     EVNT( AckReceived ) \
     EVNT( AckTimeout ) \
     EVNT( PCBInvalid ) \
     EVNT( GPIOAEvent ) \
     EVNT( GPIOBEvent ) \
+    EVNT( PQResend ) \
+    EVNT( UptimeRequest ) \
+    EVNT( Resync ) \
 
 GENERATE_EVENTS( EVENTS );
 

@@ -27,16 +27,18 @@ static void Callback(void)
     rtc_set_alarm(&alarm, Callback);
 }
 
+
+
 extern void Alarm_Init(void)
 {
     printf("\tInitialising Alarm\n");
     rtc_init();
     memset(&dt, 0x00, sizeof(datetime_t));
+    
 }
 
 extern void Alarm_SetClock(time_t * unixtime)
 {
-    printf("\tSetting Clock to %s\n", ctime(unixtime));
     struct tm * time = gmtime(unixtime);
 
     dt.year = time->tm_year + 1900U;
@@ -71,6 +73,57 @@ extern void Alarm_Start(void)
 
     alarm.min = minutes[pos];
     rtc_set_alarm(&alarm, Callback);
+}
+
+extern void Alarm_PrintCurrent(uint8_t * buffer, uint16_t len)
+{
+    memset(buffer, 0x00, len);
+    rtc_get_datetime(&dt);
+    datetime_to_str((char*)buffer, len, &dt);
+    printf("%s\n", buffer);
+}
+
+extern void Alarm_FormatTime(uint8_t * buffer, uint16_t len)
+{
+    memset(buffer, 0x00, len);
+    rtc_get_datetime(&dt);
+    snprintf((char*)buffer, len, "%02u:%02u:%02u",dt.hour,dt.min,dt.sec);
+}
+
+extern void Alarm_FormatDate(uint8_t * buffer, uint16_t len)
+{
+    memset(buffer, 0x00, len);
+    rtc_get_datetime(&dt);
+    snprintf((char*)buffer, len, "%02u-%02u-%02u",dt.year,dt.month,dt.day);
+}
+
+extern time_t Alarm_GetUnixTime(void)
+{
+    rtc_get_datetime(&dt);
+    struct tm time =
+    {
+        .tm_year = dt.year - 1900U,
+        .tm_mon = dt.month - 1U,
+        .tm_mday = dt.day,
+        .tm_wday = dt.dotw,
+        .tm_hour = dt.hour,
+        .tm_min = dt.min,
+        .tm_sec = dt.sec,    
+    };
+    time_t utime = mktime(&time);
+
+    return utime;
+}
+
+extern void Alarm_EncodeUnixTime(char * buffer, uint8_t buffer_len)
+{
+    assert(buffer != NULL);
+    uint64_t utime = (uint64_t)Alarm_GetUnixTime();
+
+    memset(buffer,0x00, buffer_len);
+    
+    snprintf(buffer, buffer_len,"{\"ts\":%llu}",
+            utime);
 }
 
 extern void Alarm_Stop(void)

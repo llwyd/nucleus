@@ -15,9 +15,8 @@
 #include "state.h"
 #include "wifi.h"
 #include "emitter.h"
-#include "comms.h"
+#include "tcp.h"
 #include "mqtt.h"
-#include "msg_fifo.h"
 #include "node_events.h"
 #include "i2c.h"
 #include "accelerometer.h"
@@ -29,15 +28,23 @@
 #include "meta.h"
 #include "watchdog.h"
 #include "uptime.h"
+#include "dns.h"
 
-#define NODE_EVENT(X) ("evnt/" X)
+#define NODE_EVENT(X) ("home/evnt/" X)
 
-#define RETRY_ATTEMPTS (5U)
+#define DNS_RETRY_ATTEMPTS (5U)
+#define RETRY_ATTEMPTS (10U)
 #define RETRY_PERIOD_MS (1000)
-#define SENSOR_PERIOD_MS (200)
+#define SENSOR_PERIOD_MS (250)
+#define ACK_TIMEOUT_MS (2000u)
+
+#define PQ_RETRY_MS (500u)
+#define PQ_TIMEOUT_US (5000000)
 
 #define ID_STRING_SIZE ( 32U )
 #define MSG_BUFFER_SIZE ( 128U )
+
+#define MQTT_PORT ( 1883 )
 
 GENERATE_EVENT_STRINGS( EVENTS );
 
@@ -64,49 +71,133 @@ typedef struct
 {
     state_t state;
     uint32_t retry_counter;
+    uint32_t dns_attempts;
     struct repeating_timer * timer;
     struct repeating_timer * read_timer;
     struct repeating_timer * retry_timer;
     mqtt_t * mqtt;
+    ip_addr_t addr;
     ntp_t * ntp;
-    msg_fifo_t * msg_fifo;
-    msg_fifo_t * udp_fifo;
+    tcp_t * tcp;
     critical_section_t * crit;
-    char * msg_buffer;
+    uint8_t * msg_buffer;
+    uint8_t * broker_ip;
 }
 node_state_t;
 
-static void HashRequest(mqtt_data_t * data);
-static void ResetRequest(mqtt_data_t * data);
-static void SensorRequest(mqtt_data_t * data);
+static bool ResetRequest(uint8_t * data);
+static bool SensorRequest(uint8_t * data);
+static bool UptimeRequest(uint8_t * data);
+static bool ResyncRequest(uint8_t * data);
 
-static mqtt_subs_t subs[3] = 
+static mqtt_sub_t subs[4] = 
 {
-    {"req_hash", mqtt_type_str, HashRequest},
-    {"reset", mqtt_type_bool, ResetRequest},
-    {"sensor_rst", mqtt_type_bool, SensorRequest},
+    {   
+        .name = "home/reset",
+        .callback_fn = ResetRequest,
+        .global = true
+    },
+    {   
+        .name = "home/sensor_rst", 
+        .callback_fn = SensorRequest, 
+        .global = true
+    },
+    {   
+        .name = "home/reqmeta",
+        .callback_fn = UptimeRequest,
+        .global = true
+    },
+    {   
+        .name = "home/resync",
+        .callback_fn = ResyncRequest,
+        .global = true
+    },
 };
 
-static void ResetRequest(mqtt_data_t * data)
+static bool ResetRequest(uint8_t * data)
 {
     (void)data;
     printf("\tRESET REQUEST!\n");
+#ifdef WATCHDOG_ENABLED
     while(1);
+#endif
+    return true;
 }
 
-static void SensorRequest(mqtt_data_t * data)
+static bool SensorRequest(uint8_t * data)
 {
     (void)data;
-    printf("\tRE-INIT Sensor\n");
     Enviro_Init();
+    return true;
 }
 
-static void HashRequest(mqtt_data_t * data)
+static bool UptimeRequest(uint8_t * data)
 {
     (void)data;
-    printf("\tRequesting GIT hash: %s\n", data->s);
-    Emitter_EmitEvent(EVENT(HashRequest));
+    Emitter_EmitEvent(EVENT(UptimeRequest));
+    return true;
 }
+
+static bool ResyncRequest(uint8_t * data)
+{
+    (void)data;
+    Emitter_EmitEvent(EVENT(Resync));
+    return true;
+}
+
+static state_ret_t Publish(node_state_t * state,
+                            event_t e,
+                            mqtt_msg_params_t * params,
+                            bool retry)
+{
+    state_t * this = &(state->state);
+    state_ret_t ret = HANDLED();
+    
+    mqtt_msg_t * out = MQTT_Encode(state->mqtt,
+            MQTT_PUBLISH,
+            state->msg_buffer, 
+            strlen((char*)state->msg_buffer),
+            params);
+    
+    if(out != NULL)
+    {
+        if(TCP_Send(state->tcp, out->msg, out->size))
+        {
+            /* If send was successful, then add the dup flag here
+             * incase of retransmission
+             */
+            out->msg[0] |= (1 << 3); // Dup flag
+            ret = HANDLED();
+        }
+        else
+        {
+            if(TCP_MemoryError(state->tcp))
+            {
+                /* LWIP Buffer is full, do not re-emit the event
+                 * as the PQ will reattempt */
+                ret = HANDLED();
+            }
+            else
+            {
+                /* Otherwise just reboot */
+                TCP_Close(state->tcp);
+                ret = TRANSITION(this, STATE(TCPNotConnected));
+            }
+        }
+    }
+    else
+    {
+        if(retry)
+        {
+            /* PQ Buffer is full, re-emit event to try again */
+            Emitter_EmitEvent(e);
+        }
+        ret = HANDLED();
+    }
+
+    return ret;
+}
+
 static state_ret_t State_Setup( state_t * this, event_t s )
 {
     STATE_DEBUG(s);
@@ -208,6 +299,7 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
     {
         case EVENT( Enter ):
         {
+            WIFI_Teardown();
             WIFI_TryConnect();
             Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
             ret = HANDLED();
@@ -276,7 +368,7 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
             node_state->retry_counter = 0U;
             if(WIFI_CheckTCPStatus())
             {
-                if(Comms_TCPInit())
+                if(TCP_Connect(node_state->tcp))
                 {
                     Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
                 }
@@ -293,17 +385,25 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
         }
         case EVENT( TCPConnected ):
         {
+            TCP_Flush(node_state->tcp);
             Emitter_Destroy(node_state->retry_timer);
-            FIFO_Flush( &node_state->msg_fifo->base );
             ret = TRANSITION(this, STATE(MQTTNotConnected));
             break;
         }
         case EVENT( PCBInvalid ):
         case EVENT( TCPDisconnected ):
         {
-            Comms_Close();
+            TCP_Close(node_state->tcp);
             ret = HANDLED();
             break;
+        }
+        case EVENT( TCPReceived ):
+        {
+            /* Upon a successful connection it is possible to receive left overs from previous
+             * session, so "receive them so they are emptied from the buffer
+             */
+            (void)TCP_Retrieve(node_state->tcp, node_state->msg_buffer, MSG_BUFFER_SIZE);
+            ret = HANDLED();
         }
         case EVENT( Exit ):
         {
@@ -333,7 +433,7 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         case EVENT( PCBInvalid ):
         case EVENT( TCPDisconnected ):
         {
-            Comms_Close();
+            TCP_Close(node_state->tcp);
             ret = TRANSITION(this, STATE(TCPNotConnected));
             break;
         }
@@ -357,24 +457,30 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         {
             Emitter_Destroy(node_state->retry_timer);
             node_state->retry_counter = 0U;
-            if(MQTT_Connect(node_state->mqtt))
+            mqtt_msg_t * out = MQTT_Encode(node_state->mqtt,
+                    MQTT_CONNECT,
+                    NULL,
+                    0,
+                    NULL);
+
+            if(TCP_Send(node_state->tcp, out->msg, out->size))
             {
+                Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
                 ret = HANDLED();
             }
             else
             {
-                Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
-                ret = HANDLED();
-                //ret = TRANSITION(this, STATE(TCPNotConnected));
+                TCP_Close(node_state->tcp);
+                ret = TRANSITION(this, STATE(TCPNotConnected));
             }
             break;
         }
-        case EVENT( MessageReceived ):
+        case EVENT( TCPReceived ):
         {
             /* Presumably the buffer has a message... */
-            assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
-            if(MQTT_HandleMessage(node_state->mqtt, (uint8_t*)msg.data))
+            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->msg_buffer, MSG_BUFFER_SIZE);
+            assert(recv_len > 0);
+            if(MQTT_Decode(node_state->mqtt, node_state->msg_buffer, MSG_BUFFER_SIZE))
             {
                 ret = TRANSITION(this, STATE(MQTTSubscribing));
             }
@@ -401,11 +507,11 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
     node_state_t * node_state = (node_state_t *)this;
     switch(s)
     {
-        case EVENT( MessageReceived ):
+        case EVENT( TCPReceived ):
         {
-            assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
-            if(MQTT_HandleMessage(node_state->mqtt, (uint8_t*)msg.data))
+            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->msg_buffer, MSG_BUFFER_SIZE);
+            assert(recv_len > 0);
+            if(MQTT_Decode(node_state->mqtt, node_state->msg_buffer, MSG_BUFFER_SIZE))
             {
                 if(MQTT_AllSubscribed(node_state->mqtt))
                 {
@@ -419,13 +525,16 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
             }
             else
             {
-                ret = TRANSITION(this, STATE(MQTTSubscribing));
+                /* Something gone wrong, reconnect to TCP */
+                printf("\tError, not received expected packet\n");
+                TCP_Close(node_state->tcp);
+                ret = TRANSITION(this, STATE(TCPNotConnected));
             }
             break;
         }
         case EVENT( TCPDisconnected ):
         {
-            Comms_Close();
+            TCP_Close(node_state->tcp);
             ret = TRANSITION(this, STATE(TCPNotConnected));
             break;
         }
@@ -453,13 +562,26 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
         {
             Emitter_Destroy(node_state->retry_timer);
             node_state->retry_counter = 0U;
-            if(MQTT_Subscribe(node_state->mqtt))
+            bool success = true;
+            for(uint32_t idx = 0; idx < node_state->mqtt->subs->num_subs; idx++)
+            {
+                /* TODO -> func for translating global and local topics */
+                uint8_t * sub_topic = (uint8_t*)node_state->mqtt->subs->subs[idx].name;
+                mqtt_msg_t * out = MQTT_Encode(node_state->mqtt, 
+                                                    MQTT_SUBSCRIBE, 
+                                                    sub_topic, 
+                                                    strlen((char*)sub_topic), 
+                                                    NULL);
+                success &= TCP_Send(node_state->tcp, out->msg, out->size);
+            }
+            if(success)
             {
                 Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
                 ret = HANDLED();
             }
             else
             {
+                TCP_Close(node_state->tcp);
                 ret = TRANSITION(this, STATE(TCPNotConnected));
             }
             break;
@@ -514,6 +636,8 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
         case EVENT(RetryCounterIncrement):
         {
             Emitter_Destroy(node_state->retry_timer);
+            ret = HANDLED();
+            
             node_state->retry_counter++;
             if(node_state->retry_counter < RETRY_ATTEMPTS)
             {
@@ -521,9 +645,16 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
             }
             else
             {
-                Emitter_Create(EVENT(DNSRetryRequest), node_state->retry_timer, RETRY_PERIOD_MS);
+                node_state->dns_attempts++;
+                if(node_state->dns_attempts < DNS_RETRY_ATTEMPTS)
+                {
+                    Emitter_Create(EVENT(DNSRetryRequest), node_state->retry_timer, RETRY_PERIOD_MS);
+                }
+                else
+                {
+                    ret = TRANSITION(this, STATE(WifiNotConnected));
+                }
             }
-            ret = HANDLED();
             break;
         }
         case EVENT( DNSRetryRequest ):
@@ -532,7 +663,7 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
             ret = HANDLED();
             Emitter_Destroy(node_state->retry_timer);
             node_state->retry_counter = 0U;
-            NTP_RequestDNS(node_state->ntp);
+            DNS_Request("pool.ntp.org");
             if(WIFI_CheckStatus())
             {
                 Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
@@ -547,12 +678,14 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
         case EVENT( DNSReceived ):
         {
             Emitter_Destroy(node_state->retry_timer);
-            NTP_PrintIP(node_state->ntp);
+            DNS_PrintIP();
+            node_state->addr = DNS_Get();
             ret = TRANSITION(this, STATE(RequestNTP));
             break;
         }
         case EVENT( Exit ):
         {
+            node_state->dns_attempts = 0u;
             ret = HANDLED();
             break;
         }
@@ -592,7 +725,12 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
         {
             ret = HANDLED();
             Emitter_Destroy(node_state->retry_timer);
-            NTP_Get(node_state->ntp);
+            NTP_Encode(node_state->msg_buffer);
+            UDP_Send(node_state->msg_buffer, 
+                    48U,
+                    node_state->addr,
+                    NTP_PORT,
+                    node_state->crit);
             node_state->retry_counter = 0U;
             if(WIFI_CheckStatus())
             {
@@ -610,12 +748,14 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
             ret = HANDLED();
             break;
         }
-        case EVENT(NTPReceived):
+        case EVENT(UDPReceived):
         {
             Emitter_Destroy(node_state->retry_timer);
-            assert( !FIFO_IsEmpty( &node_state->udp_fifo->base ) );
-            msg_t msg = FIFO_Dequeue(node_state->udp_fifo);
-            NTP_Decode((uint8_t*)msg.data);
+            UDP_Retrieve(node_state->msg_buffer, MSG_BUFFER_SIZE); 
+            NTP_Decode(node_state->msg_buffer, node_state->ntp);
+            NTP_Print(node_state->ntp);
+            Alarm_SetClock(&node_state->ntp->transmit);
+            TCP_Close(node_state->tcp);
             ret = TRANSITION(this, STATE(TCPNotConnected));
         }
         default:
@@ -665,83 +805,82 @@ static state_ret_t State_Idle( state_t * this, event_t s )
     STATE_DEBUG(s);
     state_ret_t ret = PARENT(this, STATE(Root));
     node_state_t * node_state = (node_state_t *)this;
-
+    uint32_t timestamp = time_us_32();
     switch(s)
     {
         case EVENT( Exit ):
         {
             Emitter_Destroy(node_state->retry_timer);
+            Emitter_Destroy(node_state->timer);
             ret = HANDLED();
             break;
         }
         case EVENT( Enter ):
         {
             Enviro_Init();
-            Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, RETRY_PERIOD_MS);
+            Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, ACK_TIMEOUT_MS);
+            Emitter_Create(EVENT(PQResend), node_state->timer, PQ_RETRY_MS);
             ret = HANDLED();
             break;
         }
         case EVENT( AccelMotion ):
         {
             Accelerometer_Ack();
-            bool success = MQTT_Publish(node_state->mqtt,NODE_EVENT("accl"),"1");
-            if(success)
+            Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            mqtt_msg_params_t params =
             {
-                ret = HANDLED();
-            }
-            else
-            {
-                Comms_Close();
-                ret = TRANSITION(this, STATE(TCPNotConnected));
-            }
+                .qos = 1,
+                .global = false,
+                .topic = (uint8_t*)NODE_EVENT("accl"),
+                .timestamp = timestamp,
+            };
+            ret = Publish(node_state, s, &params, true);
             break;
         }
         case EVENT( GPIOAEvent ):
         {
-            bool success = MQTT_Publish(node_state->mqtt,NODE_EVENT("gpioa"),"1");
-            if(success)
+            Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            mqtt_msg_params_t params =
             {
-                ret = HANDLED();
-            }
-            else
-            {
-                Comms_Close();
-                ret = TRANSITION(this, STATE(TCPNotConnected));
-            }
+                .qos = 1,
+                .timestamp = timestamp,
+                .global = false,
+                .topic = (uint8_t*)NODE_EVENT("gpioa"),
+            };
+            ret = Publish(node_state, s, &params, true);
             break;
         }
         case EVENT( GPIOBEvent ):
         {
-            bool success = MQTT_Publish(node_state->mqtt,NODE_EVENT("gpiob"),"1");
-            if(success)
+            Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            mqtt_msg_params_t params =
             {
-                ret = HANDLED();
-            }
-            else
-            {
-                Comms_Close();
-                ret = TRANSITION(this, STATE(TCPNotConnected));
-            }
+                .qos = 1,
+                .timestamp = timestamp,
+                .global = false,
+                .topic = (uint8_t*)NODE_EVENT("gpiob"),
+            };
+            ret = Publish(node_state, s, &params, true);
             break;
         }
-        case EVENT( HashRequest ):
+        case EVENT( UptimeRequest ):
         {
-            bool success = MQTT_Publish(node_state->mqtt,"hash", META_GITHASH);
-            if(success)
+            Uptime_Encode((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            printf("\tMeta: %s\n", node_state->msg_buffer);
+            mqtt_msg_params_t params =
             {
-                ret = HANDLED();
-            }
-            else
-            {
-                Comms_Close();
-                ret = TRANSITION(this, STATE(TCPNotConnected));
-            }
+                .qos = 1,
+                .timestamp = timestamp,
+                .global = false,
+                .topic = (uint8_t*)"home/meta",
+            };
+            ret = Publish(node_state, s, &params, true);
             break;
         }
         case EVENT( PCBInvalid ):
         case EVENT( TCPDisconnected ):
         {
-            Comms_Close();
+            TCP_Close(node_state->tcp);
             ret = TRANSITION(this, STATE(TCPNotConnected));
             break;
         }
@@ -750,56 +889,127 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             Enviro_Read();
             Enviro_Print();
 
-            Enviro_GenerateJSON(node_state->msg_buffer, MSG_BUFFER_SIZE);
-            bool success = MQTT_Publish(node_state->mqtt,"env", node_state->msg_buffer);
-            if(success)
+            Enviro_GenShortDigest((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            mqtt_msg_params_t params =
             {
+                .qos = 0,
+                .timestamp = timestamp,
+                .global = false,
+                .topic = (uint8_t*)"home/env",
+            };
+            ret = Publish(node_state, s, &params, false);
+            break;
+        }
+        case EVENT( TCPReceived ):
+        {
+            /* Presumably the buffer has a message... */
+            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->msg_buffer, MSG_BUFFER_SIZE);
+            assert(recv_len > 0);
+            if(MQTT_Decode(node_state->mqtt, node_state->msg_buffer, MSG_BUFFER_SIZE))
+            {
+                /* May need to send ACK */
                 ret = HANDLED();
+                mqtt_status_t status = MQTT_GetStatus(node_state->mqtt);
+                switch(status)
+                {
+                    case MQTT_SEND_ACK:
+                    {
+                        mqtt_msg_t * out = MQTT_Encode(node_state->mqtt,
+                                MQTT_PUBACK, 
+                                NULL, 
+                                0u,
+                                NULL);
+                        /* Doesnt store in PQ so should never be null */
+                        assert(out != NULL);
+                        if(TCP_Send(node_state->tcp, out->msg, out->size))
+                        {
+                            ret = HANDLED();
+                        }
+                        else
+                        {
+                            TCP_Close(node_state->tcp);
+                            ret = TRANSITION(this, STATE(TCPNotConnected));
+                        }
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                }
             }
             else
             {
-                Comms_Close();
+                /* Something gone wrong, reconnect to TCP */
+                printf("\tError, not received expected packet\n");
+                TCP_Close(node_state->tcp);
                 ret = TRANSITION(this, STATE(TCPNotConnected));
             }
-            break;
-        }
-        case EVENT( MessageReceived ):
-        {
-            /* Presumably the buffer has a message... */
-            assert( !FIFO_IsEmpty( &node_state->msg_fifo->base ) );
-            msg_t msg = FIFO_Dequeue(node_state->msg_fifo);
-            (void)MQTT_HandleMessage(node_state->mqtt, (uint8_t*)msg.data); 
-            ret = HANDLED();
             break;
         }
         case EVENT( AlarmElapsed ):
         {
-            Enviro_GenerateJSON(node_state->msg_buffer, MSG_BUFFER_SIZE);
-            bool success = MQTT_Publish(node_state->mqtt,"summary", node_state->msg_buffer);
-            if(success)
+            Enviro_GenDigest((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            mqtt_msg_params_t params =
             {
-                ret = HANDLED();
-            }
-            else
-            {
-                Comms_Close();
-                ret = TRANSITION(this, STATE(TCPNotConnected));
-            }
+                .qos = 1,
+                .timestamp = timestamp,
+                .global = false,
+                .topic = (uint8_t*)"home/digest",
+            };
+            ret = Publish(node_state, s, &params, true);
             break;
+        }
+        case EVENT( PQResend ):
+        {
+            Emitter_Destroy(node_state->timer);
+            Emitter_Create(EVENT(PQResend), node_state->timer, PQ_RETRY_MS);
+            const uint32_t fill = node_state->mqtt->pq->fill;
+            ret = HANDLED();
+            for(uint32_t idx = 0; idx < fill; idx++)
+            {
+                mqtt_msg_t * b = (mqtt_msg_t *)PQ_Peek(node_state->mqtt->pq, idx);
+                uint32_t delta = (timestamp - b->timestamp);
+                if(delta > PQ_TIMEOUT_US)
+                {
+                    printf("\tts: %lu\n", timestamp);
+                    printf("\tb->ts: %lu\n", b->timestamp);
+                    printf("\td: %lu\n", delta);
+                    printf("\tMQTT: Retransmitting %u\n", b->seq_num);
+                    b->timestamp = timestamp;
+                    if(TCP_Send(node_state->tcp, b->msg, b->size))
+                    {
+                        ret = HANDLED();
+                    }
+                    else
+                    {
+                        break;
+                        TCP_Close(node_state->tcp);
+                        ret = TRANSITION(this, STATE(TCPNotConnected));
+                    }
+                }
+            }    
         }
         case EVENT( AckReceived ):
         {
-            printf("TCP ACK Received\n");
+            printf("\tTCP ACK Received\n");
             Emitter_Destroy(node_state->retry_timer);
-            Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, RETRY_PERIOD_MS);
+            Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, ACK_TIMEOUT_MS);
             ret = HANDLED();
             break;
         }
         case EVENT( AckTimeout ):
         {
-            printf("TCP ACK Timeout\n");
-            Comms_Close();
+            printf("\tTCP ACK Timeout\n");
+            TCP_Close(node_state->tcp);
             ret = TRANSITION(this, STATE(TCPNotConnected));
+            break;
+        }
+        case EVENT( Resync ):
+        {
+            printf("\tResync\n");
+            TCP_Close(node_state->tcp);
+            ret = TRANSITION(this, STATE(DNSRequest));
             break;
         }
         default:
@@ -813,28 +1023,26 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
 extern void Daemon_Run(void)
 {
-    char msg_buffer[MSG_BUFFER_SIZE] = {0};
-    char unique_id[ID_STRING_SIZE]={0};
-    pico_get_unique_board_id_string(unique_id, ID_STRING_SIZE);
+    uint8_t msg_buffer[MSG_BUFFER_SIZE] = {0};
+    uint8_t unique_id[ID_STRING_SIZE]={0};
+    uint8_t broker_ip[EEPROM_ENTRY_SIZE] = {0U};
+    pico_get_unique_board_id_string((char*)unique_id, ID_STRING_SIZE);
 
     event_fifo_t events;
     critical_section_t crit;
-    msg_fifo_t msg_fifo;
-    msg_fifo_t udp_fifo;
-    mqtt_t mqtt =
+    mqtt_msg_t pool[PQ_FULL_LEN];
+    mqtt_subs_t all_subs =
     {
-        .client_name = unique_id,
-        .send = Comms_Send,
-        .recv = Comms_Recv,
         .subs = subs,
-        .num_subs = 3U,
+        .num_subs = 4u,
     };
+   
+    mqtt_t mqtt;
 
-    ntp_t ntp =
-    {
-        .send = UDP_Send,
-    };
+    ntp_t ntp = {0U};
+    tcp_t tcp = {0U};
 
+    pq_t pq;
     struct repeating_timer timer;
     struct repeating_timer read_timer;
     struct repeating_timer retry_timer;
@@ -842,16 +1050,12 @@ extern void Daemon_Run(void)
     critical_section_t crit_events;
     critical_section_t crit_tcp;
     critical_section_t crit_udp;
-    critical_section_t crit_msg_fifo;
-    critical_section_t crit_udp_fifo;
    
     /* Initialise various sub modules */ 
     critical_section_init(&crit);
     critical_section_init_with_lock_num(&crit_events, 0U);
     critical_section_init_with_lock_num(&crit_tcp, 1U);
     critical_section_init_with_lock_num(&crit_udp, 2U);
-    critical_section_init_with_lock_num(&crit_msg_fifo, 3U);
-    critical_section_init_with_lock_num(&crit_udp_fifo, 4U);
     
     Watchdog_Init();
     I2C_Init();
@@ -860,29 +1064,31 @@ extern void Daemon_Run(void)
     Enviro_Init();
     Accelerometer_Init();
     Events_Init(&events);
-    EEPROM_Read((uint8_t*)unique_id, EEPROM_ENTRY_SIZE, EEPROM_NAME);
-    
+    EEPROM_Read(unique_id, EEPROM_ENTRY_SIZE, EEPROM_NAME);
+    EEPROM_Read(broker_ip, EEPROM_ENTRY_SIZE, EEPROM_IP);
+
+    TCP_Init(&tcp, (char *)broker_ip, MQTT_PORT, &crit_tcp);
+
     Watchdog_Kick();
-    Message_Init(&msg_fifo, &crit_msg_fifo);
-    Message_Init(&udp_fifo, &crit_udp_fifo);
-    Comms_Init(&msg_fifo, &crit_tcp);
-    UDP_Init(&udp_fifo, &crit_udp);
-    MQTT_Init(&mqtt);
-    NTP_Init(&ntp);
+    MQTT_Init(&mqtt, 
+            (char*)unique_id, 
+            &all_subs, 
+            &pq,
+            pool);
     Emitter_Init(&events, &crit_events);
     WIFI_Init();
 
     node_state_t state_machine; 
     state_machine.retry_counter = 0U;
+    state_machine.dns_attempts = 0U;
     state_machine.timer = &timer;
     state_machine.read_timer = &read_timer;
     state_machine.retry_timer = &retry_timer;
     state_machine.mqtt = &mqtt;
-    state_machine.msg_fifo = &msg_fifo;
-    state_machine.udp_fifo = &udp_fifo;
     state_machine.ntp = &ntp;
     state_machine.crit = &crit;
     state_machine.msg_buffer = msg_buffer;
+    state_machine.tcp = &tcp;
 
     Watchdog_Kick();
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );

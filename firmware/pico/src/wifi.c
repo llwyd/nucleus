@@ -22,17 +22,21 @@ extern void WIFI_Init(void)
     }
     cyw43_wifi_pm (&cyw43_state,CYW43_PERFORMANCE_PM );
     WIFI_ClearLed();
-    cyw43_arch_enable_sta_mode();
-    
 }
 
 extern void WIFI_TryConnect(void)
 {
     WIFI_ClearLed();
+    cyw43_arch_enable_sta_mode();    
     if(cyw43_arch_wifi_connect_async((char*)ssid, (char*)pass, CYW43_AUTH_WPA2_MIXED_PSK))
     {
         printf("Failed to retry\n");
     }
+}
+
+extern void WIFI_Teardown(void)
+{
+    cyw43_arch_disable_sta_mode();    
 }
 
 extern bool WIFI_CheckStatus(void)

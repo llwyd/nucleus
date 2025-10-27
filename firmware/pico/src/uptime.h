@@ -10,6 +10,7 @@
 extern void Uptime_Init(void);
 extern uint64_t Uptime_Refresh(void);
 extern uint64_t Uptime_Get(void);
+extern void Uptime_Encode(char * buffer, uint8_t buffer_len);
 
 #endif /* UPTIME_H_ */
 

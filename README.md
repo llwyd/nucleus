@@ -1,4 +1,5 @@
-# Home Assistant
+# NUCLEUS
 
-Various bits of firmware, code and other scripts for managing a DIY home monitoring setup
+Homebrew home automation and monitoring. 
+
 

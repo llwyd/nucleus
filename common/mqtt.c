@@ -1,15 +1,11 @@
 #include "mqtt.h"
 
 #include <time.h>
-#include "fifo_base.h"
 #include <assert.h>
 
 #define MQTT_PORT ( "1883" )
 #define BUFFER_SIZE (128)
 #define ID_BUFFER_SIZE (32)
-#define RESP_FIFO_LEN (32U)
-
-#define MQTT_TIMEOUT ( 0xb4 )
 
 #define MQTT_CONNACK_CODE   ( 0x20 )
 #define MQTT_SUBACK_CODE    ( 0x90 )
@@ -19,30 +15,12 @@
 #define MQTT_PINGRESP_CODE  ( 0xD0 )
 #define MQTT_DISCONNECT_CODE  ( 0x00 )
 
-typedef enum mqtt_msg_type_t
-{
-    mqtt_msg_Connect,
-    mqtt_msg_Subscribe,
-    mqtt_msg_Publish,
-    mqtt_msg_Ping,
-    mqtt_msg_Disconnect,
-} mqtt_msg_type_t;
-
 typedef struct
 {
     mqtt_msg_type_t msg_type;
     uint16_t seq_num;
 }
 mqtt_resp_t;
-
-typedef struct
-{
-    fifo_base_t base;
-    mqtt_resp_t queue[RESP_FIFO_LEN];
-    mqtt_resp_t in;
-    mqtt_resp_t out;
-}
-resp_fifo_t;
 
 typedef struct mqtt_pub_t
 {
@@ -58,657 +36,451 @@ typedef struct msg_id_t
     uint16_t id[ID_BUFFER_SIZE];
 } msg_id_t;
 
-/* Functions for handling acks */
-bool Ack_Connect(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
-bool Ack_Subscribe(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
-bool Ack_Publish(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
-bool Ack_Ping(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
-bool Ack_Disconnect(mqtt_t * mqtt, uint8_t * buff, uint8_t len );
 
-static void IncrementSendMessageID(void);
-static void FlushMsgIDBuffer( void );
-
-typedef struct mqtt_pairs_t
+static void IncrementSeqNum(mqtt_t * mqtt)
 {
-    mqtt_msg_type_t msg_type;
-    uint8_t send_code;
-    uint8_t recv_code;
-    bool (*ack_fn)(mqtt_t * mqtt, uint8_t * buff, uint8_t len);
-    char * name;
-    char * ack_name;
-} mqtt_pairs_t;
-
-/* transmit and acknowledge code pairs */
-
-static mqtt_pairs_t msg_code [ 5 ] =
-{
-    { mqtt_msg_Connect,         0x10, MQTT_CONNACK_CODE, Ack_Connect, "CONNECT", "CONNACK" },
-    { mqtt_msg_Subscribe,       0x82, MQTT_SUBACK_CODE, Ack_Subscribe, "SUBSCRIBE", "SUBACK" },
-    { mqtt_msg_Publish,         MQTT_PUBLISH_CODE, MQTT_PUBACK_CODE, Ack_Publish, "PUBLISH", "PUBACK" },
-    { mqtt_msg_Ping,            0xc0, MQTT_PINGRESP_CODE, Ack_Ping, "PINGREQ", "PINGRESP" },
-    { mqtt_msg_Disconnect,      0x00, MQTT_DISCONNECT_CODE, Ack_Disconnect, "DISCONNECT", "DISCONNECT" },
-};
-
-
-static uint8_t send_buffer[ BUFFER_SIZE ];
-
-static char * parent_topic = "home";
-
-static uint8_t successful_subs = 0;
-
-static uint16_t send_msg_id = 0x0000;
-
-static msg_id_t msg_id;
-
-/* Functions used for resp_fifo */
-static resp_fifo_t resp_fifo;
-
-static void InitRespFifo(resp_fifo_t * fifo);
-static void RespEnqueue( fifo_base_t * const fifo );
-static void RespDequeue( fifo_base_t * const fifo );
-static void RespFlush( fifo_base_t * const fifo );
-static void RespPeek( fifo_base_t * const fifo );
-
-mqtt_data_t Extract( char * data, mqtt_type_t type )
-{
-    mqtt_data_t d;
-    
-    switch( type )
+    mqtt->state.seq_num++;
+    if(mqtt->state.seq_num == 0U)
     {
-        case mqtt_type_float:
-            d.f = (float)atof(data);
-            break;
-        case mqtt_type_int16:
-            d.i = (uint16_t)atoi(data);
-            break;
-        case mqtt_type_str:
-            d.s = data;
-            break;
-        case mqtt_type_bool:
-            if( strcmp("1", data) == 0) 
+        uint32_t seq_num = 1u;
+        const uint32_t fill = mqtt->pq->fill;
+        for(uint32_t idx = 0; idx < fill; idx++)
+        {
+            (void)PQ_DecreaseKey(mqtt->pq, idx, seq_num);
+            seq_num++;
+        }
+
+        mqtt->state.seq_num = seq_num;
+    }
+}
+
+extern void MQTT_Init( mqtt_t * mqtt,
+                char * client_name,
+                mqtt_subs_t * subs,
+                pq_t * pq,
+                mqtt_msg_t * pool
+                )
+{
+    assert(mqtt != NULL);
+    assert(client_name != NULL);
+
+    memset(mqtt, 0x00, sizeof(mqtt_t));
+
+    mqtt->pq = pq;
+    mqtt->subs = subs;
+    mqtt->client_name = client_name;    
+    mqtt->state.subs = 0u;
+    mqtt->state.seq_num = 1u;
+    mqtt->state.status = MQTT_OK;
+    mqtt->state.rx_seq_num = 1u;
+    PQ_Init(mqtt->pq, &pool->key, sizeof(mqtt_msg_t));
+
+    for(uint32_t idx = 0; idx < PQ_FULL_LEN; idx++)
+    {
+        pool[idx].size = 0u;
+        pool[idx].seq_num = 0u;
+        pool[idx].type = MQTT_NONE;
+        pool[idx].timestamp = 0u;
+        memset(pool[idx].msg, 0x00, MQTT_MSG_SIZE); 
+    }
+}
+
+extern mqtt_msg_t * MQTT_Encode(mqtt_t * mqtt,
+        mqtt_msg_type_t type,
+        uint8_t * data_buffer, 
+        uint16_t data_len,
+        mqtt_msg_params_t * params
+        )
+{
+    (void)mqtt;
+    (void)data_buffer;
+    (void)data_len;
+    uint16_t full_packet_size = 0;
+    mqtt_msg_t * ret = NULL;
+    printf("\tPQ: Fill: %lu / %lu\n", mqtt->pq->fill, mqtt->pq->max);
+    if(PQ_IsFull(mqtt->pq))
+    {
+        if (type != MQTT_CONNECT)
+        {
+            printf("\tMQTT: Buffer full, exiting\n");
+            goto cleanup;
+        }
+    }
+
+    switch(type)
+    {
+        case MQTT_CONNECT:
+        {
+            /* Reset the state */
+            PQ_Flush(mqtt->pq);
+
+            /* Store message but dont actually place in the PQ */
+            mqtt_msg_t * buffer = (mqtt_msg_t *)PQ_Cache(mqtt->pq);
+            memset(buffer->msg,0x00, MQTT_MSG_SIZE);
+            /* Message Template for mqtt connect */
+            uint8_t mqtt_template_connect[] =
             {
-                d.b = true; 
+                        0x10,                                   /* connect */
+                        0x00,                                   /* payload size */
+                        0x00, 0x04,                             /* Protocol name size */
+                        'M', 'Q', 'T', 'T',                     /* MQTT */
+                        0x05,                                   /* Version MQTT v5 */
+                        0x02,                                   /* Clean Session, No Will */
+                        0x00, MQTT_TIMEOUT,                     /* Keep alive timeout */
+                        0x05,                                   /* Properties Length */
+                        0x27,                                   /* Max packet size */
+                        0x00, 0x00, 0x00, 0x80,                 /* 128 max packet size */
+            };
+            uint8_t * msg_ptr = buffer->msg;
+            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
+            uint16_t name_size = strlen( mqtt->client_name );
+
+            memcpy( msg_ptr, mqtt_template_connect, packet_size );
+            msg_ptr+= packet_size;
+            msg_ptr++;
+            *msg_ptr++ = (uint8_t)(name_size & 0xFF);
+            memcpy(msg_ptr, mqtt->client_name, name_size);
+                        
+            uint16_t total_packet_size = packet_size + name_size;
+            buffer->msg[1] = (uint8_t)(total_packet_size&0xFF);
+            full_packet_size = total_packet_size + 2;
+            buffer->type = MQTT_CONNECT; 
+            buffer->seq_num = 0u;
+            buffer->size = full_packet_size;
+            
+            mqtt->state.subs = 0u;
+            mqtt->state.seq_num = 1u;
+            ret = buffer;
+            break;
+        }
+        case MQTT_SUBSCRIBE:
+        {
+            const uint16_t seq_num = mqtt->state.seq_num;
+
+            mqtt_msg_t * buffer = (mqtt_msg_t *)PQ_Push(mqtt->pq, seq_num);
+            buffer->seq_num = seq_num;
+            memset(buffer->msg,0x00, MQTT_MSG_SIZE);
+            const unsigned char mqtt_template_subscribe[] =
+            {
+                0x82,
+                0x00,   // length of message
+            };
+            uint8_t * msg_ptr = buffer->msg;
+            uint16_t packet_size = (uint16_t)sizeof( mqtt_template_subscribe );
+            memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
+            msg_ptr+= packet_size;
+            
+            *msg_ptr++ = (uint8_t)((seq_num >> 8U)&0xFF);
+            *msg_ptr++ = (uint8_t)(seq_num&0xFF);        
+            *msg_ptr++ = 0u;
+            
+            msg_ptr++;
+            *msg_ptr++ = (uint8_t)(data_len & 0xFF);
+            memcpy(msg_ptr, data_buffer, data_len); 
+            msg_ptr+=data_len;
+            *msg_ptr |= (0x1);
+                    
+            uint16_t total_packet_size = packet_size + data_len + 1 + 2 + 1;
+            buffer->msg[1] = (uint8_t)(total_packet_size&0xFF);
+            full_packet_size = total_packet_size + 2;
+            
+            buffer->type = MQTT_SUBSCRIBE;
+            buffer->size = full_packet_size;
+            buffer->timestamp = params->timestamp; 
+            
+            ret = buffer;
+            IncrementSeqNum(mqtt);
+            break;
+        }
+        case MQTT_PUBLISH:
+        {
+            assert(params != NULL);
+            assert(params->qos < 3u);
+            const uint16_t seq_num = mqtt->state.seq_num;
+
+            mqtt_msg_t * buffer = NULL;
+            if(params->qos > 0u)
+            {
+                buffer = (mqtt_msg_t *)PQ_Push(mqtt->pq, seq_num);
             }
             else
             {
-                d.b = false;
+                buffer = (mqtt_msg_t *)PQ_Cache(mqtt->pq);
             }
+            buffer->seq_num = seq_num;
+            memset(buffer->msg,0x00, MQTT_MSG_SIZE);
+            uint8_t * msg_ptr = buffer->msg;
+            uint16_t topic_size = strlen((char*)params->topic);
+            if(!params->global)
+            {
+                topic_size += strlen((char*)mqtt->client_name);
+                topic_size += 1;
+            }
+            *msg_ptr = MQTT_PUBLISH_CODE;
+            if( params->qos > 0u )
+            {
+                *msg_ptr |= (1u << params->qos);
+            }
+            msg_ptr++;
+            msg_ptr++; /* This is where message length would go */ 
+            msg_ptr++; /* MSB topic length */
+            *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
+            memcpy(msg_ptr, params->topic, strlen((char*)params->topic));
+            msg_ptr+=strlen((char*)params->topic);
+          
+            /* Append client name to topic if not global transmission */
+            if(!params->global)
+            {
+                *msg_ptr++ = (uint8_t)'/';
+                memcpy(msg_ptr, mqtt->client_name, strlen((char*)mqtt->client_name));
+                msg_ptr+=strlen((char*)mqtt->client_name);
+            }
+
+            if(params->qos > 0u)
+            {
+                *msg_ptr++ = (uint8_t)((seq_num >> 8U)&0xFF);
+                *msg_ptr++ = (uint8_t)(seq_num&0xFF);        
+            }
+            *msg_ptr++ = 0u;
+            
+            memcpy(msg_ptr, data_buffer, data_len);
+    
+            /* Topic len + topic + data + msg id */
+            uint8_t total_packet_size = (uint8_t)strlen((char*)params->topic) + data_len + 2 + 1;
+
+            if(params->qos > 0u)
+            {
+                total_packet_size += 2u;
+            }
+
+            if(!params->global)
+            {
+                total_packet_size += (uint8_t)strlen((char*)mqtt->client_name) + 1;
+            }
+            buffer->msg[1] = (uint8_t)(total_packet_size&0xFF);
+            /* header and size byte */
+            full_packet_size = total_packet_size + 2;
+            
+            buffer->type = MQTT_PUBLISH;
+            buffer->seq_num = mqtt->state.seq_num;
+            buffer->size = full_packet_size;
+            buffer->timestamp = params->timestamp; 
+            printf("\tseqnum: %u\n",buffer->seq_num);
+            
+            if(params->qos > 0u)
+            {
+                IncrementSeqNum(mqtt);
+            } 
+            /* If qos is 0, then we can immediately dequeue */
+            ret = buffer;
             break;
+        }
+        case MQTT_PUBACK:
+        {
+            /* Store message but dont actually place in the PQ */
+            mqtt_msg_t * buffer = (mqtt_msg_t *)PQ_Cache(mqtt->pq);
+            memset(buffer->msg,0x00, MQTT_MSG_SIZE);
+            
+            uint8_t * msg_ptr = buffer->msg;
+            *msg_ptr++ = MQTT_PUBACK_CODE;
+            *msg_ptr++ = 0x4; /* Remaining Length */
+            *msg_ptr++ = (uint8_t)((mqtt->state.rx_seq_num >> 8U)&0xFF);
+            *msg_ptr++ = (uint8_t)(mqtt->state.rx_seq_num&0xFF);        
+            *msg_ptr++ = 0x00; /* Reason code */
+            *msg_ptr++ = 0x00; /* Remaining properties */
+            
+            full_packet_size = 6u;
+            
+            buffer->type = MQTT_PUBACK;
+            buffer->seq_num = mqtt->state.rx_seq_num;
+            buffer->size = full_packet_size;
+            buffer->timestamp = params->timestamp;
+            printf("\t Sending PUBACK for %u\n", buffer->seq_num);
+            ret = buffer;
+            break;
+        }
         default:
+        {
             assert(false);
             break;
+        }
     }
-    return d;
-}
-
-bool Ack_Connect(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
-{
-    (void)mqtt;
-    bool ret = false;
-
-    uint8_t message_code = *buff++;
-    uint8_t msg_len = *buff++;
-
-    (void)message_code;
-    (void)msg_len;
-    assert( msg_len == len );
-
-    /* Reserved byte */
-    buff++;
-    
-    if( *buff == 0x00 )
-    {
-        printf("\tCONNACK:OK\n");
-
-        /* Need message queue flush here */
-        send_msg_id = 0x1;
-        successful_subs = 0x0;
-
-        FlushMsgIDBuffer();
-        ret = true;
-    }
-    else
-    {
-        printf("\tCONNACK:FAIL\n");
-        ret = false;
-    }
-
+    printf("\tMQTT: PQ fill: %lu\n", mqtt->pq->fill);
+cleanup:
     return ret;
 }
 
-bool Ack_Subscribe(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
+extern bool MQTT_Decode( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
 {
-    (void)mqtt;
-    bool ret = false;
-    uint8_t message_code = *buff++;
-    uint8_t msg_len = *buff++;
-    (void)message_code;
-    (void)msg_len;
-
-    assert( msg_len == len );
-    
-    uint16_t msg_id =  ( *buff++ << 8 );
-    msg_id |= *buff++;
-
-    printf("\tSUBACK msg id: %d\n", msg_id );
-
-    bool success = true;
-
-    if( success )
-    {
-        ret = true;
-        successful_subs++;
-        printf("\tSUBACK: OK\n");
-    }
-    else
-    {
-        ret = false;
-        printf("\tSUBACK: FAIL\n");
-        assert(false);
-    }
-
-    return ret;
-}
-
-bool Ack_Publish(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
-{
-    (void)mqtt;
-    uint8_t return_code = buff[0];
-    uint8_t msg_len = buff[1];
-
-    if( msg_len != len )
-    {
-        printf("len: 0x%x\n", len);
-        printf("msg_len: 0x%x\n", msg_len);
-        printf("rc: 0x%x\n", return_code);
-        printf("[0]: 0x%x\n", buff[0]); 
-        printf("[1]: 0x%x\n", buff[1]); 
-        printf("[2]: 0x%x\n", buff[2]); 
-        printf("[3]: 0x%x\n", buff[3]); 
-        assert( msg_len == len );
-    }
-
-    bool ret = false;
-    uint16_t msg_id =  ( buff[2] << 8 ) | buff[3];
-
-
-    if( return_code == MQTT_PUBACK_CODE )
-    {
-        printf("\tPUBACK msg id: %d\n", msg_id );
-
-        bool success = true;
-        if( success )
-        {
-            ret = true;
-            printf("\tPUBACK: OK\n");
-        }
-        else
-        {
-            ret = false;
-            printf("\tPUBACK: FAIL\n");
-            assert(false);
-        }
-    }
-    else
-    {
-        char topic[64];
-        char full_topic[128];
-        char data[64];
-
-        memset( topic, 0x00, 64);
-        memset( full_topic, 0x00, 128);
-        memset( data, 0x00, 64);
-                
-        unsigned char msg_len = len;
-        unsigned char topic_len = buff[2] << 8 | buff[3];
-        unsigned char * msg = &buff[4];
-        
-        memcpy(topic, msg, topic_len);
-        msg += topic_len;
-        msg_len -= topic_len;
-        printf("\tPUBLISH msg id: %d\n", msg_id );
-        printf("\ttopic: %s\n", topic );
-        
-        for( uint8_t i = 0; i < mqtt->num_subs ; i++ )
-        {
-            memset(full_topic, 0x00, 64);
-            
-            strcat(full_topic, parent_topic);
-            strcat(full_topic,"/");
-            strcat(full_topic, mqtt->subs[i].name);
-            strcat(full_topic, "/");
-            strcat(full_topic, mqtt->client_name );
-            
-            if( strcmp( full_topic, topic) == 0)
-            {
-                memcpy(data, msg, msg_len);
-                printf("\t  data:%s\n",data);
-                mqtt_data_t decode_data = Extract( data, mqtt->subs[i].format);
-                mqtt->subs[i].sub_fn( &decode_data );
-                
-                ret = true;
-            }
-        }
-
-    }
-    return ret;
-}
-
-bool Ack_Ping(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
-{
-    (void)mqtt;
-    (void)buff;
-    (void)len;
-    return true;
-}
-
-bool Ack_Disconnect(mqtt_t * mqtt, uint8_t * buff, uint8_t len )
-{
-    (void)mqtt;
-    (void)buff;
-    (void)len;
-    return true;
-}
-
-static void FlushMsgIDBuffer( void )
-{
-    if( msg_id.fill > 0U )
-    {
-        msg_id.read_index = msg_id.write_index;
-        msg_id.fill = 0U;
-    }
-}
-
-static void IncrementSendMessageID(void )
-{
-    send_msg_id++; 
-
-    if( send_msg_id == 0U )
-    {
-        send_msg_id = 0x1;
-    }
-}
-
-extern void MQTT_IncrementSeqID( mqtt_t * mqtt)
-{
-    (void)mqtt;
-    IncrementSendMessageID();
-}
-
-extern bool MQTT_EncodeAndPublish( char * name, mqtt_type_t format, void * data )
-{
-    mqtt_pub_t mqtt_data;
-    char datastr[64];
-    memset( datastr, 0x00, 64 );
-
-    mqtt_data.name = name;
-    mqtt_data.data = datastr;
-    
-    switch( format )
-    {
-        case mqtt_type_float:
-            {
-                float d = *((float *)data);
-                snprintf(datastr, 64, "%.4f", d);
-            }
-            break;
-        case mqtt_type_int16:
-            {
-                int d = *((int *)data);
-                snprintf(datastr, 64, "%df", d);
-            }
-            break;
-        case mqtt_type_str:
-            {
-                char * d = ((char *)data);
-                strcat(datastr, d);
-            }
-            break;
-        case mqtt_type_bool:
-            {
-                bool d = *(( bool * )data);
-                if( d )
-                {
-                    strcat(datastr,"1");
-                }
-                else
-                {
-                    strcat(datastr,"0");
-                }
-            }
-            break;
-        default:
-            assert(false);
-            break;
-    }
-
-    printf("\tPublish Data Encoded (%s / %s)\n", mqtt_data.name, mqtt_data.data );
-
-    return true;
-}
-
-
-static bool Subscribe( mqtt_t * mqtt, mqtt_subs_t * sub)
-{
-    printf("\tSubscribing to %s\n", sub->name);
     bool success = false;
-    uint16_t full_packet_size = 0;
-    //mqtt_subs_t * sub_data = (mqtt_subs_t *) msg_data;
-    const unsigned char mqtt_template_subscribe[] =
-    {
-        0x82,   // message type, qos, no retain
-        0x00,   // length of message
-    };
-    
-    char full_topic[64];
-    memset( full_topic, 0x00, 64);
-            
-    strcat(full_topic, parent_topic);
-    strcat(full_topic, "/");
-    strcat(full_topic, sub->name);
-    strcat(full_topic,"/");
-    strcat(full_topic, mqtt->client_name);
-
-    memset(send_buffer, 0x00, 128);
-
-    /* Construct Packet */
-    uint8_t * msg_ptr = send_buffer;
-    uint16_t packet_size = (uint16_t)sizeof( mqtt_template_subscribe );
-    uint16_t topic_size = strlen(full_topic );
-
-    memcpy( msg_ptr, mqtt_template_subscribe, packet_size );
-    msg_ptr+= packet_size;
-            
-    *msg_ptr++ = (uint8_t)((send_msg_id >> 8U)&0xFF);
-    *msg_ptr++ = (uint8_t)(send_msg_id&0xFF);
-            
-    msg_ptr++;
-    *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
-    memcpy(msg_ptr, full_topic, topic_size); 
-            
-    uint16_t total_packet_size = packet_size + topic_size + 1 + 2;
-    send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
-    full_packet_size = total_packet_size + 2;
-            
-    
-    if( !FIFO_IsFull(&resp_fifo.base))
-    {
-        if(mqtt->send( send_buffer, full_packet_size ))
-        {
-            mqtt_resp_t expected_resp =
-            {
-                .msg_type = mqtt_msg_Subscribe,
-                .seq_num = send_msg_id,
-            };
-            FIFO_Enqueue( &resp_fifo, expected_resp);
-            IncrementSendMessageID();
-            success = true;
-        }
-    }
-
-    return success;
-}
-
-extern bool MQTT_Subscribe( mqtt_t * mqtt )
-{
-    assert( mqtt != NULL );
-    assert( mqtt->num_subs > 0U );
-
-    bool success = true;
-    successful_subs = 0;
-    for( uint8_t i = 0; i < mqtt->num_subs; i++ )
-    {
-        success &= Subscribe( mqtt, &mqtt->subs[i] );
-    }
-
-    return success;
-}
-
-extern bool MQTT_Publish( mqtt_t * mqtt, char * topic, const char * const data)
-{
-    assert(mqtt!=NULL);
-    assert(topic!=NULL);
-    assert(data!=NULL);
-    bool success = false;
-
-    uint16_t full_packet_size = 0;
-    memset(send_buffer, 0x00, 128);
-            
-    char text_buff[64];
-    memset( text_buff, 0x00, 64);
-            
-    strcat(text_buff, parent_topic);
-    strcat(text_buff,"/");
-    strcat(text_buff, topic);
-    strcat(text_buff, "/");
-    strcat(text_buff, mqtt->client_name);
-    uint16_t topic_size = strlen(text_buff);
-
-    printf("\t topic: %s\n", text_buff);
-    printf("\t  size: %d\n", topic_size);
-
-    uint8_t * msg_ptr = send_buffer;
-    *msg_ptr++ = ( msg_code[mqtt_msg_Publish].send_code | 0x2 );
-    msg_ptr++; /* This is where message length would go */ 
-    msg_ptr++; /* MSB topic length */
-    *msg_ptr++ = (uint8_t)(topic_size & 0xFF);
-    memcpy(msg_ptr, text_buff, topic_size);
-    memset( text_buff, 0x00, 64);
-    msg_ptr+=topic_size;
-
-    /* Message ID */
-    *msg_ptr++ = (uint8_t)((send_msg_id >> 8U)&0xFF);
-    *msg_ptr++ = (uint8_t)(send_msg_id&0xFF);
-            
-    strcat( text_buff, data );
-
-    uint8_t data_len = strlen(text_buff);
-            
-    printf("\t  data: %s\n", text_buff);
-    printf("\t  size: %d\n", data_len);
-    printf("\t    id: %d\n", send_msg_id);
-
-    memcpy(msg_ptr, text_buff, data_len);
-
-    /* Topic len + topic + data + msg id */
-    uint8_t total_packet_size = (uint8_t)topic_size + data_len + 2 + 2;
-    send_buffer[1] = total_packet_size;
-    /* header and size byte */
-    full_packet_size = total_packet_size + 2;
-
-    if( !FIFO_IsFull(&resp_fifo.base))
-    {
-        if(mqtt->send( send_buffer, full_packet_size ))
-        {
-            mqtt_resp_t expected_resp =
-            {
-                .msg_type = mqtt_msg_Publish,
-                .seq_num = send_msg_id,
-            };
-            FIFO_Enqueue( &resp_fifo, expected_resp);
-            IncrementSendMessageID();
-            success = true;
-        }
-    }
-
-    return success;
-}
-
-extern void MQTT_Init( mqtt_t * mqtt )
-{
-    assert(mqtt!=NULL);
-    printf("Initialising MQTT\n");
-    InitRespFifo(&resp_fifo);
-}
-
-extern bool MQTT_Connect( mqtt_t * mqtt )
-{
-    assert(mqtt != NULL );
-    bool success = false;
-    memset(send_buffer, 0x00, 128);
-    printf("\tAttempting MQTT Connection\n");
-    printf("\tClient name: %s\n", mqtt->client_name);
-    
-    /* Flush buffers here */
-    FIFO_Flush(&resp_fifo.base);
-    send_msg_id = 0U;
-
-    uint16_t full_packet_size = 0;
-    /* Message Template for mqtt connect */
-    uint8_t mqtt_template_connect[] =
-    {
-                0x10,                                   /* connect */
-                0x00,                                   /* payload size */
-                0x00, 0x06,                             /* Protocol name size */
-                0x4d, 0x51, 0x49, 0x73, 0x64, 0x70,     /* MQIsdp */
-                0x03,                                   /* Version MQTT v3.1 */
-                0x02,                                   /* Fire and forget */
-                0x00, MQTT_TIMEOUT,                     /* Keep alive timeout */
-    };
-    uint8_t * msg_ptr = send_buffer;
-    uint16_t packet_size = (uint16_t)sizeof( mqtt_template_connect );
-    uint16_t name_size = strlen( mqtt->client_name );
-
-    memcpy( msg_ptr, mqtt_template_connect, packet_size );
-    msg_ptr+= packet_size;
-    msg_ptr++;
-    *msg_ptr++ = (uint8_t)(name_size & 0xFF);
-    memcpy(msg_ptr, mqtt->client_name, name_size);
-                
-    uint16_t total_packet_size = packet_size + name_size;
-    send_buffer[1] = (uint8_t)(total_packet_size&0xFF);
-    full_packet_size = total_packet_size + 2;
-
-    if( !FIFO_IsFull(&resp_fifo.base))
-    {
-        if(mqtt->send( send_buffer, full_packet_size ))
-        {
-            mqtt_resp_t expected_resp =
-            {
-                .msg_type = mqtt_msg_Connect,
-                .seq_num = 0U,
-            };
-            FIFO_Enqueue( &resp_fifo, expected_resp);
-            success = true;
-        }
-    }
-    return success;
-}
-
-extern bool MQTT_HandleMessage( mqtt_t * mqtt, uint8_t * buffer)
-{
-    bool ret = false;
     uint8_t return_code = ( buffer[0] & 0xF0 );
+    uint8_t qos = (buffer[0] >> 1u) & 0x03;
     uint8_t msg_length = buffer[1];
-    mqtt_msg_type_t msg_type;
-    bool expected = false;
-
+    mqtt->state.status = MQTT_OK;
+    (void)msg_length;
+    (void)len;
+    
     switch( return_code )
     {
         case MQTT_CONNACK_CODE:
         {
-            msg_type = mqtt_msg_Connect;
-            assert(!FIFO_IsEmpty(&resp_fifo.base));
-            mqtt_resp_t resp = FIFO_Dequeue(&resp_fifo);
-            if(msg_type == resp.msg_type)
+            printf("\tCONNACK Received\n");
+            /* Pop the previous message and check whether the last
+             * was a connect packet */
+            mqtt_msg_t * b = (mqtt_msg_t *)PQ_Cache(mqtt->pq);
+
+            bool resp_type = (b->type == MQTT_CONNECT);
+            bool conn_success = (buffer[3] == 0x00);
+            /*TODO handle other params, dont care for now */
+
+            success = resp_type && conn_success;
+            break;
+        }
+        case MQTT_SUBACK_CODE:
+        {
+            printf("\tSUBACK Received\n");
+            /* Pop the previous message and check whether the last
+             * was a connect packet */
+            mqtt_msg_t * b = (mqtt_msg_t *)PQ_Pop(mqtt->pq);
+
+            bool resp_type = (b->type == MQTT_SUBSCRIBE);
+            uint16_t seq_num = (buffer[2] << 8u) | (buffer[3]);
+            mqtt->state.rx_seq_num = seq_num;
+            /* jump over properties, dont care */
+            uint16_t jump_idx = buffer[4];
+            bool sub_success = (buffer[5 + jump_idx] <= 0x02);
+            bool seq_success = (seq_num == b->seq_num);
+
+            success = resp_type && sub_success && seq_success;
+            if(success)
             {
-                expected = true;
+                mqtt->state.subs += 1u;
             }
             break;
         }
         case MQTT_PUBACK_CODE:
         {
-            msg_type = mqtt_msg_Publish;
-            assert(!FIFO_IsEmpty(&resp_fifo.base));
-            mqtt_resp_t resp = FIFO_Dequeue(&resp_fifo);
-            if(msg_type == resp.msg_type)
+            printf("\tPUBACK Received\n");
+            uint16_t seq_num = (buffer[2] << 8u) | (buffer[3]);
+            mqtt->state.rx_seq_num = seq_num;
+            
+            /* Iterate through the PQ to find the message */
+            const uint32_t fill = mqtt->pq->fill;
+            mqtt_msg_t * b = NULL;
+            for(uint32_t idx = 0; idx < fill; idx++)
             {
-                expected = true;
+                mqtt_msg_t * c = (mqtt_msg_t *)PQ_Peek(mqtt->pq, idx);
+                if(c->seq_num == seq_num)
+                {
+                    printf("\tPacket found %u\n", c->seq_num);
+                    c = (mqtt_msg_t *)PQ_DecreaseKey(mqtt->pq, idx, 0u);
+                    b = (mqtt_msg_t *)PQ_Pop(mqtt->pq);
+                    assert(b == c);
+                    break;
+                }
+            }
+            /* Pop the previous message and check whether the last
+             * was a connect packet */
+            if(b != NULL)
+            {
+                bool resp_type = (b->type == MQTT_PUBLISH);
+
+                bool sub_success = ((buffer[4]&0x0F) == 0x00);
+                bool seq_success = (seq_num == b->seq_num);
+                bool key_success = (0u == b->key.key);
+                printf("\tseqnum: %u\n", seq_num);
+                success = resp_type && sub_success && seq_success && key_success;
+            }
+            else
+            {
+                printf("\tPacket NOT found");
+                success = false;
             }
             break;
         }
         case MQTT_PUBLISH_CODE:
         {
-            /* This is an unsolicited message, so would not expect a response */
-            expected = true;
-            msg_type = mqtt_msg_Publish;
-            break;
-        }
-        case MQTT_SUBACK_CODE:
-        {
-            msg_type = mqtt_msg_Subscribe;
-            assert(!FIFO_IsEmpty(&resp_fifo.base));
-            mqtt_resp_t resp = FIFO_Dequeue(&resp_fifo);
-            if(msg_type == resp.msg_type)
+            printf("\tPUBLISH Received\n");
+            uint16_t topic_len = (buffer[2] << 8) | buffer[3];
+            /*if qos =1 or 2, then msg id here */
+            uint8_t * const topic = &buffer[4];
+            printf("\ttopic: %s\n", topic);
+            printf("\t  qos: %u\n", qos);
+            uint8_t prop_len = *(topic+topic_len);
+            uint8_t * msg_data = topic+topic_len+prop_len+1;
+            for( uint8_t i = 0; i < mqtt->subs->num_subs ; i++ )
             {
-                expected = true;
+                uint8_t * sub_topic = (uint8_t*)mqtt->subs->subs[i].name;
+                const uint16_t sub_topic_len = strlen((char*)sub_topic);
+                const bool global = mqtt->subs->subs[i].global;
+                if( memcmp(sub_topic, topic ,sub_topic_len) == 0)
+                {
+                    if(global)
+                    {
+                        success = mqtt->subs->subs[i].callback_fn(msg_data);
+                    }
+                    else
+                    {
+                        uint8_t * client_name = (uint8_t*)mqtt->client_name;
+                        uint16_t client_len = strlen((char*)client_name);
+                        
+                        uint16_t offset = (topic_len > client_len) ? (uint16_t)(topic_len - client_len) : 0u;
+                        uint8_t * const topic_client = topic+offset;
+                        if( memcmp(topic_client, client_name, client_len) == 0)
+                        {
+                            success = mqtt->subs->subs[i].callback_fn(msg_data);
+                        }
+                    }
+
+                    if(success)
+                    {
+                        if(qos > 0)
+                        {
+                            mqtt->state.status = MQTT_SEND_ACK;
+                        }
+                    }
+                }
             }
             break;
         }
         default:
         {
-            printf("\tMQTT ERROR! Bad Receive Packet\n");
-            printf("len: 0x%x\n",msg_length);
-            printf("rc: 0x%x\n", return_code);
-            assert( false );
+            assert(false);
+            success = false;
             break;
         }
     }
-    
-    printf("\tMQTT %s packet received, length: %d\n", msg_code[(int)msg_type ].name, msg_length );
-    
-    if(expected)
-    {
-        ret = msg_code[(int)msg_type].ack_fn( mqtt, buffer, msg_length );
-    }
+    printf("\tMQTT: PQ fill: %lu\n", mqtt->pq->fill);
+    return success;
+}
 
-    return ret;
 
+extern void MQTT_Tick(mqtt_t * mqtt)
+{
+    (void)mqtt;
+    /* Resend QOS packets if timeout */
 }
 
 extern bool MQTT_AllSubscribed( mqtt_t * mqtt )
 {
-    return ( mqtt->num_subs == successful_subs );
+    return ( mqtt->state.subs == mqtt->subs->num_subs );
 }
 
-static void InitRespFifo(resp_fifo_t * fifo)
+extern uint32_t MQTT_CheckTimeouts(mqtt_t * mqtt)
 {
-    printf("Initialising MQTT FIFO\n");
-    
-    static const fifo_vfunc_t vfunc =
-    {
-        .enq = RespEnqueue,
-        .deq = RespDequeue,
-        .flush = RespFlush,
-        .peek = RespPeek,
-    };
-    FIFO_Init( (fifo_base_t *)fifo, RESP_FIFO_LEN );
-    
-    fifo->base.vfunc = &vfunc;
-    memset(fifo->queue, 0x00, RESP_FIFO_LEN * sizeof(fifo->in));
+    (void)mqtt;
+    uint32_t timeouts = 0u;
+
+    return timeouts;
 }
 
-static void RespEnqueue( fifo_base_t * const base )
+extern mqtt_msg_t * MQTT_Peek(mqtt_t * mqtt, uint32_t index)
 {
-    assert(base != NULL );
-    ENQUEUE_BOILERPLATE( resp_fifo_t, base );
+    return (mqtt_msg_t *)PQ_Peek(mqtt->pq, index);
 }
 
-static void RespDequeue( fifo_base_t * const base )
+extern mqtt_status_t MQTT_GetStatus(mqtt_t * mqtt)
 {
-    assert(base != NULL );
-    DEQUEUE_BOILERPLATE( resp_fifo_t, base );
-}
-
-static void RespFlush( fifo_base_t * const base )
-{
-    assert(base != NULL );
-    FLUSH_BOILERPLATE( resp_fifo_t, base );
-}
-
-static void RespPeek( fifo_base_t * const base )
-{
-    assert(base != NULL );
-    PEEK_BOILERPLATE( resp_fifo_t, base );
+    return mqtt->state.status;
 }
 
