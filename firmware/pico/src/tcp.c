@@ -242,6 +242,7 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
             err = tcp_output(tcp->pcb);  
             critical_section_exit(tcp->crit);
             cyw43_arch_lwip_end();
+            assert(false);
 
         }
         goto cleanup;
@@ -282,7 +283,7 @@ extern bool TCP_Connect(tcp_t * tcp)
     }
 
     /* Define Callbacks */
-    tcp_nagle_disable(tcp->pcb);
+    //tcp_nagle_disable(tcp->pcb);
     tcp_sent(tcp->pcb, Sent);
     tcp_recv(tcp->pcb, Recv);
     tcp_err(tcp->pcb, Error);
