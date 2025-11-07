@@ -196,6 +196,17 @@ static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
     return err;
 }
 
+extern void TCP_Kick(tcp_t * tcp)
+{
+    cyw43_arch_lwip_begin();
+    critical_section_enter_blocking(tcp->crit);
+    err_t err = tcp_output(tcp->pcb);  
+    critical_section_exit(tcp->crit);
+    cyw43_arch_lwip_end();
+
+    printf("\tTCP Kick: %d\n", err);
+}
+
 extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
 {
     printf("\tAttempting to send %u bytes\n", len);
@@ -211,7 +222,7 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
         success = false;
         goto cleanup;
     }
-    
+    TCP_Kick(tcp); 
     cyw43_arch_lwip_begin();
     critical_section_enter_blocking(tcp->crit);
     
@@ -237,13 +248,7 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
         else if(err == ERR_MEM)
         {
             printf("\tlwip memory error\n");
-            cyw43_arch_lwip_begin();
-            critical_section_enter_blocking(tcp->crit);
-            err = tcp_output(tcp->pcb);  
-            critical_section_exit(tcp->crit);
-            cyw43_arch_lwip_end();
-            assert(false);
-
+            TCP_Kick(tcp);
         }
         goto cleanup;
     }
@@ -283,7 +288,7 @@ extern bool TCP_Connect(tcp_t * tcp)
     }
 
     /* Define Callbacks */
-    //tcp_nagle_disable(tcp->pcb);
+    tcp_nagle_disable(tcp->pcb);
     tcp_sent(tcp->pcb, Sent);
     tcp_recv(tcp->pcb, Recv);
     tcp_err(tcp->pcb, Error);
