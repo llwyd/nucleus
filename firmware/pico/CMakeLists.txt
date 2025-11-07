@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.5)
 include(common/pico_sdk_import.cmake)
 
 project(node_project C CXX ASM)
