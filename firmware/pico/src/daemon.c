@@ -38,7 +38,7 @@
 #define SENSOR_PERIOD_MS (250)
 #define ACK_TIMEOUT_MS (2000u)
 
-#define PQ_RETRY_MS (100u)
+#define PQ_RETRY_MS (250u)
 #define PQ_TIMEOUT_US (5000000)
 
 #define ID_STRING_SIZE ( 32U )
@@ -995,7 +995,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( AckReceived ):
         {
             printf("\tTCP ACK Received\n");
-            TCP_Kick(node_state->tcp);
             Emitter_Destroy(node_state->retry_timer);
             Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, ACK_TIMEOUT_MS);
             ret = HANDLED();

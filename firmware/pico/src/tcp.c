@@ -222,7 +222,6 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
         success = false;
         goto cleanup;
     }
-    TCP_Kick(tcp); 
     cyw43_arch_lwip_begin();
     critical_section_enter_blocking(tcp->crit);
     
