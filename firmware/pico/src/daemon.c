@@ -36,7 +36,7 @@
 #define RETRY_ATTEMPTS (10U)
 #define RETRY_PERIOD_MS (1000)
 #define SENSOR_PERIOD_MS (250)
-#define ACK_TIMEOUT_MS (2000u)
+#define ACK_TIMEOUT_MS (4000u)
 
 #define PQ_RETRY_MS (250u)
 #define PQ_TIMEOUT_US (5000000)
