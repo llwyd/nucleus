@@ -34,9 +34,9 @@
 
 #define DNS_RETRY_ATTEMPTS (5U)
 #define RETRY_ATTEMPTS (10U)
-#define RETRY_PERIOD_MS (1000)
-#define SENSOR_PERIOD_MS (250)
-#define ACK_TIMEOUT_MS (4000u)
+#define RETRY_PERIOD_MS (1000u)
+#define SENSOR_PERIOD_MS (250u)
+#define ACK_TIMEOUT_MS (1000u)
 
 #define PQ_RETRY_MS (250u)
 #define PQ_TIMEOUT_US (5000000)
@@ -1004,6 +1004,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             printf("\tTCP ACK Timeout\n");
             TCP_Close(node_state->tcp);
+//            assert(false);
             ret = TRANSITION(this, STATE(TCPNotConnected));
             break;
         }
