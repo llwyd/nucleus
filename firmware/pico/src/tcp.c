@@ -227,7 +227,7 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
     
     uint16_t available = tcp_sndbuf(tcp->pcb);
     printf("\tTCP space available to output: %u\n", available);
-    err_t err = tcp_write(tcp->pcb, buffer, len, 0u);
+    err_t err = tcp_write(tcp->pcb, buffer, len, TCP_WRITE_FLAG_COPY);
     tcp->err = err; 
     critical_section_exit(tcp->crit);
     cyw43_arch_lwip_end();
