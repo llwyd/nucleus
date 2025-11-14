@@ -35,10 +35,10 @@
 #define DNS_RETRY_ATTEMPTS (5U)
 #define RETRY_ATTEMPTS (10U)
 #define RETRY_PERIOD_MS (1000u)
-#define SENSOR_PERIOD_MS (250u)
+#define SENSOR_PERIOD_MS (1000u)
 #define ACK_TIMEOUT_MS (4000u)
 
-#define PQ_RETRY_MS (250u)
+#define PQ_RETRY_MS (SENSOR_PERIOD_MS >> 1u)
 #define PQ_TIMEOUT_US (5000000)
 
 #define ID_STRING_SIZE ( 32U )
