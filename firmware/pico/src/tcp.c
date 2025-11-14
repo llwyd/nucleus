@@ -44,6 +44,7 @@ static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
     (void)arg;
     (void)tpcb;
     (void)len;
+    printf("\tTCP: %u bytes ACK'd\n", len);
     Emitter_EmitEvent(EVENT(AckReceived));
     return ERR_OK;
 }
@@ -237,6 +238,7 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
         success = false;
         if(err == ERR_ARG)
         {
+            printf("\tlwip pcb error\n");
             Emitter_EmitEvent(EVENT(PCBInvalid));
 
             /* This looks strange, but we dont want to kick off the retry timer
@@ -247,7 +249,6 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
         else if(err == ERR_MEM)
         {
             printf("\tlwip memory error\n");
-            TCP_Kick(tcp);
         }
         goto cleanup;
     }

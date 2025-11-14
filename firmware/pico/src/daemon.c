@@ -36,7 +36,7 @@
 #define RETRY_ATTEMPTS (10U)
 #define RETRY_PERIOD_MS (1000u)
 #define SENSOR_PERIOD_MS (250u)
-#define ACK_TIMEOUT_MS (2000u)
+#define ACK_TIMEOUT_MS (2500u)
 
 #define PQ_RETRY_MS (250u)
 #define PQ_TIMEOUT_US (5000000)
@@ -171,18 +171,8 @@ static state_ret_t Publish(node_state_t * state,
         }
         else
         {
-            if(TCP_MemoryError(state->tcp))
-            {
-                /* LWIP Buffer is full, do not re-emit the event
-                 * as the PQ will reattempt */
-                ret = HANDLED();
-            }
-            else
-            {
-                /* Otherwise just reboot */
-                TCP_Close(state->tcp);
-                ret = TRANSITION(this, STATE(TCPNotConnected));
-            }
+            TCP_Close(state->tcp);
+            ret = TRANSITION(this, STATE(TCPNotConnected));
         }
     }
     else
@@ -964,7 +954,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             Emitter_Destroy(node_state->timer);
             Emitter_Create(EVENT(PQResend), node_state->timer, PQ_RETRY_MS);
-            TCP_Kick(node_state->tcp);
             const uint32_t fill = node_state->mqtt->pq->fill;
             ret = HANDLED();
             for(uint32_t idx = 0; idx < fill; idx++)
@@ -995,6 +984,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( AckReceived ):
         {
             printf("\tTCP ACK Received\n");
+            TCP_Kick(node_state->tcp);
             Emitter_Destroy(node_state->retry_timer);
             Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, ACK_TIMEOUT_MS);
             ret = HANDLED();
@@ -1004,7 +994,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         {
             printf("\tTCP ACK Timeout\n");
             TCP_Close(node_state->tcp);
-//            assert(false);
             ret = TRANSITION(this, STATE(TCPNotConnected));
             break;
         }
