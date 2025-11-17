@@ -30,7 +30,7 @@ def get_todays_events():
     return todays_data
 
 def generate_data_graph(todays_data):
-    fig = Figure()
+    fig = Figure(figsize=(8,6))
     ax = fig.subplots()
     df = pd.DataFrame([(data.device_id, data.datestamp, data.timestamp, data.temperature, data.humidity) for data in todays_data], columns=['device_id','datestamp','timestamp','temperature','humidity'])
 
@@ -60,7 +60,7 @@ def generate_data_graph(todays_data):
     return base64.b64encode(buf.getbuffer()).decode("ascii")
 
 def generate_humidity_graph(todays_data):
-    fig = Figure()
+    fig = Figure(figsize=(8,6))
     ax = fig.subplots()
     df = pd.DataFrame([(data.device_id, data.datestamp, data.timestamp, data.temperature, data.humidity) for data in todays_data], columns=['device_id','datestamp','timestamp','temperature','humidity'])
 
