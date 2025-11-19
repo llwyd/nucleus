@@ -481,6 +481,13 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
             }
             break;
         }
+        case EVENT( AckReceived ):
+        {
+            printf("\tTCP ACK Received\n");
+            TCP_FreeBytes(node_state->tcp);
+            ret = HANDLED();
+            break;
+        }
         default:
         {
             break;
@@ -574,6 +581,13 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
                 TCP_Close(node_state->tcp);
                 ret = TRANSITION(this, STATE(TCPNotConnected));
             }
+            break;
+        }
+        case EVENT( AckReceived ):
+        {
+            printf("\tTCP ACK Received\n");
+            TCP_FreeBytes(node_state->tcp);
+            ret = HANDLED();
             break;
         }
         default:
@@ -984,6 +998,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( AckReceived ):
         {
             printf("\tTCP ACK Received\n");
+            TCP_FreeBytes(node_state->tcp);
             TCP_Kick(node_state->tcp);
             Emitter_Destroy(node_state->retry_timer);
             Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, ACK_TIMEOUT_MS);
