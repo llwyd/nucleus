@@ -153,6 +153,7 @@ static state_ret_t Publish(node_state_t * state,
     state_t * this = &(state->state);
     state_ret_t ret = HANDLED();
     
+    bool in_transit = TCP_BytesInTransit(state->tcp);
     mqtt_msg_t * out = MQTT_Encode(state->mqtt,
             MQTT_PUBLISH,
             state->msg_buffer, 
@@ -167,6 +168,11 @@ static state_ret_t Publish(node_state_t * state,
              * incase of retransmission
              */
             out->msg[0] |= (1 << 3); // Dup flag
+            if( !in_transit )
+            {
+                printf("\tTCP: Start timeout timer\n");
+                Emitter_Create(EVENT(AckTimeout), state->retry_timer, ACK_TIMEOUT_MS);
+            }
             ret = HANDLED();
         }
         else
@@ -822,7 +828,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( Enter ):
         {
             Enviro_Init();
-            Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, ACK_TIMEOUT_MS);
             Emitter_Create(EVENT(PQResend), node_state->timer, PQ_RETRY_MS);
             ret = HANDLED();
             break;
@@ -1001,7 +1006,13 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             TCP_FreeBytes(node_state->tcp);
             TCP_Kick(node_state->tcp);
             Emitter_Destroy(node_state->retry_timer);
-            Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, ACK_TIMEOUT_MS);
+
+            bool in_transit = TCP_BytesInTransit(node_state->tcp);
+            if( in_transit )
+            {
+                printf("\tTCP: Restart timeout timer\n");
+                Emitter_Create(EVENT(AckTimeout), node_state->retry_timer, ACK_TIMEOUT_MS);
+            }
             ret = HANDLED();
             break;
         }

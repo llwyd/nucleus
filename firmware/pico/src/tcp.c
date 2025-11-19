@@ -308,6 +308,15 @@ extern void TCP_FreeBytes(tcp_t * tcp)
     critical_section_exit(tcp->crit);
 }
 
+extern bool TCP_BytesInTransit(tcp_t * tcp)
+{
+    critical_section_enter_blocking(tcp->crit);
+    bool in_transit = (tcp->bytes > 0u);
+    critical_section_exit(tcp->crit);
+
+    return in_transit;
+}
+
 extern bool TCP_Connect(tcp_t * tcp)
 {
     bool ret = false;

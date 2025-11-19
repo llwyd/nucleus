@@ -36,5 +36,6 @@ extern uint16_t TCP_Retrieve(tcp_t * tcp, uint8_t * buffer, uint16_t len);
 extern bool TCP_MemoryError(tcp_t * tcp);
 extern void TCP_Kick(tcp_t * tcp);
 extern void TCP_FreeBytes(tcp_t * tcp);
+extern bool TCP_BytesInTransit(tcp_t * tcp);
 
 #endif /* TCP_H_ */
