@@ -22,15 +22,32 @@ typedef struct
 }
 tcp_fifo_t;
 
+typedef struct
+{
+    fifo_base_t base;
+    uint16_t queue[TCP_FIFO_LEN];
+    uint16_t in;
+    uint16_t out;
+}
+tcp_byte_fifo_t;
+
 static tcp_fifo_t tcp_fifo;
+static tcp_byte_fifo_t tcp_byte_fifo;
 static critical_section_t * critical;
 
 /* FIFO functions */
 static void InitTCPFifo(tcp_fifo_t * fifo);
+static void InitTCPByteFifo(tcp_byte_fifo_t * fifo);
 static void TCPEnqueue( fifo_base_t * const fifo );
 static void TCPDequeue( fifo_base_t * const fifo );
 static void TCPFlush( fifo_base_t * const fifo );
 static void TCPPeek( fifo_base_t * const fifo );
+
+static void TCPByteEnqueue( fifo_base_t * const fifo );
+static void TCPByteDequeue( fifo_base_t * const fifo );
+static void TCPByteFlush( fifo_base_t * const fifo );
+static void TCPBytePeek( fifo_base_t * const fifo );
+
 static void FlushBuffer(tcp_t * tcp);
 
 /* LWIP callback functions */
@@ -45,6 +62,9 @@ static err_t Sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
     (void)tpcb;
     (void)len;
     printf("\tTCP: %u bytes ACK'd\n", len);
+    critical_section_enter_blocking(critical);
+    FIFO_Enqueue(&tcp_byte_fifo, len);
+    critical_section_exit(critical);
     Emitter_EmitEvent(EVENT(AckReceived));
     return ERR_OK;
 }
@@ -255,6 +275,11 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
     
     cyw43_arch_lwip_begin();
     critical_section_enter_blocking(tcp->crit);
+
+    /*If we get this far then add the bytes sent to the total being
+     * tracked
+     */
+    tcp->bytes += len;
     err = tcp_output(tcp->pcb);  
     tcp->err = err; 
     critical_section_exit(tcp->crit);
@@ -270,6 +295,27 @@ cleanup:
     return success;
 }
 
+extern void TCP_FreeBytes(tcp_t * tcp)
+{
+    critical_section_enter_blocking(tcp->crit);
+    uint16_t bytes_to_free = FIFO_Dequeue(&tcp_byte_fifo);
+    printf("\tTCP: %u bytes to free\n", bytes_to_free);
+    assert(bytes_to_free > 0u);
+    tcp->bytes -= bytes_to_free;
+    
+    printf("\tTCP: %lu bytes tracked\n", tcp->bytes);
+    assert(tcp->bytes >= 0u);
+    critical_section_exit(tcp->crit);
+}
+
+extern bool TCP_BytesInTransit(tcp_t * tcp)
+{
+    critical_section_enter_blocking(tcp->crit);
+    bool in_transit = (tcp->bytes > 0u);
+    critical_section_exit(tcp->crit);
+
+    return in_transit;
+}
 
 extern bool TCP_Connect(tcp_t * tcp)
 {
@@ -289,6 +335,7 @@ extern bool TCP_Connect(tcp_t * tcp)
 
     /* Define Callbacks */
     tcp_nagle_disable(tcp->pcb);
+    tcp_arg(tcp->pcb, tcp);
     tcp_sent(tcp->pcb, Sent);
     tcp_recv(tcp->pcb, Recv);
     tcp_err(tcp->pcb, Error);
@@ -298,6 +345,11 @@ extern bool TCP_Connect(tcp_t * tcp)
     /* Attempt connection */
     cyw43_arch_lwip_begin();
     critical_section_enter_blocking(tcp->crit);
+
+    /* Reset number of bytes being tracked */
+    tcp->bytes = 0u;
+    FIFO_Flush(&tcp_byte_fifo.base);
+    
     err_t err = tcp_connect(tcp->pcb, &tcp->ip, tcp->port, Connected);
     critical_section_exit(tcp->crit);
     cyw43_arch_lwip_end();
@@ -331,13 +383,15 @@ extern void TCP_Init(tcp_t * tcp, char * buffer, uint16_t port, critical_section
     ip4addr_aton(buffer, &tcp->ip);
     tcp->port = port;
     tcp->crit = crit;
+    tcp->bytes = 0u;
     critical = crit;
     InitTCPFifo(&tcp_fifo);
+    InitTCPByteFifo(&tcp_byte_fifo);
 }
 
 static void InitTCPFifo(tcp_fifo_t * fifo)
 {
-    printf("Initialising MQTT FIFO\n");
+    printf("Initialising TCP pbuf FIFO\n");
     
     static const fifo_vfunc_t vfunc =
     {
@@ -374,5 +428,46 @@ static void TCPPeek( fifo_base_t * const base )
 {
     assert(base != NULL );
     PEEK_BOILERPLATE( tcp_fifo_t, base );
+}
+
+static void InitTCPByteFifo(tcp_byte_fifo_t * fifo)
+{
+    printf("Initialising TCP bytes FIFO\n");
+    
+    static const fifo_vfunc_t vfunc =
+    {
+        .enq = TCPByteEnqueue,
+        .deq = TCPByteDequeue,
+        .flush = TCPByteFlush,
+        .peek = TCPBytePeek,
+    };
+    FIFO_Init( (fifo_base_t *)fifo, TCP_FIFO_LEN );
+    
+    fifo->base.vfunc = &vfunc;
+    memset(fifo->queue, 0x00, TCP_FIFO_LEN * sizeof(fifo->in));
+}
+
+static void TCPByteEnqueue( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    ENQUEUE_BOILERPLATE( tcp_byte_fifo_t, base );
+}
+
+static void TCPByteDequeue( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    DEQUEUE_BOILERPLATE( tcp_byte_fifo_t, base );
+}
+
+static void TCPByteFlush( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    FLUSH_BOILERPLATE( tcp_byte_fifo_t, base );
+}
+
+static void TCPBytePeek( fifo_base_t * const base )
+{
+    assert(base != NULL );
+    PEEK_BOILERPLATE( tcp_byte_fifo_t, base );
 }
 

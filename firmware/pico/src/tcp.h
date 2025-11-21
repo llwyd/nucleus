@@ -21,6 +21,8 @@ typedef struct
     uint16_t port;
     critical_section_t * crit;
     err_t err;
+    /* Number of bytes in transit */
+    uint32_t bytes;
 }
 tcp_t;
 
@@ -33,5 +35,7 @@ extern void TCP_Flush(tcp_t * tcp);
 extern uint16_t TCP_Retrieve(tcp_t * tcp, uint8_t * buffer, uint16_t len);
 extern bool TCP_MemoryError(tcp_t * tcp);
 extern void TCP_Kick(tcp_t * tcp);
+extern void TCP_FreeBytes(tcp_t * tcp);
+extern bool TCP_BytesInTransit(tcp_t * tcp);
 
 #endif /* TCP_H_ */
