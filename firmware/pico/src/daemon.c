@@ -98,7 +98,7 @@ static mqtt_sub_t subs[4] =
         .global = true
     },
     {   
-        .name = "home/sensor_rst", 
+        .name = "home/envrst", 
         .callback_fn = SensorRequest, 
         .global = true
     },
@@ -827,7 +827,6 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( Enter ):
         {
-            Enviro_Init();
             Emitter_Create(EVENT(PQResend), node_state->timer, PQ_RETRY_MS);
             ret = HANDLED();
             break;
