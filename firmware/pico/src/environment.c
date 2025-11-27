@@ -22,8 +22,8 @@ static void BME280_Configure( void )
     int8_t rslt = BME280_OK;
 
     settings.osr_h     = BME280_OVERSAMPLING_4X;
-    settings.osr_p     = BME280_OVERSAMPLING_8X;
-    settings.osr_t     = BME280_OVERSAMPLING_1X;
+    settings.osr_p     = BME280_OVERSAMPLING_4X;
+    settings.osr_t     = BME280_OVERSAMPLING_4X;
     settings.filter    = BME280_FILTER_COEFF_16;
     settings.standby_time = BME280_STANDBY_TIME_0_5_MS;
 
