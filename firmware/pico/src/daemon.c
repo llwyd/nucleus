@@ -82,6 +82,9 @@ typedef struct
     critical_section_t * crit;
     uint8_t * msg_buffer;
     uint8_t * broker_ip;
+    uint64_t accl_unixtime;
+    uint64_t gpioa_unixtime;
+    uint64_t gpiob_unixtime;
 }
 node_state_t;
 
@@ -834,41 +837,71 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( AccelMotion ):
         {
             Accelerometer_Ack();
-            Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
-            mqtt_msg_params_t params =
+            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+
+            /* Only send if timestmap has changed */
+            if( node_state->accl_unixtime != utime )
             {
-                .qos = 1,
-                .global = false,
-                .topic = (uint8_t*)NODE_EVENT("accl"),
-                .timestamp = timestamp,
-            };
-            ret = Publish(node_state, s, &params, true);
+                node_state->accl_unixtime = utime;
+                mqtt_msg_params_t params =
+                {
+                    .qos = 1,
+                    .timestamp = timestamp,
+                    .global = false,
+                    .topic = (uint8_t*)NODE_EVENT("accl"),
+                };
+                ret = Publish(node_state, s, &params, true);
+            }
+            else
+            {
+                ret = HANDLED();
+            }
             break;
         }
         case EVENT( GPIOAEvent ):
         {
-            Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
-            mqtt_msg_params_t params =
+            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+
+            /* Only send if timestmap has changed */
+            if( node_state->gpioa_unixtime != utime )
             {
-                .qos = 1,
-                .timestamp = timestamp,
-                .global = false,
-                .topic = (uint8_t*)NODE_EVENT("gpioa"),
-            };
-            ret = Publish(node_state, s, &params, true);
+                node_state->gpioa_unixtime = utime;
+                mqtt_msg_params_t params =
+                {
+                    .qos = 1,
+                    .timestamp = timestamp,
+                    .global = false,
+                    .topic = (uint8_t*)NODE_EVENT("gpioa"),
+                };
+                ret = Publish(node_state, s, &params, true);
+            }
+            else
+            {
+                ret = HANDLED();
+            }
             break;
         }
         case EVENT( GPIOBEvent ):
         {
-            Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
-            mqtt_msg_params_t params =
+            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+
+            /* Only send if timestmap has changed */
+            if( node_state->gpiob_unixtime != utime )
             {
-                .qos = 1,
-                .timestamp = timestamp,
-                .global = false,
-                .topic = (uint8_t*)NODE_EVENT("gpiob"),
-            };
-            ret = Publish(node_state, s, &params, true);
+                node_state->gpiob_unixtime = utime;
+                mqtt_msg_params_t params =
+                {
+                    .qos = 1,
+                    .timestamp = timestamp,
+                    .global = false,
+                    .topic = (uint8_t*)NODE_EVENT("gpiob"),
+                };
+                ret = Publish(node_state, s, &params, true);
+            }
+            else
+            {
+                ret = HANDLED();
+            }
             break;
         }
         case EVENT( UptimeRequest ):
@@ -1106,6 +1139,10 @@ extern void Daemon_Run(void)
     state_machine.crit = &crit;
     state_machine.msg_buffer = msg_buffer;
     state_machine.tcp = &tcp;
+
+    state_machine.accl_unixtime = 0UL;
+    state_machine.gpioa_unixtime = 0UL;
+    state_machine.gpiob_unixtime = 0UL;
 
     Watchdog_Kick();
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );

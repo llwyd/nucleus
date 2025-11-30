@@ -7,12 +7,20 @@
 #include "i2c.h"
 #include "uptime.h"
 #include "alarm.h"
+#include "lpf.h"
 #include <string.h>
 
 static struct   bme280_dev dev;
 static uint8_t  bme280_addr = BME280_I2C_ADDR_PRIM;
 static struct   bme280_data env_data;
 static struct   bme280_settings settings;
+
+static double temp_filtered = 0.0;
+static lpf_t lpf =
+{
+    .alpha = 0.7304026910486456,
+    .y = 0.0
+};
 
 static void BME280_Setup( void );
 static void BME280_Configure( void );
@@ -81,6 +89,10 @@ static void BME280_Setup( void )
 extern void Enviro_Init(void)
 {
     printf("Initialising Enviro Sensor\n");
+
+    temp_filtered = 0.0;
+    LPF_Init(&lpf);
+
 #ifdef SENSOR_MCP9808
     MCP9808_Setup();
 #else
@@ -103,6 +115,7 @@ extern void Enviro_Read(void)
         printf("\tBME280 Sensor Read OK\n");
     }
 #endif
+    temp_filtered = LPF_NextSample(&lpf, env_data.temperature);
     (void)Uptime_Refresh();
 }
 
@@ -116,6 +129,7 @@ extern void Enviro_Print(void)
     printf("\tTemperature: %.2f\n", env_data.temperature);
     printf("\tHumidity: %.2f\n", env_data.humidity);
     printf("\tPressure: %.2f\n", env_data.pressure);
+    printf("\tf-Temperature: %.2f\n", temp_filtered);
 #endif
 }
 
@@ -127,7 +141,7 @@ extern void Enviro_GenDigest(char * buffer, uint8_t buffer_len)
     memset(buffer,0x00, buffer_len);
     
     snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f,\"ts\":%llu}",
-            env_data.temperature,
+            temp_filtered,
             env_data.humidity,
             utime);
 }
@@ -139,7 +153,7 @@ extern void Enviro_GenShortDigest(char * buffer, uint8_t buffer_len)
     memset(buffer,0x00, buffer_len);
     
     snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f}",
-            env_data.temperature,
+            temp_filtered,
             env_data.humidity);
 }
 

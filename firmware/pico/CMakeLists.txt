@@ -56,6 +56,8 @@ add_executable(node
     src/watchdog.h
     src/uptime.h
     src/uptime.c
+    src/lpf.c
+    src/lpf.h
     ../../boilerplate/src/state.h
     ../../boilerplate/src/state.c
     ../../boilerplate/src/fifo_base.h
