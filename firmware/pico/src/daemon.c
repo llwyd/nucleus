@@ -300,22 +300,28 @@ static state_ret_t State_WifiNotConnected( state_t * this, event_t s )
         {
             WIFI_Teardown();
             WIFI_TryConnect();
+            node_state->retry_counter = 0u;
             Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
             ret = HANDLED();
             break;
         }
         case EVENT( WifiCheckStatus ):
         {
-            if( WIFI_CheckStatus() )
+            if( WIFI_CheckTCPStatus() )
             {
                 Emitter_Destroy(node_state->retry_timer);
-                //ret = TRANSITION(this, STATE(TCPNotConnected));
                 // Get NTP upon wifi connection 
                 ret = TRANSITION(this, STATE(DNSRequest));
             }
             else
             {
-                WIFI_TryConnect();
+                node_state->retry_counter++;
+                if(node_state->retry_counter >= RETRY_ATTEMPTS)
+                {
+                    node_state->retry_counter = 0u;
+                    WIFI_Teardown();
+                    WIFI_TryConnect();
+                }
                 Emitter_Destroy(node_state->retry_timer);
                 Emitter_Create(EVENT(WifiCheckStatus), node_state->retry_timer, RETRY_PERIOD_MS);
                 ret = HANDLED();
@@ -677,7 +683,7 @@ static state_ret_t State_DNSRequest( state_t * this, event_t s )
             Emitter_Destroy(node_state->retry_timer);
             node_state->retry_counter = 0U;
             DNS_Request("pool.ntp.org");
-            if(WIFI_CheckStatus())
+            if(WIFI_CheckTCPStatus())
             {
                 Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
             }
@@ -745,7 +751,7 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
                     NTP_PORT,
                     node_state->crit);
             node_state->retry_counter = 0U;
-            if(WIFI_CheckStatus())
+            if(WIFI_CheckTCPStatus())
             {
                 Emitter_Create(EVENT(RetryCounterIncrement), node_state->retry_timer, RETRY_PERIOD_MS);
             }
