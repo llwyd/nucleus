@@ -14,6 +14,7 @@ lpf_t;
 
 extern void LPF_Init(lpf_t * filter);
 extern double LPF_NextSample(lpf_t * filter, double x);
+extern void LPF_Set(lpf_t * filter, double x);
 
 #endif /* LPF_H */
 

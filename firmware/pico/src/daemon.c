@@ -836,6 +836,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( Enter ):
         {
+            Enviro_ResetFilter();
             Emitter_Create(EVENT(PQResend), node_state->timer, PQ_RETRY_MS);
             ret = HANDLED();
             break;

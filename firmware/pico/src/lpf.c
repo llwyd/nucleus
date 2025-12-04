@@ -15,3 +15,10 @@ extern double LPF_NextSample(lpf_t * filter, double x)
 
     return filter->y;
 }
+
+extern void LPF_Set(lpf_t * filter, double x)
+{
+    assert(filter != NULL);
+    filter->y = x;
+}
+
