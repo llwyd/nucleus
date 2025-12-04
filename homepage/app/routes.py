@@ -6,6 +6,7 @@ from app.models import EventData
 import datetime as dt
 import pandas as pd
 from matplotlib.figure import Figure
+import matplotlib.dates as mdates
 import base64
 from io import BytesIO
 import numpy as np
@@ -57,6 +58,9 @@ def generate_data_graph(todays_data):
     ax.spines[:].set_color('white')
     ax.legend()
 
+    date_format = mdates.DateFormatter('%H:%M')
+    ax.xaxis.set_major_formatter(date_format) 
+    
     buf = BytesIO()
     fig.savefig(buf, format='png',transparent=True)
     return base64.b64encode(buf.getbuffer()).decode("ascii")
@@ -88,6 +92,9 @@ def generate_humidity_graph(todays_data):
     ax.tick_params('y', colors='white')
     ax.spines[:].set_color('white')
     ax.legend()
+    
+    date_format = mdates.DateFormatter('%H:%M')
+    ax.xaxis.set_major_formatter(date_format) 
 
     buf = BytesIO()
     fig.savefig(buf, format='png', transparent=True)
