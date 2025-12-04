@@ -1,6 +1,5 @@
 #include "environment.h"
 #include "bme280.h"
-#include "MCP9808.h"
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
@@ -93,18 +92,11 @@ extern void Enviro_Init(void)
     temp_filtered = 0.0;
     LPF_Init(&lpf);
 
-#ifdef SENSOR_MCP9808
-    MCP9808_Setup();
-#else
     BME280_Setup();
-#endif
 }
 
 extern void Enviro_Read(void)
 {
-#ifdef SENSOR_MCP9808
-    MCP9808_Read();
-#else
     int8_t rslt = bme280_get_sensor_data(BME280_ALL, &env_data, &dev);
     if( rslt != BME280_OK )
     {
@@ -114,23 +106,17 @@ extern void Enviro_Read(void)
     {
         printf("\tBME280 Sensor Read OK\n");
     }
-#endif
+
     temp_filtered = LPF_NextSample(&lpf, env_data.temperature);
     (void)Uptime_Refresh();
 }
 
 extern void Enviro_Print(void)
 { 
-#ifdef SENSOR_MCP9808
-    printf("\tTemperature: %.2f\n", MCP9808_GetTemperature());
-    printf("\tHumidity: %.2f\n", 0.0);
-    printf("\tPressure: %.2f\n", 0.0);
-#else
     printf("\tTemperature: %.2f\n", env_data.temperature);
     printf("\tHumidity: %.2f\n", env_data.humidity);
     printf("\tPressure: %.2f\n", env_data.pressure);
     printf("\tf-Temperature: %.2f\n", temp_filtered);
-#endif
 }
 
 extern void Enviro_GenDigest(char * buffer, uint8_t buffer_len)
@@ -155,6 +141,21 @@ extern void Enviro_GenShortDigest(char * buffer, uint8_t buffer_len)
     snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f}",
             temp_filtered,
             env_data.humidity);
+}
+
+extern void Enviro_ResetFilter(void)
+{
+    printf("\tENV: Reset Filter\n");
+    int8_t rslt = bme280_get_sensor_data(BME280_ALL, &env_data, &dev);
+    if( rslt != BME280_OK )
+    {
+        printf("\tBME280 Sensor Read FAIL\n");
+    }
+    else 
+    {
+        printf("\tBME280 Sensor Read OK\n");
+    }
+    LPF_Set(&lpf, env_data.temperature);
 }
 
 

@@ -49,14 +49,16 @@ def generate_data_graph(todays_data):
         data = data[data.datetime > yesterdays_time]
         ax.plot(data['datetime'], np.float32(data['temperature']),label=node)
     
-    ax.set_title('Temperature')
-    ax.set_xlabel('Time')
-    ax.set_ylabel('Degrees (C)')
-    ax.tick_params('x', labelrotation=45)
+    ax.set_title('Temperature',color='white')
+    ax.set_xlabel('Time', color='white')
+    ax.set_ylabel('Degrees (C)', color='white')
+    ax.tick_params('x', labelrotation=45, colors='white')
+    ax.tick_params('y', colors='white')
+    ax.spines[:].set_color('white')
     ax.legend()
 
     buf = BytesIO()
-    fig.savefig(buf, format='png')
+    fig.savefig(buf, format='png',transparent=True)
     return base64.b64encode(buf.getbuffer()).decode("ascii")
 
 def generate_humidity_graph(todays_data):
@@ -79,14 +81,16 @@ def generate_humidity_graph(todays_data):
         data = data[data.datetime > yesterdays_time]
         ax.plot(data['datetime'], np.float32(data['humidity']),label=node)
     
-    ax.set_title('Humidity')
-    ax.set_xlabel('Time')
-    ax.set_ylabel('Relative Humidity')
-    ax.tick_params('x', labelrotation=45)
+    ax.set_title('Humidity',color='white')
+    ax.set_xlabel('Time',color='white')
+    ax.set_ylabel('Relative Humidity',color='white')
+    ax.tick_params('x', labelrotation=45, colors='white')
+    ax.tick_params('y', colors='white')
+    ax.spines[:].set_color('white')
     ax.legend()
 
     buf = BytesIO()
-    fig.savefig(buf, format='png')
+    fig.savefig(buf, format='png', transparent=True)
     return base64.b64encode(buf.getbuffer()).decode("ascii")
 
 def get_uptime():
