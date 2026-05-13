@@ -38,7 +38,8 @@ def get_todays_data(db_path:str):
         data = data[data['device_id'] == node]
         data['datetime'] = pd.to_datetime(data['datestamp'] + " " + data['timestamp'])
         data = data[data.datetime > yesterdays_time]
-        ax.plot(data['datetime'], np.float32(data['temperature']),label=node)
+        if not data.empty:
+            ax.plot(data['datetime'], np.float32(data['temperature']),label=node)
     
     ax.set_title('Temperature',color='white')
     ax.set_xlabel('Time', color='white')
