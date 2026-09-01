@@ -101,7 +101,7 @@ def generate_humidity_graph(todays_data):
     return base64.b64encode(buf.getbuffer()).decode("ascii")
 
 def get_uptime():
-    uptime_result = subprocess.run(['uptime','--pretty'], stdout=subprocess.PIPE)
+    uptime_result = subprocess.run(['/usr/bin/uptime','--pretty'], stdout=subprocess.PIPE)
     return uptime_result.stdout.decode('utf-8')[3:-1];
 
 @app.route("/")
