@@ -3,7 +3,8 @@
 echo "Generating metadata to meta.h"
 
 output_folder=$1
-githash=$(git rev-parse --short HEAD)
+hash_folder=$2
+githash=$(git log -1 --pretty='format:%h' $2)
 
 echo "GIT Hash: ${githash}"
 
