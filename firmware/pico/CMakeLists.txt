@@ -12,11 +12,11 @@ pico_sdk_init()
 
 add_custom_command(
     PRE_BUILD
-    COMMAND ../../../scripts/generate_meta.sh ../../../common/
+    COMMAND ../../../scripts/generate_meta.sh ../../../common/ ../../../firmware
     OUTPUT ../../common/meta.h)
 
 add_custom_target(meta ALL
-    COMMAND ../../../scripts/generate_meta.sh ../../../common/
+    COMMAND ../../../scripts/generate_meta.sh ../../../common/ ../../../firmware
     DEPENDS ../../common/meta.h)
 
 add_executable(node
