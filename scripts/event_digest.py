@@ -19,11 +19,17 @@ def get_todays_events(db_path:str):
     df = pd.DataFrame(query_output.fetchall())
 
     num_events = len(df)
-  
+    todays_date            = dt.datetime.now().strftime('%Y-%m-%d')
+    yesterdays_time        = (dt.datetime.now() - dt.timedelta(minutes=5)) 
+ 
+    num_events = 0
     raw_html = f'<table style ="margin-left:auto;margin-right:auto;"><tr><th><b>ID</b></th><th><b>Date</b></th><th><b>Time</b></th><th><b>Device</b></th><th><b>Event</b></th></tr>'
     for idx, reading in df.iterrows():
-        row_html = f'<tr><td>{reading.id}</td><td>{reading.datestamp}</td><td>{reading.timestamp}</td><td>{reading.device_id}</td><td>{reading.event}</td></tr>'
-        raw_html += row_html
+        row_dt = pd.to_datetime(reading.datestamp + " " + reading.timestamp)
+        if row_dt > yesterdays_time:
+            row_html = f'<tr><td>{reading.id}</td><td>{reading.datestamp}</td><td>{reading.timestamp}</td><td>{reading.device_id}</td><td>{reading.event}</td></tr>'
+            raw_html += row_html
+            num_events += 1
 
     raw_html += f'</table>'
     return num_events, raw_html
@@ -47,7 +53,7 @@ def digest(key:str, address:str, sender:str, path):
         'accept': 'application/json',
             }
 
-
+'''
     r = requests.post(
             url,
             headers=headers,
@@ -58,7 +64,7 @@ def digest(key:str, address:str, sender:str, path):
                 'html_body': raw_html,
                 }
             )
-
+'''
 
 if __name__ == '__main__':
     digest()
