@@ -53,18 +53,17 @@ def digest(key:str, address:str, sender:str, path):
         'accept': 'application/json',
             }
 
-'''
-    r = requests.post(
-            url,
-            headers=headers,
-            json={
-                'sender': f'{sender}',
-                'to': [f'{address}'],
-                'subject': f'{num_events} event(s) detected',
-                'html_body': raw_html,
-                }
-            )
-'''
+    if num_events > 0:
+        r = requests.post(
+                url,
+                headers=headers,
+                json={
+                    'sender': f'{sender}',
+                    'to': [f'{address}'],
+                    'subject': f'{num_events} event(s) detected',
+                    'html_body': raw_html,
+                    }
+                )
 
 if __name__ == '__main__':
     digest()
