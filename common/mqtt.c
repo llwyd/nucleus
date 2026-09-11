@@ -97,7 +97,11 @@ extern mqtt_msg_t * MQTT_Encode(mqtt_t * mqtt,
     (void)data_len;
     uint16_t full_packet_size = 0;
     mqtt_msg_t * ret = NULL;
+#if defined(__linux__)
     printf("\tPQ: Fill: %lu / %lu\n", mqtt->pq->fill, mqtt->pq->max);
+#else
+    printf("\tPQ: Fill: %u / %u\n", mqtt->pq->fill, mqtt->pq->max);
+#endif
     if(PQ_IsFull(mqtt->pq))
     {
         if (type != MQTT_CONNECT)
@@ -305,7 +309,11 @@ extern mqtt_msg_t * MQTT_Encode(mqtt_t * mqtt,
             break;
         }
     }
+#if defined(__linux__)
     printf("\tMQTT: PQ fill: %lu\n", mqtt->pq->fill);
+#else
+    printf("\tMQTT: PQ fill: %u\n", mqtt->pq->fill);
+#endif
 cleanup:
     return ret;
 }
@@ -450,7 +458,11 @@ extern bool MQTT_Decode( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
             break;
         }
     }
+#if defined(__linux__)
     printf("\tMQTT: PQ fill: %lu\n", mqtt->pq->fill);
+#else
+    printf("\tMQTT: PQ fill: %u\n", mqtt->pq->fill);
+#endif
     return success;
 }
 
