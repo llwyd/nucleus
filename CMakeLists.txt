@@ -15,6 +15,7 @@ include_directories( tests.out PRIVATE common )
 
 add_executable( tests.out
                 common/mqtt.c
+                common/base64.c
                 boilerplate/src/fifo_base.c
                 boilerplate/src/pq_base.c
                 tests/tests.c
