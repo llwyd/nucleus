@@ -416,7 +416,7 @@ extern bool MQTT_Decode( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
             printf("\t  qos: %u\n", qos);
             uint8_t prop_len = *(topic+topic_len);
             uint8_t * msg_data = topic+topic_len+prop_len+1;
-            for( uint8_t i = 0; i < mqtt->subs->num_subs ; i++ )
+            for( uint32_t i = 0; i < mqtt->subs->num_subs ; i++ )
             {
                 uint8_t * sub_topic = (uint8_t*)mqtt->subs->subs[i].name;
                 const uint16_t sub_topic_len = strlen((char*)sub_topic);
