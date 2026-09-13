@@ -19,8 +19,8 @@ add_executable( tests.out
                 boilerplate/src/fifo_base.c
                 boilerplate/src/pq_base.c
                 tests/tests.c
-                tests/mqtt_tests.h
                 tests/mqtt_tests.c
+                tests/base64_tests.c
                 Unity/src/unity.c
                 Unity/src/unity.h
                 Unity/src/unity_internals.h ) 
