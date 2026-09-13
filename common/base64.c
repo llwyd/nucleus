@@ -1,6 +1,5 @@
 #include "base64.h"
 #include "assert.h"
-#include "stdio.h"
 
 uint8_t lut[] =
 {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','-','_','='};
@@ -31,7 +30,7 @@ uint32_t BASE64_Encode(uint8_t * input_buffer,
             shift -= 8;
         }
         uint8_t out[4];
-        out[0] = word >> 18;
+        out[0] = (word >> 18) & 0x3F;
         out[1] = (word >> 12) & 0x3F;
         out[2] = (kdx > 1) ? (word >> 6) & 0x3F : 64;
         out[3] = (kdx > 2) ? word & 0x3F : 64;
@@ -41,5 +40,6 @@ uint32_t BASE64_Encode(uint8_t * input_buffer,
             output_buffer[mdx++] = lut[out[ndx]];
         }
     }
+    assert((mdx%4) == 0);
     return mdx;
 }
