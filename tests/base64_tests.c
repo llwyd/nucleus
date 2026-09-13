@@ -26,8 +26,35 @@ void test_BASE64_Test1(void)
     TEST_ASSERT_EQUAL_STRING("Zm9vYmFy", output);
 }
 
+void test_BASE64_Test2(void)
+{
+    char * test_vector = "fo";
+    char output[32] = {0};
+    uint32_t len = strlen(test_vector);
+    uint32_t out_len = BASE64_Encode((uint8_t*)test_vector,len,(uint8_t*)output);
+
+    TEST_ASSERT_EQUAL(len, 2u);
+    TEST_ASSERT_EQUAL(out_len, 4u);
+    TEST_ASSERT_EQUAL_STRING("Zm8=", output);
+}
+
+void test_BASE64_Test3(void)
+{
+    char * test_vector = "f";
+    char output[32] = {0};
+    uint32_t len = strlen(test_vector);
+    uint32_t out_len = BASE64_Encode((uint8_t*)test_vector,len,(uint8_t*)output);
+
+    TEST_ASSERT_EQUAL(len, 1u);
+    TEST_ASSERT_EQUAL(out_len, 4u);
+    TEST_ASSERT_EQUAL_STRING("Zg==", output);
+}
+
+
 extern void BASE64TestSuite(void)
 {
     RUN_TEST(test_BASE64_Test0);
     RUN_TEST(test_BASE64_Test1);
+    RUN_TEST(test_BASE64_Test2);
+    RUN_TEST(test_BASE64_Test3);
 }
