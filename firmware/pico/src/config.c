@@ -54,10 +54,10 @@ const cli_command_t command_table[] =
     { "set pass", STATE(SetValue), "PASSWORD", EEPROM_PASS},
     { "set broker", STATE(SetValue), "BROKER", EEPROM_IP},
     { "set name", STATE(SetValue), "NAME", EEPROM_NAME},
-    { "set gpioa", STATE(SetValue), "NAME", EEPROM_NAME},
-    { "set gpiob", STATE(SetValue), "NAME", EEPROM_NAME},
-    { "test", STATE(Test), "NAME", EEPROM_NAME},
-    { "reset", STATE(Reset), "NAME", EEPROM_NAME},
+    { "set gpioa", STATE(SetValue), "GPIOA", EEPROM_GPIOA},
+    { "set gpiob", STATE(SetValue), "GPIOB", EEPROM_GPIOB},
+    { "test", STATE(Test), "TEST", EEPROM_NONE},
+    { "reset", STATE(Reset), "RESET", EEPROM_NONE},
     { "read all", STATE(ReadAll), "ALL", EEPROM_NONE },
     { "read raw", STATE(ReadRaw), "RAW", EEPROM_NONE},
 };
@@ -203,6 +203,12 @@ static state_ret_t State_ReadAll( state_t * this, event_t s )
             
             (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_NAME);
             printf("NAME: %s\n", raw_buffer);
+            
+            (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_GPIOA);
+            printf("GPIOA: %s\n", raw_buffer);
+            
+            (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_GPIOB);
+            printf("GPIOB: %s\n", raw_buffer);
 
             ret = TRANSITION(this, STATE(AwaitingCommand));
             break;
