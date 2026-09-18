@@ -84,10 +84,8 @@ typedef struct
     uint8_t * scratch_buffer;
     uint8_t * broker_ip;
     uint64_t accl_unixtime;
-    uint64_t gpioa_unixtime;
-    uint64_t gpiob_unixtime;
-    uint8_t * gpioa;
-    uint8_t * gpiob;
+    gpio_event_t * gpioa;
+    gpio_event_t * gpiob;
 }
 node_state_t;
 
@@ -873,15 +871,15 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->scratch_buffer, SCRATCH_SIZE);
 
             /* Only send if timestmap has changed */
-            if( node_state->gpioa_unixtime != utime )
+            if( node_state->gpioa->unixtime != utime )
             {
-                node_state->gpioa_unixtime = utime;
+                node_state->gpioa->unixtime = utime;
                 mqtt_msg_params_t params =
                 {
                     .qos = 1,
                     .timestamp = timestamp,
                     .global = false,
-                    .topic = node_state->gpioa,
+                    .topic = node_state->gpioa->name,
                 };
                 ret = Publish(node_state, s, &params, true);
             }
@@ -896,15 +894,15 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->scratch_buffer, SCRATCH_SIZE);
 
             /* Only send if timestmap has changed */
-            if( node_state->gpiob_unixtime != utime )
+            if( node_state->gpiob->unixtime != utime )
             {
-                node_state->gpiob_unixtime = utime;
+                node_state->gpiob->unixtime = utime;
                 mqtt_msg_params_t params =
                 {
                     .qos = 1,
                     .timestamp = timestamp,
                     .global = false,
-                    .topic = node_state->gpiob,
+                    .topic = node_state->gpiob->name,
                 };
                 ret = Publish(node_state, s, &params, true);
             }
@@ -1085,8 +1083,8 @@ extern void Daemon_Run(void)
 {
     uint8_t unique_id[ID_STRING_SIZE]={0};
     uint8_t broker_ip[EEPROM_ENTRY_SIZE] = {0U};
-    uint8_t gpioa[GPIO_NAME_SIZE] = {0U};
-    uint8_t gpiob[GPIO_NAME_SIZE] = {0U};
+    uint8_t gpioa_name[GPIO_NAME_SIZE] = {0U};
+    uint8_t gpiob_name[GPIO_NAME_SIZE] = {0U};
     
     pico_get_unique_board_id_string((char*)unique_id, ID_STRING_SIZE);
 
@@ -1132,16 +1130,28 @@ extern void Daemon_Run(void)
     uint8_t * const scratch = Scratch_Get();
     memset(scratch, 0x00, SCRATCH_SIZE);
     EEPROM_Read(scratch, EEPROM_ENTRY_SIZE, EEPROM_GPIOA);
-    strncat((char *)gpioa, NODE_EVENT(""), EEPROM_ENTRY_SIZE);
-    strncat((char *)gpioa, (char *)scratch, EEPROM_ENTRY_SIZE);
+    strncat((char *)gpioa_name, NODE_EVENT(""), EEPROM_ENTRY_SIZE);
+    strncat((char *)gpioa_name, (char *)scratch, EEPROM_ENTRY_SIZE);
 
     memset(scratch, 0x00, SCRATCH_SIZE);
     EEPROM_Read(scratch, EEPROM_ENTRY_SIZE, EEPROM_GPIOB);
-    strncat((char *)gpiob, NODE_EVENT(""),EEPROM_ENTRY_SIZE);
-    strncat((char *)gpiob, (char *)scratch,EEPROM_ENTRY_SIZE);
+    strncat((char *)gpiob_name, NODE_EVENT(""),EEPROM_ENTRY_SIZE);
+    strncat((char *)gpiob_name, (char *)scratch,EEPROM_ENTRY_SIZE);
 
-    printf("GPIOA: %s\n",gpioa);
-    printf("GPIOB: %s\n",gpiob);
+    printf("GPIOA: %s\n",gpioa_name);
+    printf("GPIOB: %s\n",gpiob_name);
+
+    gpio_event_t gpioa =
+    {
+        .unixtime = 0UL,
+        .name=gpioa_name,
+    };
+    
+    gpio_event_t gpiob =
+    {
+        .unixtime = 0UL,
+        .name=gpiob_name,
+    };
 
     TCP_Init(&tcp, (char *)broker_ip, MQTT_PORT, &crit_tcp);
 
@@ -1167,11 +1177,9 @@ extern void Daemon_Run(void)
     state_machine.tcp = &tcp;
 
     state_machine.accl_unixtime = 0UL;
-    state_machine.gpioa_unixtime = 0UL;
-    state_machine.gpiob_unixtime = 0UL;
     
-    state_machine.gpioa = gpioa;
-    state_machine.gpiob = gpiob;
+    state_machine.gpioa = &gpioa;
+    state_machine.gpiob = &gpiob;
 
     Watchdog_Kick();
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );

@@ -19,6 +19,13 @@
 #define GPIO_A_PIN (8U)
 #define GPIO_B_PIN (9U)
 
+typedef struct
+{
+    uint64_t unixtime;
+    uint8_t * name;
+}
+gpio_event_t;
+
 extern void GPIO_Init(void);
 
 #endif /* GPIO_H_ */
