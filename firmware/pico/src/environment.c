@@ -119,7 +119,7 @@ extern void Enviro_Print(void)
     printf("\tf-Temperature: %.2f\n", temp_filtered);
 }
 
-extern void Enviro_GenDigest(char * buffer, uint8_t buffer_len)
+extern void Enviro_GenDigest(char * buffer, uint32_t buffer_len)
 {
     assert(buffer != NULL);
     uint64_t utime = (uint64_t)Alarm_GetUnixTime();
@@ -132,7 +132,7 @@ extern void Enviro_GenDigest(char * buffer, uint8_t buffer_len)
             utime);
 }
 
-extern void Enviro_GenShortDigest(char * buffer, uint8_t buffer_len)
+extern void Enviro_GenShortDigest(char * buffer, uint32_t buffer_len)
 {
     assert(buffer != NULL);
 

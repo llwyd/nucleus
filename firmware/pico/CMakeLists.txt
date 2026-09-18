@@ -23,6 +23,8 @@ add_executable(node
     src/node_pico.c
     src/daemon.c
     src/daemon.h
+    src/scratch.c
+    src/scratch.h
     src/node_events.h
     src/environment.c
     src/environment.h
@@ -81,6 +83,8 @@ set_source_files_properties(
     src/node_pico.c
     src/daemon.c
     src/daemon.h
+    src/scratch.c
+    src/scratch.h
     src/node_events.h
     src/environment.c
     src/environment.h
@@ -137,7 +141,8 @@ target_compile_options(node PRIVATE -Wfatal-errors
                         -Wall
                         # -Wextra
                         #-Werror
-                        -Wpointer-arith)
+                        #-Wpointer-arith
+                    )
 
 target_include_directories(node PRIVATE ${CMAKE_CURRENT_LIST_DIR} )
 include_directories( node PRIVATE src )

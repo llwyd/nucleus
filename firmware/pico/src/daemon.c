@@ -29,6 +29,7 @@
 #include "watchdog.h"
 #include "uptime.h"
 #include "dns.h"
+#include "scratch.h"
 
 #define NODE_EVENT(X) ("home/evnt/" X)
 
@@ -42,9 +43,9 @@
 #define PQ_TIMEOUT_US (5000000)
 
 #define ID_STRING_SIZE ( 32U )
-#define MSG_BUFFER_SIZE ( 128U )
 
 #define MQTT_PORT ( 1883 )
+#define GPIO_NAME_SIZE (EEPROM_ENTRY_SIZE * 4)
 
 GENERATE_EVENT_STRINGS( EVENTS );
 
@@ -80,11 +81,13 @@ typedef struct
     ntp_t * ntp;
     tcp_t * tcp;
     critical_section_t * crit;
-    uint8_t * msg_buffer;
+    uint8_t * scratch_buffer;
     uint8_t * broker_ip;
     uint64_t accl_unixtime;
     uint64_t gpioa_unixtime;
     uint64_t gpiob_unixtime;
+    uint8_t * gpioa;
+    uint8_t * gpiob;
 }
 node_state_t;
 
@@ -159,8 +162,8 @@ static state_ret_t Publish(node_state_t * state,
     bool in_transit = TCP_BytesInTransit(state->tcp);
     mqtt_msg_t * out = MQTT_Encode(state->mqtt,
             MQTT_PUBLISH,
-            state->msg_buffer, 
-            strlen((char*)state->msg_buffer),
+            state->scratch_buffer, 
+            strlen((char*)state->scratch_buffer),
             params);
     
     if(out != NULL)
@@ -407,7 +410,7 @@ static state_ret_t State_TCPNotConnected( state_t * this, event_t s )
             /* Upon a successful connection it is possible to receive left overs from previous
              * session, so "receive them so they are emptied from the buffer
              */
-            (void)TCP_Retrieve(node_state->tcp, node_state->msg_buffer, MSG_BUFFER_SIZE);
+            (void)TCP_Retrieve(node_state->tcp, node_state->scratch_buffer, SCRATCH_SIZE);
             ret = HANDLED();
         }
         case EVENT( Exit ):
@@ -483,9 +486,9 @@ static state_ret_t State_MQTTNotConnected( state_t * this, event_t s )
         case EVENT( TCPReceived ):
         {
             /* Presumably the buffer has a message... */
-            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->msg_buffer, MSG_BUFFER_SIZE);
+            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->scratch_buffer, SCRATCH_SIZE);
             assert(recv_len > 0);
-            if(MQTT_Decode(node_state->mqtt, node_state->msg_buffer, MSG_BUFFER_SIZE))
+            if(MQTT_Decode(node_state->mqtt, node_state->scratch_buffer, SCRATCH_SIZE))
             {
                 ret = TRANSITION(this, STATE(MQTTSubscribing));
             }
@@ -521,9 +524,9 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
     {
         case EVENT( TCPReceived ):
         {
-            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->msg_buffer, MSG_BUFFER_SIZE);
+            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->scratch_buffer, SCRATCH_SIZE);
             assert(recv_len > 0);
-            if(MQTT_Decode(node_state->mqtt, node_state->msg_buffer, MSG_BUFFER_SIZE))
+            if(MQTT_Decode(node_state->mqtt, node_state->scratch_buffer, SCRATCH_SIZE))
             {
                 if(MQTT_AllSubscribed(node_state->mqtt))
                 {
@@ -744,8 +747,8 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
         {
             ret = HANDLED();
             Emitter_Destroy(node_state->retry_timer);
-            NTP_Encode(node_state->msg_buffer);
-            UDP_Send(node_state->msg_buffer, 
+            NTP_Encode(node_state->scratch_buffer);
+            UDP_Send(node_state->scratch_buffer, 
                     48U,
                     node_state->addr,
                     NTP_PORT,
@@ -770,8 +773,8 @@ static state_ret_t State_RequestNTP( state_t * this, event_t s )
         case EVENT(UDPReceived):
         {
             Emitter_Destroy(node_state->retry_timer);
-            UDP_Retrieve(node_state->msg_buffer, MSG_BUFFER_SIZE); 
-            NTP_Decode(node_state->msg_buffer, node_state->ntp);
+            UDP_Retrieve(node_state->scratch_buffer, SCRATCH_SIZE); 
+            NTP_Decode(node_state->scratch_buffer, node_state->ntp);
             NTP_Print(node_state->ntp);
             Alarm_SetClock(&node_state->ntp->transmit);
             TCP_Close(node_state->tcp);
@@ -844,7 +847,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( AccelMotion ):
         {
             Accelerometer_Ack();
-            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->scratch_buffer, SCRATCH_SIZE);
 
             /* Only send if timestmap has changed */
             if( node_state->accl_unixtime != utime )
@@ -867,7 +870,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( GPIOAEvent ):
         {
-            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->scratch_buffer, SCRATCH_SIZE);
 
             /* Only send if timestmap has changed */
             if( node_state->gpioa_unixtime != utime )
@@ -878,7 +881,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                     .qos = 1,
                     .timestamp = timestamp,
                     .global = false,
-                    .topic = (uint8_t*)NODE_EVENT("gpioa"),
+                    .topic = node_state->gpioa,
                 };
                 ret = Publish(node_state, s, &params, true);
             }
@@ -890,7 +893,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( GPIOBEvent ):
         {
-            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            uint64_t utime = Alarm_EncodeUnixTime((char*)node_state->scratch_buffer, SCRATCH_SIZE);
 
             /* Only send if timestmap has changed */
             if( node_state->gpiob_unixtime != utime )
@@ -901,7 +904,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                     .qos = 1,
                     .timestamp = timestamp,
                     .global = false,
-                    .topic = (uint8_t*)NODE_EVENT("gpiob"),
+                    .topic = node_state->gpiob,
                 };
                 ret = Publish(node_state, s, &params, true);
             }
@@ -913,8 +916,8 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( UptimeRequest ):
         {
-            Uptime_Encode((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
-            printf("\tMeta: %s\n", node_state->msg_buffer);
+            Uptime_Encode((char*)node_state->scratch_buffer, SCRATCH_SIZE);
+            printf("\tMeta: %s\n", node_state->scratch_buffer);
             mqtt_msg_params_t params =
             {
                 .qos = 1,
@@ -937,7 +940,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
             Enviro_Read();
             Enviro_Print();
 
-            Enviro_GenShortDigest((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            Enviro_GenShortDigest((char*)node_state->scratch_buffer, SCRATCH_SIZE);
             mqtt_msg_params_t params =
             {
                 .qos = 0,
@@ -951,9 +954,9 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         case EVENT( TCPReceived ):
         {
             /* Presumably the buffer has a message... */
-            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->msg_buffer, MSG_BUFFER_SIZE);
+            uint16_t recv_len = TCP_Retrieve(node_state->tcp, node_state->scratch_buffer, SCRATCH_SIZE);
             assert(recv_len > 0);
-            if(MQTT_Decode(node_state->mqtt, node_state->msg_buffer, MSG_BUFFER_SIZE))
+            if(MQTT_Decode(node_state->mqtt, node_state->scratch_buffer, SCRATCH_SIZE))
             {
                 /* May need to send ACK */
                 ret = HANDLED();
@@ -997,7 +1000,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( AlarmElapsed ):
         {
-            Enviro_GenDigest((char*)node_state->msg_buffer, MSG_BUFFER_SIZE);
+            Enviro_GenDigest((char*)node_state->scratch_buffer, SCRATCH_SIZE);
             mqtt_msg_params_t params =
             {
                 .qos = 1,
@@ -1080,9 +1083,11 @@ static state_ret_t State_Idle( state_t * this, event_t s )
 
 extern void Daemon_Run(void)
 {
-    uint8_t msg_buffer[MSG_BUFFER_SIZE] = {0};
     uint8_t unique_id[ID_STRING_SIZE]={0};
     uint8_t broker_ip[EEPROM_ENTRY_SIZE] = {0U};
+    uint8_t gpioa[GPIO_NAME_SIZE] = {0U};
+    uint8_t gpiob[GPIO_NAME_SIZE] = {0U};
+    
     pico_get_unique_board_id_string((char*)unique_id, ID_STRING_SIZE);
 
     event_fifo_t events;
@@ -1123,6 +1128,20 @@ extern void Daemon_Run(void)
     Events_Init(&events);
     EEPROM_Read(unique_id, EEPROM_ENTRY_SIZE, EEPROM_NAME);
     EEPROM_Read(broker_ip, EEPROM_ENTRY_SIZE, EEPROM_IP);
+    
+    uint8_t * const scratch = Scratch_Get();
+    memset(scratch, 0x00, SCRATCH_SIZE);
+    EEPROM_Read(scratch, EEPROM_ENTRY_SIZE, EEPROM_GPIOA);
+    strncat((char *)gpioa, NODE_EVENT(""), EEPROM_ENTRY_SIZE);
+    strncat((char *)gpioa, (char *)scratch, EEPROM_ENTRY_SIZE);
+
+    memset(scratch, 0x00, SCRATCH_SIZE);
+    EEPROM_Read(scratch, EEPROM_ENTRY_SIZE, EEPROM_GPIOB);
+    strncat((char *)gpiob, NODE_EVENT(""),EEPROM_ENTRY_SIZE);
+    strncat((char *)gpiob, (char *)scratch,EEPROM_ENTRY_SIZE);
+
+    printf("GPIOA: %s\n",gpioa);
+    printf("GPIOB: %s\n",gpiob);
 
     TCP_Init(&tcp, (char *)broker_ip, MQTT_PORT, &crit_tcp);
 
@@ -1144,12 +1163,15 @@ extern void Daemon_Run(void)
     state_machine.mqtt = &mqtt;
     state_machine.ntp = &ntp;
     state_machine.crit = &crit;
-    state_machine.msg_buffer = msg_buffer;
+    state_machine.scratch_buffer = Scratch_Get();
     state_machine.tcp = &tcp;
 
     state_machine.accl_unixtime = 0UL;
     state_machine.gpioa_unixtime = 0UL;
     state_machine.gpiob_unixtime = 0UL;
+    
+    state_machine.gpioa = gpioa;
+    state_machine.gpiob = gpiob;
 
     Watchdog_Kick();
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
@@ -1164,7 +1186,6 @@ extern void Daemon_Run(void)
         event_t e = FIFO_Dequeue( &events );
         critical_section_exit(&crit_events);
         STATEMACHINE_Dispatch(&state_machine.state, e);
-        //cyw43_arch_poll();
         Watchdog_Kick();
     }
 
