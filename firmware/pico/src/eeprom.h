@@ -10,6 +10,8 @@ typedef enum
     EEPROM_PASS,
     EEPROM_IP,
     EEPROM_NAME,
+    EEPROM_GPIOA,
+    EEPROM_GPIOB,
 
     EEPROM_NONE,
 }

@@ -102,3 +102,12 @@ extern void Accelerometer_Init(void)
     }
 #endif
 }
+
+extern void Accelerometer_Check(void)
+{
+    uint8_t data = 0x0;
+    /* Read WHOAMI Register */
+    (void)I2C_ReadReg(0x0D, &data, 1U, (void*)&address);
+    printf("\tWHOAMI: %u\n", data);
+}
+
