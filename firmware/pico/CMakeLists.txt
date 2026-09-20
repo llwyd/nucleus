@@ -60,6 +60,8 @@ add_executable(node
     src/uptime.c
     src/lpf.c
     src/lpf.h
+    ../../boilerplate/src/base64.c
+    ../../boilerplate/src/base64.h
     ../../boilerplate/src/state.h
     ../../boilerplate/src/state.c
     ../../boilerplate/src/fifo_base.h
@@ -112,6 +114,8 @@ set_source_files_properties(
     src/eeprom.h
     src/cli.c
     src/cli.h
+    ../../boilerplate/src/base64.c
+    ../../boilerplate/src/base64.h
     ../../boilerplate/src/state.h
     ../../boilerplate/src/state.c
     ../../boilerplate/src/fifo_base.h

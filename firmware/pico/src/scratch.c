@@ -18,3 +18,9 @@ extern uint8_t * const Scratch_Get(uint32_t bank)
     return scratch_buffer[bank];
 }
 
+void Scratch_Clear(uint32_t bank)
+{
+    assert(bank < SCRATCH_BANKS);
+    memset(scratch_buffer[bank], 0x00, SCRATCH_SIZE);
+}
+

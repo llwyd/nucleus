@@ -10,5 +10,6 @@
 
 extern void Scratch_Init(void);
 extern uint8_t * const Scratch_Get(uint32_t bank);
+extern void Scratch_Clear(uint32_t bank);
 
 #endif /* SCRATCH_H */

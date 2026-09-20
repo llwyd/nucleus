@@ -30,6 +30,7 @@
 #include "uptime.h"
 #include "dns.h"
 #include "scratch.h"
+#include "base64.h"
 
 #define NODE_EVENT(X) ("home/evnt/" X)
 
@@ -162,10 +163,18 @@ static state_ret_t Publish(node_state_t * state,
     state_ret_t ret = HANDLED();
     
     bool in_transit = TCP_BytesInTransit(state->tcp);
+
+    uint8_t * scratch = Scratch_Get(1u);
+    Scratch_Clear(1u);
+    assert(scratch != state->scratch_buffer);
+    BASE64_Encode(state->scratch_buffer,
+            strlen((char*)state->scratch_buffer),
+            scratch);
+
     mqtt_msg_t * out = MQTT_Encode(state->mqtt,
             MQTT_PUBLISH,
-            state->scratch_buffer, 
-            strlen((char*)state->scratch_buffer),
+            scratch, 
+            strlen((char*)scratch),
             params);
     
     if(out != NULL)
@@ -948,7 +957,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                 .qos = 0,
                 .timestamp = timestamp,
                 .global = false,
-                .topic = (uint8_t*)"home/env",
+                .topic = (uint8_t*)"home/env64",
             };
             ret = Publish(node_state, s, &params, false);
             break;
@@ -1008,7 +1017,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                 .qos = 1,
                 .timestamp = timestamp,
                 .global = false,
-                .topic = (uint8_t*)"home/digest",
+                .topic = (uint8_t*)"home/digest64",
             };
             ret = Publish(node_state, s, &params, true);
             break;
