@@ -957,7 +957,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                 .qos = 0,
                 .timestamp = timestamp,
                 .global = false,
-                .topic = (uint8_t*)"home/env64",
+                .topic = (uint8_t*)"home/env",
             };
             ret = Publish(node_state, s, &params, false);
             break;
@@ -1017,7 +1017,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
                 .qos = 1,
                 .timestamp = timestamp,
                 .global = false,
-                .topic = (uint8_t*)"home/digest64",
+                .topic = (uint8_t*)"home/digest",
             };
             ret = Publish(node_state, s, &params, true);
             break;
