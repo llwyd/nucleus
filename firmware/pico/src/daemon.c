@@ -47,6 +47,10 @@
 #define MQTT_PORT ( 1883 )
 #define GPIO_NAME_SIZE (EEPROM_ENTRY_SIZE * 4)
 
+#define LOCAL_SCRATCH_SIZE ( 1024U )
+
+
+
 GENERATE_EVENT_STRINGS( EVENTS );
 
 /* Top level state */
@@ -1127,7 +1131,7 @@ extern void Daemon_Run(void)
     EEPROM_Read(unique_id, EEPROM_ENTRY_SIZE, EEPROM_NAME);
     EEPROM_Read(broker_ip, EEPROM_ENTRY_SIZE, EEPROM_IP);
     
-    uint8_t * const scratch = Scratch_Get();
+    uint8_t * const scratch = Scratch_Get(0u);
     memset(scratch, 0x00, SCRATCH_SIZE);
     EEPROM_Read(scratch, EEPROM_ENTRY_SIZE, EEPROM_GPIOA);
     strncat((char *)gpioa_name, NODE_EVENT(""), EEPROM_ENTRY_SIZE);
@@ -1173,7 +1177,7 @@ extern void Daemon_Run(void)
     state_machine.mqtt = &mqtt;
     state_machine.ntp = &ntp;
     state_machine.crit = &crit;
-    state_machine.scratch_buffer = Scratch_Get();
+    state_machine.scratch_buffer = Scratch_Get(0u);
     state_machine.tcp = &tcp;
 
     state_machine.accl_unixtime = 0UL;

@@ -1,14 +1,20 @@
 #include "assert.h"
 #include "scratch.h"
-    
-static uint8_t scratch_buffer[SCRATCH_SIZE] = {0};
+#include <stdio.h>    
+static uint8_t scratch_buffer[SCRATCH_BANKS][SCRATCH_SIZE] = {0};
 
 extern void Scratch_Init(void)
 {
-    memset(scratch_buffer, 0x00, SCRATCH_SIZE);
+    printf("Initialising Scratch...\n");
+    printf("\t %u bytes\n", SCRATCH_SIZE);
+    printf("\t %u banks\n", SCRATCH_BANKS);
+    memset(scratch_buffer[0], 0x00, SCRATCH_SIZE);
+    memset(scratch_buffer[1], 0x00, SCRATCH_SIZE);
 }
 
-extern uint8_t * const Scratch_Get(void)
+extern uint8_t * const Scratch_Get(uint32_t bank)
 {
-    return scratch_buffer;
+    assert(bank < SCRATCH_BANKS);
+    return scratch_buffer[bank];
 }
+
