@@ -78,19 +78,19 @@ typedef struct
     state_t state;
     uint32_t retry_counter;
     uint32_t dns_attempts;
-    struct repeating_timer * timer;
-    struct repeating_timer * read_timer;
-    struct repeating_timer * retry_timer;
-    mqtt_t * mqtt;
+    struct repeating_timer * const timer;
+    struct repeating_timer * const read_timer;
+    struct repeating_timer * const retry_timer;
+    mqtt_t * const mqtt;
     ip_addr_t addr;
-    ntp_t * ntp;
-    tcp_t * tcp;
-    critical_section_t * crit;
-    uint8_t * scratch_buffer;
-    uint8_t * broker_ip;
+    ntp_t * const ntp;
+    tcp_t * const tcp;
+    critical_section_t * const crit;
+    uint8_t * const scratch_buffer;
+    uint8_t * const broker_ip;
     uint64_t accl_unixtime;
-    gpio_event_t * gpioa;
-    gpio_event_t * gpiob;
+    gpio_event_t * const gpioa;
+    gpio_event_t * const gpiob;
 }
 node_state_t;
 
@@ -1177,23 +1177,22 @@ extern void Daemon_Run(void)
     Emitter_Init(&events, &crit_events);
     WIFI_Init();
 
-    node_state_t state_machine; 
-    state_machine.retry_counter = 0U;
-    state_machine.dns_attempts = 0U;
-    state_machine.timer = &timer;
-    state_machine.read_timer = &read_timer;
-    state_machine.retry_timer = &retry_timer;
-    state_machine.mqtt = &mqtt;
-    state_machine.ntp = &ntp;
-    state_machine.crit = &crit;
-    state_machine.scratch_buffer = Scratch_Get(0u);
-    state_machine.tcp = &tcp;
-
-    state_machine.accl_unixtime = 0UL;
-    
-    state_machine.gpioa = &gpioa;
-    state_machine.gpiob = &gpiob;
-
+    node_state_t state_machine =
+    {
+        .retry_counter = 0U,
+        .dns_attempts = 0U,
+        .timer = &timer,
+        .read_timer = &read_timer,
+        .retry_timer = &retry_timer,
+        .mqtt = &mqtt,
+        .ntp = &ntp,
+        .crit = &crit,
+        .scratch_buffer = Scratch_Get(0u),
+        .tcp = &tcp,
+        .accl_unixtime = 0UL,
+        .gpioa = &gpioa,
+        .gpiob = &gpiob,
+    };
     Watchdog_Kick();
     STATEMACHINE_Init( &state_machine.state, STATE( WifiNotConnected ) );
 
