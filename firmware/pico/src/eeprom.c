@@ -3,10 +3,55 @@
 #include <assert.h>
 #include "hardware/gpio.h"
 #include "eeprom.h"
+#include <string.h>
 
 static const uint32_t entry_size = 32U;
 static const uint16_t eeprom_size = 256U;
 static const uint8_t address = 0x50;
+
+static void Verify(uint8_t * buffer, uint16_t len, eeprom_label_t loc)
+{
+    assert(len == EEPROM_ENTRY_SIZE);
+    assert(buffer != NULL);
+    uint8_t blank_array[EEPROM_ENTRY_SIZE];
+    memset(blank_array, 0xFF, EEPROM_ENTRY_SIZE);
+
+    /* Check if all FFs */
+    int32_t rc = memcmp(buffer, blank_array, EEPROM_ENTRY_SIZE);
+    bool blank = (rc == 0);
+
+    /* Check Strln > 0 */
+    bool len_invalid = (strnlen((char*)buffer, EEPROM_ENTRY_SIZE) == 0u);
+
+    /* Set defaults if necessary */
+    if(blank || len_invalid)
+    {
+        switch(loc)
+        {
+            case EEPROM_SSID:
+                strncpy((char*)buffer,"BlankSSID",EEPROM_ENTRY_SIZE);
+                break;
+            case EEPROM_PASS:
+                strncpy((char*)buffer,"BlankPASS",EEPROM_ENTRY_SIZE);
+                break;
+            case EEPROM_IP:
+                strncpy((char*)buffer,"BlankIP",EEPROM_ENTRY_SIZE);
+                break;
+            case EEPROM_NAME:
+                strncpy((char*)buffer,"blank",EEPROM_ENTRY_SIZE);
+                break;
+            case EEPROM_GPIOA:
+                strncpy((char*)buffer,"gpioa",EEPROM_ENTRY_SIZE);
+                break;
+            case EEPROM_GPIOB:
+                strncpy((char*)buffer,"gpiob",EEPROM_ENTRY_SIZE);
+                break;
+            default:
+                assert(false);
+                break;
+        }
+    }
+}
 
 extern uint16_t EEPROM_GetSize(void)
 {
@@ -95,7 +140,7 @@ extern bool EEPROM_Read(uint8_t * buffer, uint16_t len, eeprom_label_t loc)
     uint32_t raw_index = GetIndex(loc);
 
     I2C_ReadReg(raw_index, buffer, len, (void*)&address);
-
+    Verify(buffer,len, loc);
     return true;
 }
 
