@@ -591,14 +591,29 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
             bool success = true;
             for(uint32_t idx = 0; idx < node_state->mqtt->subs->num_subs; idx++)
             {
-                /* TODO -> func for translating global and local topics */
-                uint8_t * sub_topic = (uint8_t*)node_state->mqtt->subs->subs[idx].name;
+                uint8_t * const sub_topic = (uint8_t*)node_state->mqtt->subs->subs[idx].name;
+                uint8_t * scratch = Scratch_Get(1u);
+                Scratch_Clear(1u);
+                strncat((char*)scratch, (char * const)sub_topic, 32u);
+                strncat((char*)scratch, "/", 2u);
+                strncat((char*)scratch, node_state->mqtt->client_name, 32u);
                 mqtt_msg_t * out = MQTT_Encode(node_state->mqtt, 
                                                     MQTT_SUBSCRIBE, 
-                                                    sub_topic, 
-                                                    strlen((char*)sub_topic), 
+                                                    scratch, 
+                                                    strnlen((char*)scratch,SCRATCH_SIZE), 
                                                     NULL);
                 success &= TCP_Send(node_state->tcp, out->msg, out->size);
+                if(node_state->mqtt->subs->subs[idx].global)
+                {
+                    /* If global, then subscribe to the generic variant */
+                    uint8_t * const sub_topic = (uint8_t*)node_state->mqtt->subs->subs[idx].name;
+                    mqtt_msg_t * out = MQTT_Encode(node_state->mqtt, 
+                                                        MQTT_SUBSCRIBE, 
+                                                        sub_topic, 
+                                                        strlen((char*)sub_topic), 
+                                                        NULL);
+                    success &= TCP_Send(node_state->tcp, out->msg, out->size);
+                }
             }
             if(success)
             {
@@ -614,7 +629,7 @@ static state_ret_t State_MQTTSubscribing( state_t * this, event_t s )
         }
         case EVENT( AckReceived ):
         {
-            printf("\tTCP ACK Received\n");
+            printf("\tTCP: ACK Received\n");
             TCP_FreeBytes(node_state->tcp);
             ret = HANDLED();
             break;
