@@ -6,7 +6,7 @@ class Config:
     SQLALCHEMY_POOL_RECYCLE = 299
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MQTT_BROKER_URL = 'localhost' 
-    MQTT_CLIENT_ID = 'pi-homepage'
+    MQTT_CLIENT_ID = 'nucleus-homepage'
     MQTT_BROKER_PORT = 1883 
     MQTT_USERNAME = ''
     MQTT_PASSWORD = '' 

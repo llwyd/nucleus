@@ -3,6 +3,7 @@ from app.models import EnvironmentData
 from app.models import EventData
 import json
 import datetime as dt
+import base64 as b64 
 
 def database_update(name, temperature, humidity):
     datestamp = dt.datetime.now().strftime('%Y-%m-%d')
@@ -24,7 +25,6 @@ def database_event_update(device, event):
 def handle_connect(client,userdata,flags,rc):
     print("MQTT Connected")
     mqtt.subscribe('home/evnt/#')
-    mqtt.subscribe('home/summary/#')
     mqtt.subscribe('home/digest/#')
 
 @mqtt.on_topic('home/evnt/#')
@@ -33,23 +33,22 @@ def handle_event_data(client,userdata,message):
     node = full_topic.replace('/',' ').split()[-1]
     event = full_topic.replace('/',' ').split()[-2]
     database_event_update(node,event)
-    #print(data)
-
-@mqtt.on_topic('home/summary/#')
-def handle_summary_data(client,userdata,message):
-    full_topic = message.topic
-    node = full_topic.replace('/',' ').split()[-1]
-    data_str = message.payload.decode()
-    data = json.loads(data_str)
-    database_update(node, data['temperature'], data['humidity'])
-    #print(data)
 
 @mqtt.on_topic('home/digest/#')
 def handle_digest_data(client,userdata,message):
     full_topic = message.topic
     node = full_topic.replace('/',' ').split()[-1]
-    data_str = message.payload.decode()
-    data = json.loads(data_str)
-    database_update(node, data['t'], data['h'])
-    #print(data)
+    data_b64 = message.payload.decode()
+
+    # Is it valid b64?
+    try:
+        data_str = b64.urlsafe_b64decode(bytes(data_b64,encoding='utf-8')).decode('utf-8')
+        # Is it valid json?
+        try:
+            data = json.loads(data_str)
+            database_update(node, data['t'], data['h'])
+        except:
+            pass
+    except:
+        pass
 
