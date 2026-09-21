@@ -27,6 +27,7 @@
 #include "alarm.h"
 #include "eeprom.h"
 #include "cli.h"
+#include "watchdog.h"
 
 //GENERATE_EVENT_STRINGS( EVENTS );
 
@@ -35,6 +36,8 @@ DEFINE_STATE(AwaitingCommand);
 DEFINE_STATE(ReadRaw);
 DEFINE_STATE(SetValue);
 DEFINE_STATE(ReadAll);
+DEFINE_STATE(Test);
+DEFINE_STATE(Reset);
 
 typedef struct
 {
@@ -44,13 +47,17 @@ typedef struct
 }
 config_state_t;
 
-#define NUM_COMMANDS (6U)
-const cli_command_t command_table[NUM_COMMANDS] =
+#define NUM_COMMANDS (10U)
+const cli_command_t command_table[] =
 {
     { "set ssid", STATE(SetValue), "SSID", EEPROM_SSID},
     { "set pass", STATE(SetValue), "PASSWORD", EEPROM_PASS},
     { "set broker", STATE(SetValue), "BROKER", EEPROM_IP},
     { "set name", STATE(SetValue), "NAME", EEPROM_NAME},
+    { "set gpioa", STATE(SetValue), "GPIOA", EEPROM_GPIOA},
+    { "set gpiob", STATE(SetValue), "GPIOB", EEPROM_GPIOB},
+    { "test", STATE(Test), "TEST", EEPROM_NONE},
+    { "reset", STATE(Reset), "RESET", EEPROM_NONE},
     { "read all", STATE(ReadAll), "ALL", EEPROM_NONE },
     { "read raw", STATE(ReadRaw), "RAW", EEPROM_NONE},
 };
@@ -196,6 +203,12 @@ static state_ret_t State_ReadAll( state_t * this, event_t s )
             
             (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_NAME);
             printf("NAME: %s\n", raw_buffer);
+            
+            (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_GPIOA);
+            printf("GPIOA: %s\n", raw_buffer);
+            
+            (void)EEPROM_Read(raw_buffer, CLI_CMD_SIZE, EEPROM_GPIOB);
+            printf("GPIOB: %s\n", raw_buffer);
 
             ret = TRANSITION(this, STATE(AwaitingCommand));
             break;
@@ -243,6 +256,66 @@ static state_ret_t State_SetValue( state_t * this, event_t s )
             str_len++;
             EEPROM_Write(config_state->buffer, str_len, command_table[cmd_idx].label);
             ret = TRANSITION(this, STATE(AwaitingCommand));
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return ret;
+}
+
+static state_ret_t State_Test( state_t * this, event_t s )
+{
+    //STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, STATE(Config));
+    config_state_t * config_state = (config_state_t *)this;
+    (void)config_state;
+    switch(s)
+    {
+        case EVENT( Enter ):
+        {
+            printf("\tEnvironment Sensor:\n");
+            Enviro_Read();
+            Enviro_Print();
+            printf("\tAccelerometer:\n");
+            Accelerometer_Check();
+
+            ret = TRANSITION(this, STATE(AwaitingCommand));
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    return ret;
+}
+
+static state_ret_t State_Reset( state_t * this, event_t s )
+{
+    //STATE_DEBUG(s);
+    state_ret_t ret = PARENT(this, STATE(Config));
+    config_state_t * config_state = (config_state_t *)this;
+    (void)config_state;
+    switch(s)
+    {
+        case EVENT( Enter ):
+        {
+            printf("\tResetting...\n");
+            Watchdog_Init();
+            ret = TRANSITION(this, STATE(AwaitingCommand));
+            break;
+        }
+        case EVENT( Exit ):
+        {
+            ret = HANDLED();
+            break;
         }
         default:
         {

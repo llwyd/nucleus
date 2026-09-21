@@ -115,7 +115,7 @@ extern time_t Alarm_GetUnixTime(void)
     return utime;
 }
 
-extern uint64_t Alarm_EncodeUnixTime(char * buffer, uint8_t buffer_len)
+extern uint64_t Alarm_EncodeUnixTime(char * buffer, uint32_t buffer_len)
 {
     assert(buffer != NULL);
     uint64_t utime = (uint64_t)Alarm_GetUnixTime();

@@ -2,7 +2,7 @@
 #define ACCL_H_
 
 extern void Accelerometer_Init(void);
-extern void Accelerometer_ReadAll(void);
+extern void Accelerometer_Check(void);
 extern void Accelerometer_Start(void);
 extern void Accelerometer_Ack(void);
 

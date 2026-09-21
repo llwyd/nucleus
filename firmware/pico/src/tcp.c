@@ -76,13 +76,13 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
     (void)err;
     cyw43_arch_lwip_check();
     err_t ret = ERR_OK;
-    printf("\terr: %d\n", err);
+    printf("\tTCP: err: %d\n", err);
     critical_section_enter_blocking(critical);
     if( p != NULL )
     {
-        printf("\tfifo fill: %lu\n",tcp_fifo.base.fill);
+        printf("\tTCP: fifo fill: %lu\n",tcp_fifo.base.fill);
         uint16_t pbufs_recvd = pbuf_clen( p ); 
-        printf("\t%u pbufs recvd\n", pbufs_recvd);
+        printf("\tTCP: %u pbufs recvd\n", pbufs_recvd);
         for(uint32_t idx = 0; idx < pbufs_recvd; idx++)
         {
             assert(p->len < BUFFER_SIZE); 
@@ -100,7 +100,7 @@ static err_t Recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
     }
     else
     {
-        printf("\tConnection Closed\n");
+        printf("\tTCP: Connection Closed\n");
         Emitter_EmitEvent(EVENT(TCPDisconnected));
         ret = ERR_CLSD;
     }
@@ -126,7 +126,7 @@ extern void TCP_Close(tcp_t * tcp)
 {
     if(tcp->pcb != NULL)
     {
-        printf("\tClosing TCP comms\n");
+        printf("\tTCP: Closing comms\n");
         cyw43_arch_lwip_begin();
         err_t close_err = tcp_close(tcp->pcb);
         tcp_abort(tcp->pcb);
@@ -134,13 +134,13 @@ extern void TCP_Close(tcp_t * tcp)
         tcp->err = close_err;
         if( close_err != ERR_OK )
         {
-            printf("\tFailed to close (%d)", close_err);
+            printf("\tTCP: Failed to close (%d)", close_err);
             TCP_Abort(tcp);
             tcp->pcb = NULL;
         }
         else
         {
-            printf("\tClose Success!\n");
+            printf("\tTCP: Close Success!\n");
             tcp->pcb = NULL;
         }
     }
@@ -156,7 +156,7 @@ static void FlushBuffer(tcp_t * tcp)
         tcp_pack_t t = FIFO_Dequeue(&tcp_fifo);
         tcp_recved(tcp->pcb, t.p->len);
         uint8_t num_dealloc = pbuf_free(t.p);
-        printf("\t%u tcp chains dealloc\n", num_dealloc);
+        printf("\tTCP: %u tcp chains dealloc\n", num_dealloc);
     }
     assert(FIFO_IsEmpty(&tcp_fifo.base));
     critical_section_exit(tcp->crit);
@@ -171,12 +171,12 @@ extern uint16_t TCP_Retrieve(tcp_t * tcp, uint8_t * buffer, uint16_t len)
     tcp_pack_t t = FIFO_Dequeue(&tcp_fifo);
 
     uint16_t recv_len = t.p->len;
-    printf("\t%u bytes received\n", recv_len);
+    printf("\tTCP: %u bytes received\n", recv_len);
     uint16_t copied = pbuf_copy_partial(t.p, buffer, t.p->len, 0);
-    printf("\t%u bytes retrieved\n", copied);
+    printf("\tTCP: %u bytes retrieved\n", copied);
     tcp_recved(tcp->pcb, t.p->len);
     uint8_t num_dealloc = pbuf_free(t.p);
-    printf("\t%u tcp chains dealloc\n", num_dealloc);
+    printf("\tTCP: %u tcp chains dealloc\n", num_dealloc);
     critical_section_exit(tcp->crit);
     return recv_len;
 }
@@ -185,7 +185,7 @@ static void Error(void *arg, err_t err)
 {
     (void)arg;
     (void)err;
-    printf("\tTCP Error (%d)\n", (int16_t)err);
+    printf("\tTCP: Error (%d)\n", (int16_t)err);
     switch(err)
     {
         case ERR_RST:
@@ -204,7 +204,7 @@ static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
     (void)arg;
     (void)tpcb;
-    printf("\tTCP Connected...");
+    printf("\tTCP: Connected...");
     if( err == ERR_OK )
     {
         printf("OK\n");
@@ -225,12 +225,12 @@ extern void TCP_Kick(tcp_t * tcp)
     critical_section_exit(tcp->crit);
     cyw43_arch_lwip_end();
 
-    printf("\tTCP Kick: %d\n", err);
+    printf("\tTCP: Kick: %d\n", err);
 }
 
 extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
 {
-    printf("\tAttempting to send %u bytes\n", len);
+    printf("\tTCP: Attempting to send %u bytes\n", len);
     bool success = true;
 
     if( buffer == NULL)
@@ -247,18 +247,18 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
     critical_section_enter_blocking(tcp->crit);
     
     uint16_t available = tcp_sndbuf(tcp->pcb);
-    printf("\tTCP space available to output: %u\n", available);
+    printf("\tTCP: space available to output: %u\n", available);
     err_t err = tcp_write(tcp->pcb, buffer, len, TCP_WRITE_FLAG_COPY);
     tcp->err = err; 
     critical_section_exit(tcp->crit);
     cyw43_arch_lwip_end();
     if( err != ERR_OK )
     {
-        printf("\tFailed to write (%d)\n", (int16_t)err);
+        printf("\tTCP: Failed to write (%d)\n", (int16_t)err);
         success = false;
         if(err == ERR_ARG)
         {
-            printf("\tlwip pcb error\n");
+            printf("\tTCP: lwip pcb error\n");
             Emitter_EmitEvent(EVENT(PCBInvalid));
 
             /* This looks strange, but we dont want to kick off the retry timer
@@ -268,7 +268,7 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
         }
         else if(err == ERR_MEM)
         {
-            printf("\tlwip memory error\n");
+            printf("\tTCP: lwip memory error\n");
         }
         goto cleanup;
     }
@@ -286,11 +286,11 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
     cyw43_arch_lwip_end();
     if( err != ERR_OK )
     {
-        printf("\tFailed to output\n");
+        printf("\tTCP: Failed to output\n");
         success = false;
         goto cleanup;
     }
-    printf("\tSend successfully\n"); 
+    printf("\tTCP: Send successfully\n"); 
 cleanup:
     return success;
 }
@@ -321,7 +321,7 @@ extern bool TCP_Connect(tcp_t * tcp)
 {
     bool ret = false;
     
-    printf("\tAttempting Connection to %s port %d\n", ip4addr_ntoa(&tcp->ip), tcp->port);
+    printf("\tTCP: Attempting Connection to %s port %d\n", ip4addr_ntoa(&tcp->ip), tcp->port);
 
     /* Initialise pcb struct */
     assert(tcp->pcb == NULL);
@@ -356,12 +356,12 @@ extern bool TCP_Connect(tcp_t * tcp)
 
     if(err==ERR_OK)
     {
-        printf("\tTCP Initialising success, awaiting connection\n");
+        printf("\tTCP: Initialising success, awaiting connection\n");
         ret = true;
     }
     else
     {
-        printf("\tTCP Initialising failure, Retrying\n");
+        printf("\tTCP: Initialising failure, Retrying\n");
         Emitter_EmitEvent(EVENT(TCPDisconnected));
         ret = false;
     }

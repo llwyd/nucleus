@@ -19,7 +19,7 @@ extern uint64_t Uptime_Get(void)
     return uptime_ms;
 }
 
-extern void Uptime_Encode(char * buffer, uint8_t buffer_len)
+extern void Uptime_Encode(char * buffer, uint32_t buffer_len)
 {
     assert(buffer != NULL);
     memset(buffer,0x00, buffer_len);
