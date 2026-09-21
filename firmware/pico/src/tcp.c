@@ -204,7 +204,7 @@ static err_t Connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
     (void)arg;
     (void)tpcb;
-    printf("\tTCP Connected...");
+    printf("\tTCP: Connected...");
     if( err == ERR_OK )
     {
         printf("OK\n");
@@ -225,12 +225,12 @@ extern void TCP_Kick(tcp_t * tcp)
     critical_section_exit(tcp->crit);
     cyw43_arch_lwip_end();
 
-    printf("\tTCP Kick: %d\n", err);
+    printf("\tTCP: Kick: %d\n", err);
 }
 
 extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
 {
-    printf("\tAttempting to send %u bytes\n", len);
+    printf("\tTCP: Attempting to send %u bytes\n", len);
     bool success = true;
 
     if( buffer == NULL)
@@ -247,7 +247,7 @@ extern bool TCP_Send( tcp_t * tcp, uint8_t * buffer, uint16_t len )
     critical_section_enter_blocking(tcp->crit);
     
     uint16_t available = tcp_sndbuf(tcp->pcb);
-    printf("\tTCP space available to output: %u\n", available);
+    printf("\tTCP: space available to output: %u\n", available);
     err_t err = tcp_write(tcp->pcb, buffer, len, TCP_WRITE_FLAG_COPY);
     tcp->err = err; 
     critical_section_exit(tcp->crit);
@@ -321,7 +321,7 @@ extern bool TCP_Connect(tcp_t * tcp)
 {
     bool ret = false;
     
-    printf("\tAttempting Connection to %s port %d\n", ip4addr_ntoa(&tcp->ip), tcp->port);
+    printf("\tTCP: Attempting Connection to %s port %d\n", ip4addr_ntoa(&tcp->ip), tcp->port);
 
     /* Initialise pcb struct */
     assert(tcp->pcb == NULL);
@@ -356,12 +356,12 @@ extern bool TCP_Connect(tcp_t * tcp)
 
     if(err==ERR_OK)
     {
-        printf("\tTCP Initialising success, awaiting connection\n");
+        printf("\tTCP: Initialising success, awaiting connection\n");
         ret = true;
     }
     else
     {
-        printf("\tTCP Initialising failure, Retrying\n");
+        printf("\tTCP: Initialising failure, Retrying\n");
         Emitter_EmitEvent(EVENT(TCPDisconnected));
         ret = false;
     }
