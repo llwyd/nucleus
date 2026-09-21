@@ -97,7 +97,7 @@ extern mqtt_msg_t * MQTT_Encode(mqtt_t * mqtt,
     (void)data_len;
     uint16_t full_packet_size = 0;
     mqtt_msg_t * ret = NULL;
-    printf("\tPQ: Fill: %lu / %lu\n", mqtt->pq->fill, mqtt->pq->max);
+    printf("\tMQTT: PQ Fill: %lu / %lu\n", mqtt->pq->fill, mqtt->pq->max);
     if(PQ_IsFull(mqtt->pq))
     {
         if (type != MQTT_CONNECT)
@@ -265,7 +265,7 @@ extern mqtt_msg_t * MQTT_Encode(mqtt_t * mqtt,
             buffer->seq_num = mqtt->state.seq_num;
             buffer->size = full_packet_size;
             buffer->timestamp = params->timestamp; 
-            printf("\tseqnum: %u\n",buffer->seq_num);
+            printf("\tMQTT: seqnum: %u\n",buffer->seq_num);
             
             if(params->qos > 0u)
             {
@@ -295,7 +295,7 @@ extern mqtt_msg_t * MQTT_Encode(mqtt_t * mqtt,
             buffer->seq_num = mqtt->state.rx_seq_num;
             buffer->size = full_packet_size;
             buffer->timestamp = params->timestamp;
-            printf("\t Sending PUBACK for %u\n", buffer->seq_num);
+            printf("\tMQTT: Sending PUBACK for %u\n", buffer->seq_num);
             ret = buffer;
             break;
         }
@@ -324,7 +324,7 @@ extern bool MQTT_Decode( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
     {
         case MQTT_CONNACK_CODE:
         {
-            printf("\tCONNACK Received\n");
+            printf("\tMQTT: CONNACK Received\n");
             /* Pop the previous message and check whether the last
              * was a connect packet */
             mqtt_msg_t * b = (mqtt_msg_t *)PQ_Cache(mqtt->pq);
@@ -338,7 +338,7 @@ extern bool MQTT_Decode( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
         }
         case MQTT_SUBACK_CODE:
         {
-            printf("\tSUBACK Received\n");
+            printf("\tMQTT: SUBACK Received\n");
             /* Pop the previous message and check whether the last
              * was a connect packet */
             mqtt_msg_t * b = (mqtt_msg_t *)PQ_Pop(mqtt->pq);
@@ -360,7 +360,7 @@ extern bool MQTT_Decode( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
         }
         case MQTT_PUBACK_CODE:
         {
-            printf("\tPUBACK Received\n");
+            printf("\tMQTT: PUBACK Received\n");
             uint16_t seq_num = (buffer[2] << 8u) | (buffer[3]);
             mqtt->state.rx_seq_num = seq_num;
             
@@ -372,7 +372,7 @@ extern bool MQTT_Decode( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
                 mqtt_msg_t * c = (mqtt_msg_t *)PQ_Peek(mqtt->pq, idx);
                 if(c->seq_num == seq_num)
                 {
-                    printf("\tPacket found %u\n", c->seq_num);
+                    printf("\tMQTT: Packet found %u\n", c->seq_num);
                     c = (mqtt_msg_t *)PQ_DecreaseKey(mqtt->pq, idx, 0u);
                     b = (mqtt_msg_t *)PQ_Pop(mqtt->pq);
                     assert(b == c);
@@ -388,24 +388,24 @@ extern bool MQTT_Decode( mqtt_t * mqtt, uint8_t * buffer, uint16_t len)
                 bool sub_success = ((buffer[4]&0x0F) == 0x00);
                 bool seq_success = (seq_num == b->seq_num);
                 bool key_success = (0u == b->key.key);
-                printf("\tseqnum: %u\n", seq_num);
+                printf("\tMQTT: seqnum: %u\n", seq_num);
                 success = resp_type && sub_success && seq_success && key_success;
             }
             else
             {
-                printf("\tPacket NOT found");
+                printf("\tMQTT: Packet NOT found");
                 success = false;
             }
             break;
         }
         case MQTT_PUBLISH_CODE:
         {
-            printf("\tPUBLISH Received\n");
+            printf("\tMQTT: PUBLISH Received\n");
             uint16_t topic_len = (buffer[2] << 8) | buffer[3];
             /*if qos =1 or 2, then msg id here */
             uint8_t * const topic = &buffer[4];
-            printf("\ttopic: %s\n", topic);
-            printf("\t  qos: %u\n", qos);
+            printf("\tMQTT: topic: %s\n", topic);
+            printf("\tMQTT:   qos: %u\n", qos);
             uint8_t prop_len = *(topic+topic_len);
             uint8_t * msg_data = topic+topic_len+prop_len+1;
             for( uint32_t i = 0; i < mqtt->subs->num_subs ; i++ )

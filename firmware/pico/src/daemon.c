@@ -1070,7 +1070,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( AckReceived ):
         {
-            printf("\tTCP ACK Received\n");
+            printf("\tTCP: ACK Received\n");
             TCP_FreeBytes(node_state->tcp);
             TCP_Kick(node_state->tcp);
             Emitter_Destroy(node_state->retry_timer);
@@ -1086,7 +1086,7 @@ static state_ret_t State_Idle( state_t * this, event_t s )
         }
         case EVENT( AckTimeout ):
         {
-            printf("\tTCP ACK Timeout\n");
+            printf("\tTCP: ACK Timeout\n");
             TCP_Close(node_state->tcp);
             ret = TRANSITION(this, STATE(TCPNotConnected));
             break;

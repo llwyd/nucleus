@@ -15,7 +15,7 @@
 
 static void PrintStartupInfo(void)
 {
-    printf("Pico sensor node\n");
+    printf("NUCLEUS sensor node\n");
     printf("Git hash: %s\n", META_GITHASH);
     printf("Build time: %s %s\n", META_DATESTAMP, META_TIMESTAMP);
 }
