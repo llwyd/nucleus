@@ -20,8 +20,9 @@ def binday(loc:str):
     
     due_tomorrow = False
 
-    tomorrow = dt.datetime.now() + dt.timedelta(days=1)
+    tomorrow = (dt.datetime.now() + dt.timedelta(days=1)).replace(hour=0,minute=0,second=0,microsecond=0)
     click.echo(tomorrow)
+    
     for b in bins:
         out = b.get_text().strip()
         date = regex.search(out).group()
