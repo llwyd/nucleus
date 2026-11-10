@@ -11,7 +11,7 @@ def get_bins(loc:str):
 
     bins = soup.find_all('li')
     
-    regex = re.compile(r'(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\s\d+(th|st|nd|rd)\s\w+\s\d+')
+    regex = re.compile(r'((Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\s\d+(th|st|nd|rd)\s\w+\s\d+|Tomorrow)')
     regex_bin = re.compile(r'(Blue|Green|Food)')
     
     due_tomorrow = False
@@ -25,11 +25,10 @@ def get_bins(loc:str):
         colour = regex_bin.search(out).group()
 
         date_split = date.split()
-        timestamp = dt.datetime.strptime(f'{date_split[0]} {date_split[1][:-2]} {date_split[2]} {date_split[3]}','%A %d %B %Y')
-        if timestamp.date() == tomorrow.date():
+        if date_split[0] == 'Tomorrow':
             due_tomorrow = True
-            click.echo(f'{colour} bin @ {timestamp.date()}')
-            raw_html += f'<p>{colour} @ {timestamp.date()}</p>'
+            click.echo(f'{colour} bin @ {tomorrow.date()}')
+            raw_html += f'<p>{colour} @ {tomorrow.date()}</p>'
 
     return due_tomorrow, raw_html
 
