@@ -70,3 +70,13 @@ extern void GPIO_Init(void)
 
     bi_decl(bi_2pins_with_func(SDA_PIN, SCL_PIN, GPIO_FUNC_I2C));
 }
+
+extern bool GPIO_ReadA(void)
+{
+    return gpio_get(GPIO_A_PIN);
+}
+
+extern bool GPIO_ReadB(void)
+{
+    return gpio_get(GPIO_B_PIN);
+}

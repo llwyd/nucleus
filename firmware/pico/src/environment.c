@@ -7,6 +7,7 @@
 #include "uptime.h"
 #include "alarm.h"
 #include "lpf.h"
+#include "gpio.h"
 #include <string.h>
 
 static struct   bme280_dev dev;
