@@ -118,6 +118,11 @@ extern void Enviro_Print(void)
     printf("\tHumidity: %.2f\n", env_data.humidity);
     printf("\tPressure: %.2f\n", env_data.pressure);
     printf("\tf-Temperature: %.2f\n", temp_filtered);
+    
+    const bool gpio_a = GPIO_ReadA();
+    const bool gpio_b = GPIO_ReadB();
+    printf("\tGPIO A: %d\n", gpio_a);
+    printf("\tGPIO B: %d\n", gpio_b);
 }
 
 extern void Enviro_GenDigest(char * buffer, uint32_t buffer_len)
