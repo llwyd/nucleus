@@ -7,6 +7,7 @@
 #include "uptime.h"
 #include "alarm.h"
 #include "lpf.h"
+#include "gpio.h"
 #include <string.h>
 
 static struct   bme280_dev dev;
@@ -117,6 +118,11 @@ extern void Enviro_Print(void)
     printf("\tHumidity: %.2f\n", env_data.humidity);
     printf("\tPressure: %.2f\n", env_data.pressure);
     printf("\tf-Temperature: %.2f\n", temp_filtered);
+    
+    const bool gpio_a = GPIO_ReadA();
+    const bool gpio_b = GPIO_ReadB();
+    printf("\tGPIO A: %d\n", gpio_a);
+    printf("\tGPIO B: %d\n", gpio_b);
 }
 
 extern void Enviro_GenDigest(char * buffer, uint32_t buffer_len)
@@ -126,9 +132,13 @@ extern void Enviro_GenDigest(char * buffer, uint32_t buffer_len)
 
     memset(buffer,0x00, buffer_len);
     
-    snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f,\"ts\":%llu}",
+    const bool gpio_a = GPIO_ReadA();
+    const bool gpio_b = GPIO_ReadB();
+    snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f,\"a\":%d,\"b\":%d,\"ts\":%llu}",
             temp_filtered,
             env_data.humidity,
+            gpio_a,
+            gpio_b,
             utime);
 }
 
@@ -138,9 +148,14 @@ extern void Enviro_GenShortDigest(char * buffer, uint32_t buffer_len)
 
     memset(buffer,0x00, buffer_len);
     
-    snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f}",
+    const bool gpio_a = GPIO_ReadA();
+    const bool gpio_b = GPIO_ReadB();
+    
+    snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f,\"a\":%d,\"b\":%d}",
             temp_filtered,
-            env_data.humidity);
+            env_data.humidity,
+            gpio_a,
+            gpio_b);
 }
 
 extern void Enviro_ResetFilter(void)

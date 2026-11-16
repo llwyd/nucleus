@@ -27,5 +27,7 @@ typedef struct
 gpio_event_t;
 
 extern void GPIO_Init(void);
+extern bool GPIO_ReadA(void);
+extern bool GPIO_ReadB(void);
 
 #endif /* GPIO_H_ */
