@@ -20,7 +20,7 @@ def get_todays_events(db_path:str):
 
     num_events = len(df)
     todays_date            = dt.datetime.now().strftime('%Y-%m-%d')
-    yesterdays_time        = (dt.datetime.now() - dt.timedelta(minutes=5)) 
+    yesterdays_time        = (dt.datetime.now() - dt.timedelta(minutes=30)) 
  
     num_events = 0
     raw_html = f'<table style ="margin-left:auto;margin-right:auto;"><tr><th><b>ID</b></th><th><b>Date</b></th><th><b>Time</b></th><th><b>Device</b></th><th><b>Event</b></th></tr>'

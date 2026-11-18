@@ -134,7 +134,7 @@ extern void Enviro_GenDigest(char * buffer, uint32_t buffer_len)
     
     const bool gpio_a = GPIO_ReadA();
     const bool gpio_b = GPIO_ReadB();
-    snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f,\"a\":%d,\"b\":%d,\"ts\":%llu}",
+    snprintf(buffer, buffer_len,"{\"t\":%.2f,\"h\":%.1f,\"a\":%d,\"b\":%d,\"ts\":%llu}",
             temp_filtered,
             env_data.humidity,
             gpio_a,
@@ -151,7 +151,7 @@ extern void Enviro_GenShortDigest(char * buffer, uint32_t buffer_len)
     const bool gpio_a = GPIO_ReadA();
     const bool gpio_b = GPIO_ReadB();
     
-    snprintf(buffer, buffer_len,"{\"t\":%.1f,\"h\":%.1f,\"a\":%d,\"b\":%d}",
+    snprintf(buffer, buffer_len,"{\"t\":%.2f,\"h\":%.1f,\"a\":%d,\"b\":%d}",
             temp_filtered,
             env_data.humidity,
             gpio_a,
