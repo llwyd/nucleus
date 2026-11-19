@@ -11,7 +11,7 @@ def get_bins(loc:str):
 
     bins = soup.find_all('li')
     
-    regex = re.compile(r'((Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\s\d+(th|st|nd|rd)\s\w+\s\d+|Tomorrow)')
+    regex = re.compile(r'((Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\s\d+(th|st|nd|rd)\s\w+\s\d+|Tomorrow|Today)')
     regex_bin = re.compile(r'(Blue|Green|Food)')
     
     due_tomorrow = False
